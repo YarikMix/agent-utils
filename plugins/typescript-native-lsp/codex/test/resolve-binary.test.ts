@@ -27,6 +27,58 @@ test('npm-added local .bin is skipped in favor of the next global PATH compiler'
   } finally { await fixture.dispose() }
 })
 
+for (const alias of ['dot suffix', 'directory symlink']) {
+  test(`local .bin via ${alias} is skipped in mixed PATH`, async () => {
+    const fixture = await temporaryProject({})
+    try {
+      const localBin = join(fixture.root, 'checkout/node_modules/.bin')
+      const globalBin = join(fixture.root, 'global bin')
+      await mkdir(dirname(localBin), { recursive: true })
+      await cp(dirname(native), localBin, { recursive: true })
+      await cp(dirname(native), globalBin, { recursive: true })
+      let localEntry = `${localBin}/.`
+      if (alias === 'directory symlink') {
+        localEntry = join(fixture.root, 'local bin alias')
+        await symlink(localBin, localEntry, process.platform === 'win32' ? 'junction' : 'dir')
+      }
+      const PATH = [localEntry, globalBin].join(process.platform === 'win32' ? ';' : ':')
+      assert.equal(await resolver.resolveTscBinary({ env: { PATH } }), await realpath(join(globalBin, process.platform === 'win32' ? 'tsc.exe' : 'tsc')))
+      await assert.rejects(resolver.resolveTscBinary({ env: { PATH: localEntry } }), /PATH.*TSC_PATH/s)
+    } finally { await fixture.dispose() }
+  })
+}
+
+for (const location of ['ancestor checkout', 'global sibling']) {
+  test(`global npm launcher with native only in ${location} ${location === 'ancestor checkout' ? 'fails without checkout fallback' : 'resolves the hoisted dependency'}`, async () => {
+    const fixture = await temporaryProject({})
+    try {
+      const checkout = join(fixture.root, 'checkout')
+      const prefix = join(checkout, 'global prefix')
+      const bin = process.platform === 'win32' ? prefix : join(prefix, 'bin')
+      const globalModules = process.platform === 'win32' ? join(prefix, 'node_modules') : join(prefix, 'lib/node_modules')
+      const packageRoot = join(globalModules, 'typescript')
+      const nativeRoot = join(location === 'ancestor checkout' ? join(checkout, 'node_modules') : globalModules, `@typescript/typescript-${process.platform}-${process.arch}`)
+      await mkdir(bin, { recursive: true })
+      await mkdir(join(packageRoot, 'bin'), { recursive: true })
+      await mkdir(nativeRoot, { recursive: true })
+      await writeFile(join(packageRoot, 'package.json'), '{"name":"typescript"}')
+      await writeFile(join(packageRoot, 'bin/tsc'), '#!/usr/bin/env node\nthrow new Error("launcher must never run")')
+      await writeFile(join(nativeRoot, 'package.json'), '{"name":"native"}')
+      await cp(dirname(native), join(nativeRoot, 'lib'), { recursive: true })
+      if (process.platform === 'win32') {
+        await writeFile(join(bin, 'tsc.cmd'), '@ECHO off\n"%dp0%\\node.exe" "%dp0%\\node_modules\\typescript\\bin\\tsc" %*\n')
+      } else {
+        await symlink('../lib/node_modules/typescript/bin/tsc', join(bin, 'tsc'))
+      }
+      if (location === 'ancestor checkout') {
+        await assert.rejects(resolver.resolveTscBinary({ env: { PATH: bin } }), /TypeScript.*7.*PATH.*TSC_PATH/s)
+      } else {
+        assert.equal(await resolver.resolveTscBinary({ env: { PATH: bin } }), await realpath(join(nativeRoot, 'lib', process.platform === 'win32' ? 'tsc.exe' : 'tsc')))
+      }
+    } finally { await fixture.dispose() }
+  })
+}
+
 test('absolute explicit native binary and its symlink resolve identically', async () => {
   const fixture = await temporaryProject({})
   try {

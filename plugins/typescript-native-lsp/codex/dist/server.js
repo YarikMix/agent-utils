@@ -2236,8 +2236,8 @@ var require_resolve = __commonJS({
       }
       return count;
     }
-    function getFullPath(resolver, id = "", normalize) {
-      if (normalize !== false)
+    function getFullPath(resolver, id = "", normalize2) {
+      if (normalize2 !== false)
         id = normalizeId(id);
       const p = resolver.parse(id);
       return _getFullPath(resolver, p);
@@ -3832,7 +3832,7 @@ var require_fast_uri = __commonJS({
       }
       return decodedScheme;
     }
-    function normalize(uri, options) {
+    function normalize2(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
         normalizeString(uri, options);
@@ -4210,7 +4210,7 @@ var require_fast_uri = __commonJS({
     }
     var fastUri = {
       SCHEMES,
-      normalize,
+      normalize: normalize2,
       resolve: resolve2,
       resolveComponent,
       equal,
@@ -31301,8 +31301,7 @@ function findProjectRoot(filePath) {
 import { spawn as spawn2 } from "node:child_process";
 import { constants } from "node:fs";
 import { access, open, realpath, stat } from "node:fs/promises";
-import { createRequire } from "node:module";
-import { dirname as dirname2, isAbsolute, join as join2, resolve } from "node:path";
+import { dirname as dirname2, isAbsolute, join as join2, normalize, resolve } from "node:path";
 var GUIDANCE = "Install TypeScript 7+ globally and add tsc to PATH, or set TSC_PATH to its absolute native binary path.";
 async function resolveTscBinary(options = {}) {
   const binary = await discoverTscBinary(options);
@@ -31324,9 +31323,17 @@ async function discoverTscBinary(options = {}) {
   const path = Object.entries(env).find(([key]) => platform === "win32" ? key.toLowerCase() === "path" : key === "PATH")?.[1] ?? "";
   const names = platform === "win32" ? ["tsc.exe", "tsc.cmd", "tsc", "tsc.ps1"] : ["tsc"];
   for (const entry of path.split(platform === "win32" ? ";" : ":")) {
-    const directory = entry.replace(/^"(.*)"$/, "$1");
-    if (!isAbsolute(directory)) continue;
-    if (/(?:^|[\\/])node_modules[\\/]\.bin[\\/]?$/i.test(directory)) continue;
+    const rawDirectory = entry.replace(/^"(.*)"$/, "$1");
+    if (!isAbsolute(rawDirectory)) continue;
+    const normalizedDirectory = normalize(rawDirectory);
+    let directory;
+    try {
+      directory = await realpath(normalizedDirectory);
+    } catch {
+      continue;
+    }
+    const localBin = /(?:^|[\\/])node_modules[\\/]\.bin[\\/]?$/i;
+    if (localBin.test(normalizedDirectory) || localBin.test(directory)) continue;
     for (const name of names) {
       const launcher = join2(directory, name);
       try {
@@ -31363,8 +31370,16 @@ async function nativeFromLauncher(launcher, platform, arch) {
   }
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) throw new Error("npm launcher does not target typescript/bin/tsc");
   const packageRoot = dirname2(dirname2(script));
-  const packagePath = createRequire(join2(packageRoot, "package.json")).resolve(`@typescript/typescript-${platform}-${arch}/package.json`);
-  return nativeBinary(join2(dirname2(packagePath), "lib", platform === "win32" ? "tsc.exe" : "tsc"), platform);
+  const nativePackage = `@typescript/typescript-${platform}-${arch}`;
+  for (const nativeRoot of [join2(packageRoot, "node_modules", nativePackage), join2(dirname2(packageRoot), nativePackage)]) {
+    try {
+      await stat(join2(nativeRoot, "package.json"));
+    } catch {
+      continue;
+    }
+    return nativeBinary(join2(nativeRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"), platform);
+  }
+  throw new Error(`Global TypeScript installation is missing native package ${nativePackage}`);
 }
 async function nativeBinary(path, platform) {
   let binary;

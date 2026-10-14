@@ -1,8 +1,7 @@
 import { spawn } from "node:child_process"
 import { constants } from "node:fs"
 import { access, open, realpath, stat } from "node:fs/promises"
-import { createRequire } from "node:module"
-import { dirname, isAbsolute, join, resolve } from "node:path"
+import { dirname, isAbsolute, join, normalize, resolve } from "node:path"
 
 export interface ResolveOptions {
   env?: NodeJS.ProcessEnv
@@ -37,10 +36,14 @@ export async function discoverTscBinary(options: ResolveOptions = {}): Promise<s
   const path = Object.entries(env).find(([key]) => platform === "win32" ? key.toLowerCase() === "path" : key === "PATH")?.[1] ?? ""
   const names = platform === "win32" ? ["tsc.exe", "tsc.cmd", "tsc", "tsc.ps1"] : ["tsc"]
   for (const entry of path.split(platform === "win32" ? ";" : ":")) {
-    const directory = entry.replace(/^"(.*)"$/, "$1")
+    const rawDirectory = entry.replace(/^"(.*)"$/, "$1")
     // Empty/relative entries must not silently select a checkout compiler.
-    if (!isAbsolute(directory)) continue
-    if (/(?:^|[\\/])node_modules[\\/]\.bin[\\/]?$/i.test(directory)) continue
+    if (!isAbsolute(rawDirectory)) continue
+    const normalizedDirectory = normalize(rawDirectory)
+    let directory: string
+    try { directory = await realpath(normalizedDirectory) } catch { continue }
+    const localBin = /(?:^|[\\/])node_modules[\\/]\.bin[\\/]?$/i
+    if (localBin.test(normalizedDirectory) || localBin.test(directory)) continue
     for (const name of names) {
       const launcher = join(directory, name)
       try { await stat(launcher) } catch { continue }
@@ -75,8 +78,14 @@ async function nativeFromLauncher(launcher: string, platform: NodeJS.Platform, a
   }
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) throw new Error("npm launcher does not target typescript/bin/tsc")
   const packageRoot = dirname(dirname(script))
-  const packagePath = createRequire(join(packageRoot, "package.json")).resolve(`@typescript/typescript-${platform}-${arch}/package.json`)
-  return nativeBinary(join(dirname(packagePath), "lib", platform === "win32" ? "tsc.exe" : "tsc"), platform)
+  const nativePackage = `@typescript/typescript-${platform}-${arch}`
+  // Only package-local or hoisted global dependencies belong to this installation.
+  // Node's normal ancestor lookup could silently fall back to a checkout package.
+  for (const nativeRoot of [join(packageRoot, "node_modules", nativePackage), join(dirname(packageRoot), nativePackage)]) {
+    try { await stat(join(nativeRoot, "package.json")) } catch { continue }
+    return nativeBinary(join(nativeRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"), platform)
+  }
+  throw new Error(`Global TypeScript installation is missing native package ${nativePackage}`)
 }
 
 /** Validate native ownership: scripts/shims would create an unowned compiler child. */
