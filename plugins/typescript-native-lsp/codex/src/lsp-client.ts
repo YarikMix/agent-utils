@@ -611,7 +611,33 @@ export class LspClient {
    * @param method - LSP method name.
    * @param params - JSON-RPC request parameters.
    */
-  private sendRequest(method: string, params: unknown, options: RequestOptions = {}): Promise<unknown> {
+  private async sendRequest(method: string, params: unknown, options: RequestOptions = {}): Promise<unknown> {
+    if (method === 'initialize' || method === 'shutdown') return this.sendRawRequest(method, params, options)
+    const timeoutMs = options.timeoutMs ?? this.requestTimeoutMs
+    const deadline = performance.now() + timeoutMs
+    const remainingOptions = (): RequestOptions => {
+      if (options.signal?.aborted) throw new Error(`Request "${method}" aborted`)
+      const remaining = deadline - performance.now()
+      if (remaining <= 0) throw new Error(`Request "${method}" timed out after ${timeoutMs}ms`)
+      return { ...options, timeoutMs: remaining }
+    }
+    const snapshot = this.documentSession.reconciliationSnapshot()
+    const result = await this.sendRawRequest(method, params, remainingOptions())
+    await this.documentSession.settleReconciliation(snapshot)
+    remainingOptions()
+    if (!snapshot.pending) return result
+    // TS7 can coalesce Created+Changed without refreshing a cached source. The
+    // requested read above is the barrier; preserve both original notifications,
+    // replay only their permitted Changed, and repeat this pure read at most once.
+    this.documentSession.replayReconciliation(snapshot)
+    const repeated = await this.sendRawRequest(method, params, remainingOptions())
+    await this.documentSession.settleReconciliation(snapshot)
+    remainingOptions()
+    this.documentSession.completeReconciliation(snapshot)
+    return repeated
+  }
+
+  private sendRawRequest(method: string, params: unknown, options: RequestOptions = {}): Promise<unknown> {
     if (!this.alive || (this.closing && method !== "shutdown")) return Promise.reject(new Error("LSP client is closed"))
     if (options.signal?.aborted) return Promise.reject(new Error(`Request "${method}" aborted`))
     if (method !== "initialize" && method !== "shutdown") {

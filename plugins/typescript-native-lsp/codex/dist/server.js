@@ -34634,6 +34634,9 @@ var DocumentSession = class {
   syncKind = 1;
   revision = 0;
   knownDependencies = /* @__PURE__ */ new Set();
+  watcherKnownDependencies = /* @__PURE__ */ new Set();
+  reconciliationVersion = 0;
+  reconciliationPending = /* @__PURE__ */ new Map();
   get generation() {
     return this.revision;
   }
@@ -34648,11 +34651,15 @@ var DocumentSession = class {
     return [...this.documents].map(([uri, { content, physicalPath }]) => ({ uri, content, physicalPath }));
   }
   /** Native-returned file identities, without opening files or widening watcher scope. */
-  noteDependencies(files) {
+  noteDependencies(files, seedWatchers = true) {
     const added = files.filter((file2) => !this.knownDependencies.has(file2));
     for (const file2 of added) {
       pathToUri(file2);
       this.knownDependencies.add(file2);
+    }
+    if (seedWatchers) for (const file2 of files) {
+      if (this.watcherKnownDependencies.has(file2)) continue;
+      this.watcherKnownDependencies.add(file2);
       for (const watcher of this.registeredWatchers) watcher.noteFile(file2);
     }
     if ([...this.events.values()].some((event) => added.some(
@@ -34672,7 +34679,43 @@ var DocumentSession = class {
         if (entry.isFile() && (sources.test(entry.name) || configs.test(entry.name))) known.add(join5(parent, entry.name));
       }
     }
-    this.noteDependencies([...known]);
+    this.noteDependencies(files);
+    this.noteDependencies([...known], false);
+  }
+  reconciliationSnapshot() {
+    return { generation: this.revision, version: this.reconciliationVersion, pending: this.reconciliationPending.size > 0 };
+  }
+  assertReconciliationSnapshot(snapshot) {
+    if (snapshot.version !== this.reconciliationVersion || snapshot.pending && snapshot.generation !== this.revision) {
+      throw new Error("Files changed during native request; retry the operation");
+    }
+  }
+  /** Settle callbacks without draining events that metadata may still reclassify. */
+  async settleReconciliation(snapshot) {
+    await this.settleFileEvents();
+    this.assertReconciliationSnapshot(snapshot);
+    if (this.ambiguousChanges([...this.events.values()]).length) {
+      throw new Error("Files changed during native request; retry the operation");
+    }
+  }
+  ambiguousChanges(changes) {
+    const changed = new Set(changes.filter((event) => event.type === 2).map((event) => event.uri));
+    return changes.filter((event) => event.type === 1 && changed.has(event.uri) && this.isSemanticEvent(uriToPath(event.uri), 1));
+  }
+  /** Replay only Changed already delivered in an ambiguous mask-permitted pair.
+   * Parallel reads share the replay; its accounting survives a failed repeat. */
+  replayReconciliation(snapshot) {
+    this.assertReconciliationSnapshot(snapshot);
+    const changes = [];
+    for (const [uri, pending] of this.reconciliationPending) if (!pending.replayed) {
+      pending.replayed = true;
+      changes.push({ uri, type: 2 });
+    }
+    if (changes.length) this.notify("workspace/didChangeWatchedFiles", { changes });
+  }
+  completeReconciliation(snapshot) {
+    this.assertReconciliationSnapshot(snapshot);
+    this.reconciliationPending.clear();
   }
   setSyncKind(value) {
     const parsed = external_exports3.union([external_exports3.number().int().min(0).max(2), external_exports3.object({ openClose: external_exports3.boolean().optional(), change: external_exports3.number().int().min(0).max(2).optional() })]).safeParse(value);
@@ -34759,7 +34802,7 @@ var DocumentSession = class {
           const watcher = createRegisteredWatcher(spec, (file2, type) => this.enqueue(file2, type), (error48) => {
             this.watcherError = error48;
           });
-          for (const file2 of this.knownDependencies) if (existsSync2(file2)) watcher.noteFile(file2);
+          for (const file2 of this.watcherKnownDependencies) if (existsSync2(file2)) watcher.noteFile(file2);
           for (const uri of this.documents.keys()) {
             const file2 = uriToPath(uri);
             if (existsSync2(file2)) watcher.noteFile(file2);
@@ -34798,14 +34841,25 @@ var DocumentSession = class {
     await Promise.all([...this.readiness]);
     if (this.watcherError) throw this.watcherError;
   }
-  async flushFileEvents() {
+  async settleFileEvents() {
     if (this.closed) throw new Error("Document session is closed");
     await this.waitForWatchers();
     await Promise.all([...this.registeredWatchers].map((watcher) => watcher.flush()));
     if (this.watcherError) throw this.watcherError;
+  }
+  async flushFileEvents() {
+    await this.settleFileEvents();
     if (this.events.size) {
       const changes = [...this.events.values()];
       this.events.clear();
+      const ambiguous = new Set(this.ambiguousChanges(changes).map((change) => change.uri));
+      for (const change of changes) {
+        if (change.type === 3) this.reconciliationPending.delete(change.uri);
+        if (change.type === 1 && ambiguous.has(change.uri)) {
+          this.reconciliationVersion++;
+          this.reconciliationPending.set(change.uri, { replayed: false });
+        }
+      }
       this.notify("workspace/didChangeWatchedFiles", { changes });
     }
   }
@@ -34866,6 +34920,8 @@ var DocumentSession = class {
       this.documents.clear();
       this.events.clear();
       this.knownDependencies.clear();
+      this.watcherKnownDependencies.clear();
+      this.reconciliationPending.clear();
       for (const registration of this.registrations.values()) registration.watchers = [];
     });
     return this.closing;
@@ -35360,7 +35416,29 @@ var LspClient = class _LspClient {
    * @param method - LSP method name.
    * @param params - JSON-RPC request parameters.
    */
-  sendRequest(method, params, options = {}) {
+  async sendRequest(method, params, options = {}) {
+    if (method === "initialize" || method === "shutdown") return this.sendRawRequest(method, params, options);
+    const timeoutMs = options.timeoutMs ?? this.requestTimeoutMs;
+    const deadline = performance.now() + timeoutMs;
+    const remainingOptions = () => {
+      if (options.signal?.aborted) throw new Error(`Request "${method}" aborted`);
+      const remaining = deadline - performance.now();
+      if (remaining <= 0) throw new Error(`Request "${method}" timed out after ${timeoutMs}ms`);
+      return { ...options, timeoutMs: remaining };
+    };
+    const snapshot = this.documentSession.reconciliationSnapshot();
+    const result = await this.sendRawRequest(method, params, remainingOptions());
+    await this.documentSession.settleReconciliation(snapshot);
+    remainingOptions();
+    if (!snapshot.pending) return result;
+    this.documentSession.replayReconciliation(snapshot);
+    const repeated = await this.sendRawRequest(method, params, remainingOptions());
+    await this.documentSession.settleReconciliation(snapshot);
+    remainingOptions();
+    this.documentSession.completeReconciliation(snapshot);
+    return repeated;
+  }
+  sendRawRequest(method, params, options = {}) {
     if (!this.alive || this.closing && method !== "shutdown") return Promise.reject(new Error("LSP client is closed"));
     if (options.signal?.aborted) return Promise.reject(new Error(`Request "${method}" aborted`));
     if (method !== "initialize" && method !== "shutdown") {

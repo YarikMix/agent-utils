@@ -5,6 +5,7 @@ let buffer = Buffer.alloc(0)
 let hoverId
 let definitionId
 let diagnosticIndex = 0
+const responseIndexes = new Map()
 const frame = message => {
   const body = JSON.stringify(message)
   return Buffer.from(`Content-Length: ${Buffer.byteLength(body)}\r\n${options.contentType ? "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n" : ""}\r\n${body}`)
@@ -19,6 +20,17 @@ function send(message) {
 function handle(message) {
   if (options.log) appendFileSync(options.log, JSON.stringify(message) + '\n')
   if (!message.method) return
+  const sequence = options.responseSequences?.[message.method]
+  if (message.id !== undefined && sequence) {
+    const index = responseIndexes.get(message.method) ?? 0
+    responseIndexes.set(message.method, index + 1)
+    const step = sequence[Math.min(index, sequence.length - 1)]
+    if (step.hang) return
+    const respond = () => send({ jsonrpc: '2.0', id: message.id, ...(step.error ? { error: { code: -32001, message: step.error } } : { result: step.result }) })
+    if (step.delay) setTimeout(respond, step.delay)
+    else respond()
+    return
+  }
   if (message.id !== undefined && Object.hasOwn(options.results ?? {}, message.method)) {
     send({ jsonrpc: '2.0', id: message.id, result: options.results[message.method] }); return
   }

@@ -6,6 +6,7 @@ import { EventEmitter } from 'node:events'
 import { syncBuiltinESMExports } from 'node:module'
 import test from 'node:test'
 import { LspClient } from '../src/lsp-client.ts'
+import { DocumentSession } from '../src/documents.ts'
 import { TypeScriptPool } from '../src/pool.ts'
 import { HierarchyStore } from '../src/hierarchy.ts'
 import { pathToUri } from '../src/files.ts'
@@ -301,7 +302,7 @@ test('omitted sibling event during native metadata cannot mint a hierarchy ID', 
 })
 
 
-test('dependency directory baseline seeds late watchers but keeps new-file create masks', { skip: !['darwin', 'win32'].includes(process.platform) }, async t => {
+test('dependency directory baseline preserves late watcher ambiguity and new-file create masks', { skip: !['darwin', 'win32'].includes(process.platform) }, async t => {
   const p = await temporaryProject({ 'project/main.ts': 'x', 'shared/a.ts': 'x', 'shared/barrel.ts': 'x' })
   const file = join(p.root, 'project/main.ts'); const log = join(p.root, 'wire.jsonl')
   let callback!: (event: string, file: string) => void
@@ -316,7 +317,7 @@ test('dependency directory baseline seeds late watchers but keeps new-file creat
     callback('rename', 'shared/new.ts')
     await client.hover(file, 0, 0)
     const changes = (await recordedMessages(log)).filter(m => m.method === 'workspace/didChangeWatchedFiles').flatMap(m => m.params.changes)
-    assert.deepEqual(changes.filter(change => change.uri === pathToUri(join(p.root, 'shared/barrel.ts'))).map(change => change.type), [2])
+    assert.deepEqual(changes.filter(change => change.uri === pathToUri(join(p.root, 'shared/barrel.ts'))).map(change => change.type), [1, 2, 2])
     assert.deepEqual(changes.filter(change => change.uri === pathToUri(join(p.root, 'shared/new.ts'))).map(change => change.type), [1, 2])
   } finally { await client.shutdown(); await fake.dispose(); t.mock.restoreAll(); syncBuiltinESMExports(); await p.dispose() }
 })
@@ -330,3 +331,25 @@ test('unavailable native dependency parent fails metadata explicitly before issu
   try { await assert.rejects(client.prepareCallHierarchy(file, 0, 0), /ENOTDIR/) }
   finally { await client.shutdown(); await fake.dispose(); await project.dispose() }
 })
+
+
+for (const kind of [1, 7]) for (const event of ['rename', 'change']) {
+  test(`new omitted sibling before baseline retains Create with delayed ${event} callback kind=${kind}`, { skip: !['darwin', 'win32'].includes(process.platform) }, async t => {
+    const p = await temporaryProject({ 'project/main.ts': 'x', 'shared/a.ts': 'x' })
+    let callback!: (event: string, file: string) => void
+    t.mock.method(fs, 'watch', ((...args: any[]) => { callback = args.at(-1); const handle = new EventEmitter() as EventEmitter & { close(): void }; handle.close = () => {}; return handle }) as typeof fs.watch); syncBuiltinESMExports()
+    const notifications: Array<{ method: string; params: any }> = []
+    const session = new DocumentSession(join(p.root, 'project'), (method, params) => notifications.push({ method, params }))
+    try {
+      await session.register({ registrations: [{ id: 'during-metadata', method: 'workspace/didChangeWatchedFiles', registerOptions: { watchers: [{ globPattern: join(p.root, '**/*'), kind }] } }] })
+      const created = join(p.root, 'shared/new.ts')
+      await writeFile(created, '// created while metadata was in flight')
+      await session.noteDependencyDirectories([join(p.root, 'shared/a.ts')])
+      callback(event, 'shared/new.ts')
+      await session.flushFileEvents()
+      const changes = notifications.filter(n => n.method === 'workspace/didChangeWatchedFiles').flatMap(n => n.params.changes).filter(change => change.uri === pathToUri(created))
+      assert.deepEqual(changes.map(change => change.type), kind === 1 ? [1] : [1, 2])
+      assert.ok(session.generation > 0)
+    } finally { await session.close(); t.mock.restoreAll(); syncBuiltinESMExports(); await p.dispose() }
+  })
+}

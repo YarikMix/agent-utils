@@ -394,7 +394,7 @@ test('omitted external re-export barrel refreshes diagnostics and hierarchy with
     assert.equal(finalWire.filter(e => e.direction === 'client' && e.message.method === 'textDocument/didOpen').length, 1)
     const barrelChanges = finalWire.filter(e => e.direction === 'client' && e.message.method === 'workspace/didChangeWatchedFiles').flatMap(e => e.message.params.changes).filter(event => event.uri === pathToUri(barrel))
     assert.ok(barrelChanges.length > 0)
-    assert.ok(barrelChanges.every(event => event.type === 2), 'existing barrel must be delivered as Changed without false Created')
+    assert.deepEqual(barrelChanges.map(event => event.type), process.platform === 'linux' ? [2] : [1, 2, 2], 'ambiguous first event retains Created+Changed and one replayed Changed; Chokidar already knows existing files')
   } finally {
     await s.close()
     await cp(outside.root, join(artifactRoot, 'omitted-barrel-external-fixture'), { recursive: true })

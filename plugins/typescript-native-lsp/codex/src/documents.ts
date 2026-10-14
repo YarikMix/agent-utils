@@ -9,6 +9,7 @@ import { compileWatchPattern, containedBy, createRegisteredWatcher, type Registe
 interface DocumentState { version: number; content: string; physicalPath: string }
 interface FileEvent { uri: string; type: number }
 interface Registration { method: string; watchers: RegisteredWatcher[]; specs: WatchPattern[] }
+interface ReconciliationSnapshot { generation: number; version: number; pending: boolean }
 const registrationSchema = z.object({ registrations: z.array(z.object({ id: z.string().min(1), method: z.string(), registerOptions: z.unknown().optional() })) })
 const watcherSchema = z.object({ globPattern: z.union([z.string().min(1), z.object({ baseUri: z.union([z.string(), z.object({ uri: z.string(), name: z.string().optional() })]), pattern: z.string().min(1) })]), kind: z.number().int().min(1).max(7).optional() })
 /** One leased document snapshot and queued filesystem notifications per project. */
@@ -26,6 +27,9 @@ export class DocumentSession {
   private syncKind = 1
   private revision = 0
   private knownDependencies = new Set<string>()
+  private watcherKnownDependencies = new Set<string>()
+  private reconciliationVersion = 0
+  private reconciliationPending = new Map<string, { replayed: boolean }>()
 
   constructor(private root: string, private notify: (method: string, params: unknown) => void) {
     pathToUri(root)
@@ -47,11 +51,15 @@ export class DocumentSession {
   }
 
   /** Native-returned file identities, without opening files or widening watcher scope. */
-  noteDependencies(files: readonly string[]): void {
+  noteDependencies(files: readonly string[], seedWatchers = true): void {
     const added = files.filter(file => !this.knownDependencies.has(file))
     for (const file of added) {
       pathToUri(file)
       this.knownDependencies.add(file)
+    }
+    if (seedWatchers) for (const file of files) {
+      if (this.watcherKnownDependencies.has(file)) continue
+      this.watcherKnownDependencies.add(file)
       for (const watcher of this.registeredWatchers) watcher.noteFile(file)
     }
     // A watcher event may have arrived while native metadata was in flight, before
@@ -74,7 +82,51 @@ export class DocumentSession {
         if (entry.isFile() && (sources.test(entry.name) || configs.test(entry.name))) known.add(join(parent, entry.name))
       }
     }
-    this.noteDependencies([...known])
+    this.noteDependencies(files)
+    // A directory snapshot proves relevance, not existence before tracking began:
+    // a delayed callback may still be a genuine creation, including with kind=1.
+    this.noteDependencies([...known], false)
+  }
+
+  reconciliationSnapshot(): ReconciliationSnapshot {
+    return { generation: this.revision, version: this.reconciliationVersion, pending: this.reconciliationPending.size > 0 }
+  }
+
+  assertReconciliationSnapshot(snapshot: ReconciliationSnapshot): void {
+    if (snapshot.version !== this.reconciliationVersion || (snapshot.pending && snapshot.generation !== this.revision)) {
+      throw new Error('Files changed during native request; retry the operation')
+    }
+  }
+
+  /** Settle callbacks without draining events that metadata may still reclassify. */
+  async settleReconciliation(snapshot: ReconciliationSnapshot): Promise<void> {
+    await this.settleFileEvents()
+    this.assertReconciliationSnapshot(snapshot)
+    if (this.ambiguousChanges([...this.events.values()]).length) {
+      throw new Error('Files changed during native request; retry the operation')
+    }
+  }
+
+  private ambiguousChanges(changes: readonly FileEvent[]): FileEvent[] {
+    const changed = new Set(changes.filter(event => event.type === 2).map(event => event.uri))
+    return changes.filter(event => event.type === 1 && changed.has(event.uri) && this.isSemanticEvent(uriToPath(event.uri), 1))
+  }
+
+  /** Replay only Changed already delivered in an ambiguous mask-permitted pair.
+   * Parallel reads share the replay; its accounting survives a failed repeat. */
+  replayReconciliation(snapshot: ReconciliationSnapshot): void {
+    this.assertReconciliationSnapshot(snapshot)
+    const changes: FileEvent[] = []
+    for (const [uri, pending] of this.reconciliationPending) if (!pending.replayed) {
+      pending.replayed = true
+      changes.push({ uri, type: 2 })
+    }
+    if (changes.length) this.notify('workspace/didChangeWatchedFiles', { changes })
+  }
+
+  completeReconciliation(snapshot: ReconciliationSnapshot): void {
+    this.assertReconciliationSnapshot(snapshot)
+    this.reconciliationPending.clear()
   }
 
   setSyncKind(value: unknown): void {
@@ -160,7 +212,7 @@ export class DocumentSession {
         for (const spec of entry.specs) {
           const watcher = createRegisteredWatcher(spec, (file, type) => this.enqueue(file, type), error => { this.watcherError = error })
           // Native may register an ancestor after documents/metadata were loaded.
-          for (const file of this.knownDependencies) if (existsSync(file)) watcher.noteFile(file)
+          for (const file of this.watcherKnownDependencies) if (existsSync(file)) watcher.noteFile(file)
           for (const uri of this.documents.keys()) { const file = uriToPath(uri); if (existsSync(file)) watcher.noteFile(file) }
           registration.watchers.push(watcher); this.registeredWatchers.add(watcher)
           this.readiness.add(watcher.ready)
@@ -198,14 +250,26 @@ export class DocumentSession {
     if (this.watcherError) throw this.watcherError
   }
 
-  async flushFileEvents(): Promise<void> {
+  private async settleFileEvents(): Promise<void> {
     if (this.closed) throw new Error('Document session is closed')
     await this.waitForWatchers()
     await Promise.all([...this.registeredWatchers].map(watcher => watcher.flush()))
     if (this.watcherError) throw this.watcherError
+  }
+
+  async flushFileEvents(): Promise<void> {
+    await this.settleFileEvents()
     if (this.events.size) {
       const changes = [...this.events.values()]
       this.events.clear()
+      const ambiguous = new Set(this.ambiguousChanges(changes).map(change => change.uri))
+      for (const change of changes) {
+        if (change.type === 3) this.reconciliationPending.delete(change.uri)
+        if (change.type === 1 && ambiguous.has(change.uri)) {
+          this.reconciliationVersion++
+          this.reconciliationPending.set(change.uri, { replayed: false })
+        }
+      }
       this.notify('workspace/didChangeWatchedFiles', { changes })
     }
   }
@@ -263,7 +327,7 @@ export class DocumentSession {
     this.closed = true
     for (const settle of this.settleReady.values()) settle()
     this.closing = Promise.all([...this.watchers, ...this.registeredWatchers].map(watcher => watcher.close())).then(() => {
-      this.watchers.clear(); this.registeredWatchers.clear(); this.documents.clear(); this.events.clear(); this.knownDependencies.clear()
+      this.watchers.clear(); this.registeredWatchers.clear(); this.documents.clear(); this.events.clear(); this.knownDependencies.clear(); this.watcherKnownDependencies.clear(); this.reconciliationPending.clear()
       // Native shutdown can unregister capabilities after local handles are closed.
       for (const registration of this.registrations.values()) registration.watchers = []
     })
