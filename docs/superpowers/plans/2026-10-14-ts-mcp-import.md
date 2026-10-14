@@ -53,7 +53,7 @@
 
 Все команды `npm` в задачах 1–8 выполняются из `P/`, с явным публичным registry; для локальных install-проб использовать разные пустые temporary user/global npm config, не выводить пользовательские настройки. `npm test -- test/name.test.ts` передаёт выбранные файлы в `node --import tsx --test`; полный `npm test` запускает import/protocol/unit tests без native suite и без fixture исходников. Для этого `scripts/test.mjs` выбирает `test/*.test.ts` (кроме native.test.ts) и import.test.mjs либо использует переданные argv, затем spawn Node с shell=false. `npm run test:live` запускает только `test/native.test.ts`; `npm run test:codex -- --marketplace <root-or-url> [--ref <ref>]` — отдельную установленную копию. Не добавлять `pretest`, который незаметно перезапишет dist до его проверки. Обновлять `UPSTREAM.md`/notice при изменениях импорта и библиотек; окончательно пересобрать dist в задаче 8.
 
-### Задача 1: Самостоятельный импорт с проверяемой сборкой
+### Task 1: Самостоятельный импорт с проверяемой сборкой
 
 **Files:** Create `P/src/{index,lsp-client,pool,resolve-binary}.ts`, `P/test/{sample,smoke,support}.ts`, `P/test/import.test.mjs`, `P/scripts/test.mjs`, package/build/license файлы из карты. Из upstream перенести README и обе tsconfig как исходный материал, свести сборку к `P/tsconfig.json`, все преобразования перечислить в `UPSTREAM.md`.
 
@@ -75,7 +75,7 @@ assert.match(hoverText, /number/); // fixture из upstream, известная 
 - [ ] **4. GREEN:** `npm ci`, `npm run typecheck`, `npm run build`, `npm test -- test/import.test.mjs`, `npm run smoke`, `npm run verify-build`. В smoke/import явно передать dev-native `TSC_PATH`. Ожидается 6 tools, непустой hover и побайтное совпадение одного server.js; no `workspace:*`/внутренних registry в собственных package/lock. Проверить запуск bundle из temp-копии без node_modules, с явным native TSC_PATH; до исправления EOF завершать тестовый child через SIGTERM в finally.
 - [ ] **5. Коммит:** `git add` только созданные файлы задачи в `P/`; `git commit -m "feat: vendor pinned ts-mcp as standalone Codex package"`. Обнаруженные URI/delete/EOF регрессии пока не объявлять исправленными.
 
-### Задача 2: Глобальный native TS7 и lazy запуск
+### Task 2: Глобальный native TS7 и lazy запуск
 
 **Files:** Modify `P/src/resolve-binary.ts`, `P/src/pool.ts`, `P/src/index.ts`, `P/test/support.ts`; Create `P/test/resolve-binary.test.ts`, `P/test/startup.test.ts`.
 
@@ -96,7 +96,7 @@ assert.equal(resolvedPath, expectedNativePath); assert.equal(versionProbe.shell,
 - [ ] **4. GREEN:** выбранные тесты + `npm run typecheck`; реальная проба глобального `tsc` и explicit native TSC_PATH возвращают одинаковый binary. MCP без компилятора отвечает initialize/list, первый file tool выдаёт понятную ошибку. Постоянные настройки пользователя не менять.
 - [ ] **5. Коммит:** собственные files задачи и provenance; `git commit -m "fix: resolve global native TypeScript lazily"`.
 
-### Задача 3: Lifetime LSP, отмена, пул и EOF
+### Task 3: Lifetime LSP, отмена, пул и EOF
 
 **Files:** Modify `P/src/{lsp-client,pool,index}.ts`; Create `P/test/{transport,pool,shutdown}.test.ts`, `P/test/fixtures/fake-lsp.mjs`; Extend `P/test/support.ts`.
 
@@ -120,7 +120,7 @@ assert.ok(shutdownDurationMs <= 2250); // 2000 ms deadline + 250 ms допуск
 - [ ] **4. GREEN:** выбранные тесты и typecheck. Реальный stdin EOF через SDK transport отдельно проверяется в задаче 7; никаких killall/pkill по имени.
 - [ ] **5. Коммит:** файлы задачи и provenance; `git commit -m "fix: bound LSP lifecycle and serialize project operations"`.
 
-### Задача 4: URI, синхронизация документов и честные ответы
+### Task 4: URI, синхронизация документов и честные ответы
 
 **Files:** Create `P/src/{files,documents,protocol}.ts`, `P/test/{files,documents,protocol}.test.ts`; Modify `P/src/{lsp-client,pool,index}.ts`, package/lock/notices.
 
@@ -152,7 +152,7 @@ assert.deepEqual(changedVersions, [2, 3]); assert.ok(eventIndex < queryIndex);
 - [ ] **5. GREEN:** выбранные тесты, typecheck и реальная короткая проба удаления открытого import: diagnostics содержит TS2307, как независимый TS7. Без sleep на каждой операции; bounded polling изменения неоткрытой зависимости — задача 7.
 - [ ] **6. Коммит:** новые/изменённые файлы задачи и provenance; `git commit -m "fix: synchronize LSP documents and normalize protocol data"`.
 
-### Задача 5: Шесть новых инструментов и защищённая call hierarchy
+### Task 5: Шесть новых инструментов и защищённая call hierarchy
 
 **Files:** Create `P/src/hierarchy.ts`, `P/test/{navigation,hierarchy,tools}.test.ts`; Modify `P/src/{index,lsp-client,pool,protocol}.ts`, `P/test/{import,startup}.test.ts`.
 
@@ -177,7 +177,7 @@ await assert.rejects(changedSession.outgoingCalls(file, prepared[0].item_id), /i
 - [ ] **4. GREEN:** новые тесты + предыдущие import/startup/protocol, typecheck. Реальные positions/ожидаемые results по всем инструментам проверяются в задаче 7; fake data не выдавать за подтверждение TypeScript.
 - [ ] **5. Коммит:** файлы задачи и provenance; `git commit -m "feat: add TypeScript navigation and opaque call hierarchy tools"`.
 
-### Задача 6: Полная валидация и безопасная запись rename
+### Task 6: Полная валидация и безопасная запись rename
 
 **Files:** Create `P/src/edits.ts`, `P/test/edits.test.ts`; Modify `P/src/{index,lsp-client,pool,protocol,files}.ts`, `P/test/tools.test.ts`.
 
@@ -199,7 +199,7 @@ assert.equal(successReported, false); assert.equal(stagedFiles.length, 0);
 - [ ] **4. GREEN:** выбранный тест, tools annotations, typecheck; реальное переименование в специальном пути и независимый `tsc --noEmit` — задача 7. Не обещать межфайловую атомарность файловой системы.
 - [ ] **5. Коммит:** файлы задачи и provenance; `git commit -m "fix: validate complete rename edits before writing files"`.
 
-### Задача 7: Реальная приёмка TS7 и Windows/Linux CI
+### Task 7: Реальная приёмка TS7 и Windows/Linux CI
 
 **Files:** Create `P/test/native.test.ts`, `P/test/fixtures/project/{tsconfig.json,lib.ts,barrel.ts,main.ts,classes.ts,calls.ts,hints.ts}`, `P/scripts/test-native.mjs`, `.github/workflows/typescript-native-lsp.yml`; Extend `P/test/support.ts`, package scripts и smoke assertions. При реальном расхождении исправлять только владеющий поведением модуль задач 2–6, сохраняя RED/GREEN доказательство.
 
@@ -229,7 +229,7 @@ assert.equal(unrelatedProcessAlive, true);
 - [ ] **5. GREEN:** полная suite/verify-build локально на macOS. После push ветки в задаче 9 дождаться фактических checks через `gh run watch <run-id> --exit-status` и проверить все четыре matrix cells. До push пометить CI pending; недоступный CI или отсутствующие настоящие hints — открытый критерий приёмки, а не успех.
 - [ ] **6. Коммит:** только fixture/tests/runner/workflow и выявленные собственные fixes; `git commit -m "test: verify native TypeScript tools and cross-platform lifecycle"`.
 
-### Задача 8: Пакет, скилл и локальная установка в Codex
+### Task 8: Пакет, скилл и локальная установка в Codex
 
 **Files:** Create `.agents/plugins/marketplace.json`, `P/{plugin.json,mcp.json}`, `P/skills/typescript-native-lsp/SKILL.md`, `P/test/package.test.ts`, `P/scripts/codex-check.mjs`; Modify `.claude-plugin/marketplace.json`, `README.md`, `plugins/typescript-native-lsp/README.md`, `P/README.md`, package scripts/notices/provenance/dist. В `plugins/selectel-ops/README.md` и `plugins/apple-notes-folder/README.md` заменить только адрес репозитория.
 
@@ -254,7 +254,7 @@ assert.equal(installedTools.length, 12); assert.equal(installedSkillName, 'types
 - [ ] **6. GREEN:** `npm run build`, `npm run verify-build`, `npm run typecheck`, обычные тесты/live suite; `npm run test:codex -- --marketplace /absolute/path/to/temp-marketplace-root`. Cache запускается из cwd пакета и работает с fixture project, все 12 tools/skill обнаружены, реальные вызовы успешны. Пересобрать dist и обновить notices включая transitive bundled libraries, проверить публичный lock и отсутствие чужих абсолютных путей.
 - [ ] **7. Коммит:** только файлы этой задачи; `git commit -m "feat: package TypeScript native MCP and skill for Codex"`.
 
-### Задача 9: Ревью, переименование GitHub и проверка Git-установки
+### Task 9: Ревью, переименование GitHub и проверка Git-установки
 
 **Files:** Create `docs/superpowers/reports/2026-10-14-ts-mcp-import-verification.md`; при замечаниях — только соответствующие собственные файлы. Изменение имени GitHub/origin — операция выпуска, не изменение других плагинов.
 
