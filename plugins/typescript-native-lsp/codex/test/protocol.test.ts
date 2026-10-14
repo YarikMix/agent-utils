@@ -12,7 +12,9 @@ const location = { uri: pathToUri(file), range }
 
 test('Location and LocationLink single/array/null normalize and malformed responses throw', () => {
   assert.equal(parseLocations([location, { targetUri: location.uri, targetRange: range, targetSelectionRange: { start: { line: 2, character: 3 }, end: { line: 2, character: 4 } } }]).length, 2)
-  assert.deepEqual(parseLocations(location), [{ file, line: 0, character: 0 }])
+  assert.deepEqual(parseLocations(location), [{ file, line: 0, character: 0, range }])
+  const selection = { start: { line: 2, character: 3 }, end: { line: 2, character: 4 } }
+  assert.deepEqual(parseLocations({ targetUri: location.uri, targetRange: range, targetSelectionRange: selection, originSelectionRange: range }), [{ file, line: 2, character: 3, range: selection, targetRange: range, targetSelectionRange: selection, originSelectionRange: range }])
   assert.deepEqual(parseLocations(null), [])
   assert.throws(() => parseLocations([{}]), /protocol|location/i)
 })

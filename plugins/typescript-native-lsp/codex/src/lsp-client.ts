@@ -1,5 +1,7 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process"
 import { z } from "zod"
+import { HierarchyStore, callHierarchyItemSchema, parseHierarchyItem, type HierarchyNode, type CallEdge } from "./hierarchy.ts"
+import { parseWorkspaceSymbol, workspaceSymbolSchema, rangeSchema, type WorkspaceSymbol } from "./protocol.ts"
 import { DocumentSession } from "./documents.ts"
 import { inlayRange, pathToUri, positionToOffset, uriToPath } from "./files.ts"
 import { configurationResults, diagnosticItemSchema, INLAY_HINT_KIND_LABELS, parseLocations, parseSymbols, parseWorkspaceEdit, positionSchema, requireCapability, SEVERITY_LABELS, textEditSchema, type LspCodeAction, type LspDiagnostic, type LspInlayHint, type LspLocation, type LspSymbol, type LspTextEdit } from "./protocol.ts"
@@ -55,6 +57,7 @@ export class LspClient {
   readonly projectRoot: string
   readonly documentSession: DocumentSession
   private capabilities: Record<string, unknown> = {}
+  private hierarchy = new HierarchyStore()
   private diagnosticCache = new Map<string, { resultId?: string; items: LspDiagnostic[] }>()
   private alive = true
   private closing = false
@@ -187,6 +190,66 @@ export class LspClient {
     }, options)
 
     return parseLocations(result)
+  }
+
+  async implementations(file: string, line: number, character: number, options?: RequestOptions): Promise<LspLocation[]> {
+    const content = await this.prepareDocument(file)
+    positionToOffset(content, { line, character })
+    return parseLocations(await this.sendRequest("textDocument/implementation", { textDocument: { uri: pathToUri(file) }, position: { line, character } }, options))
+  }
+
+  async workspaceSymbols(file: string, query: string, options?: RequestOptions): Promise<WorkspaceSymbol[]> {
+    await this.prepareDocument(file)
+    const result = await this.sendRequest("workspace/symbol", { query }, options)
+    if (result === null) return []
+    const parsed = z.array(workspaceSymbolSchema).safeParse(result)
+    if (!parsed.success) throw new Error("Invalid LSP protocol workspace symbol response")
+    const symbols: WorkspaceSymbol[] = []
+    for (const symbol of parsed.data) {
+      symbols.push(parseWorkspaceSymbol(symbol.location.range ? symbol : await this.sendRequest("workspaceSymbol/resolve", symbol, options)))
+    }
+    return symbols
+  }
+
+  async prepareCallHierarchy(file: string, line: number, character: number, options?: RequestOptions): Promise<HierarchyNode[]> {
+    const content = await this.prepareDocument(file)
+    positionToOffset(content, { line, character })
+    const generation = this.documentSession.generation
+    const result = await this.sendRequest("textDocument/prepareCallHierarchy", { textDocument: { uri: pathToUri(file) }, position: { line, character } }, options)
+    if (result === null) return []
+    if (!Array.isArray(result)) throw new Error("Invalid LSP protocol call hierarchy response")
+    const items = result.map(parseHierarchyItem)
+    await this.checkHierarchyGeneration(generation)
+    return items.map(item => this.hierarchy.put(item, generation))
+  }
+
+  incomingCalls(file: string, itemId: string, options?: RequestOptions): Promise<CallEdge[]> {
+    return this.callEdges(file, itemId, "incoming", options)
+  }
+
+  outgoingCalls(file: string, itemId: string, options?: RequestOptions): Promise<CallEdge[]> {
+    return this.callEdges(file, itemId, "outgoing", options)
+  }
+
+  private async checkHierarchyGeneration(generation: number): Promise<void> {
+    await this.documentSession.flushFileEvents()
+    if (this.documentSession.generation !== generation) throw new Error("Call hierarchy item is invalid after a document change; prepare the hierarchy again")
+  }
+
+  private async callEdges(file: string, itemId: string, direction: "incoming" | "outgoing", options?: RequestOptions): Promise<CallEdge[]> {
+    await this.prepareDocument(file)
+    const generation = this.documentSession.generation
+    const item = this.hierarchy.get(itemId, generation)
+    const result = await this.sendRequest(`callHierarchy/${direction}Calls`, { item }, options)
+    if (result === null) return []
+    const edgeSchema = direction === "incoming"
+      ? z.object({ from: callHierarchyItemSchema, fromRanges: z.array(rangeSchema) }).transform(({ from, fromRanges }) => ({ item: from, fromRanges }))
+      : z.object({ to: callHierarchyItemSchema, fromRanges: z.array(rangeSchema) }).transform(({ to, fromRanges }) => ({ item: to, fromRanges }))
+    const parsed = z.array(edgeSchema).safeParse(result)
+    if (!parsed.success) throw new Error("Invalid LSP protocol call hierarchy edges")
+    const edges = parsed.data.map(edge => ({ ...edge, item: parseHierarchyItem(edge.item) }))
+    await this.checkHierarchyGeneration(generation)
+    return edges.map(edge => ({ item: this.hierarchy.put(edge.item, generation), fromFile: uriToPath(direction === "incoming" ? edge.item.uri : item.uri), fromRanges: edge.fromRanges }))
   }
 
   /**
@@ -466,6 +529,7 @@ export class LspClient {
         this.rejectPending(new Error("LSP client shut down"))
         this.buffer = Buffer.alloc(0)
         this.diagnosticCache.clear()
+        this.hierarchy.clear()
       }
     })()
     return this.shutdownPromise
@@ -477,7 +541,7 @@ export class LspClient {
       rootUri: this.rootUri,
       capabilities: {
         general: { positionEncodings: ["utf-16"] },
-        workspace: { configuration: true, didChangeConfiguration: { dynamicRegistration: true }, didChangeWatchedFiles: { dynamicRegistration: true, relativePatternSupport: true } },
+        workspace: { symbol: { resolveSupport: { properties: ["location.range"] } }, configuration: true, didChangeConfiguration: { dynamicRegistration: true }, didChangeWatchedFiles: { dynamicRegistration: true, relativePatternSupport: true } },
         textDocument: { hover: { contentFormat: ["markdown", "plaintext"] }, documentSymbol: { hierarchicalDocumentSymbolSupport: true }, diagnostic: { dynamicRegistration: false } },
       },
     }, { signal })

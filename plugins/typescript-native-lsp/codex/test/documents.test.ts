@@ -212,3 +212,20 @@ test('server shutdown may unregister a known registration after local watchers a
     await session.unregister({ unregisterations: [{ id: 'shutdown', method: 'workspace/didChangeWatchedFiles' }] })
   } finally { await session.close(); await project.dispose() }
 })
+
+
+test('external concrete declaration edits and config edits raise semantic generation without opening dependencies', async () => {
+  const project = await temporaryProject({ 'source.ts': 'x' }); const outside = await temporaryProject({ 'dep.d.ts': 'declare const x: 1' })
+  const messages: any[] = []; const session = new DocumentSession(project.root, (method, params) => messages.push({ method, params }))
+  try {
+    await session.register({ registrations: [{ id: 'dependency', method: 'workspace/didChangeWatchedFiles', registerOptions: { watchers: [{ globPattern: join(outside.root, '*.d.ts') }] } }] })
+    await session.sync(join(project.root, 'source.ts')); const initial = session.generation
+    await writeFile(join(outside.root, 'dep.d.ts'), 'declare const x: 2')
+    await waitForChanges(session, messages, [[join(outside.root, 'dep.d.ts'), 2]])
+    assert.ok(session.generation > initial); assert.equal(session.getVersion(pathToUri(join(outside.root, 'dep.d.ts'))), undefined)
+    const changedDependency = session.generation
+    await writeFile(join(project.root, 'tsconfig.json'), '{"compilerOptions":{"strict":false}}')
+    await waitForChanges(session, messages, [[join(project.root, 'tsconfig.json'), 2]])
+    assert.ok(session.generation > changedDependency)
+  } finally { await session.close(); await Promise.all([project.dispose(), outside.dispose()]) }
+})

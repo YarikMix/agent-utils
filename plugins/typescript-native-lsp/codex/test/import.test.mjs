@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const expectedTools = ['diagnostics', 'hover', 'inlay_hints', 'outline', 'references', 'rename'];
+const expectedTools = ['hover', 'diagnostics', 'references', 'outline', 'rename', 'inlay_hints', 'definition', 'workspace_symbols', 'implementations', 'prepare_call_hierarchy', 'incoming_calls', 'outgoing_calls'].sort();
 
-test('pinned standalone import has metadata, six tools and real native hover', async () => {
+test('pinned standalone import has metadata, twelve tools and real native hover', async () => {
   const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
   const upstream = await readFile(join(root, 'UPSTREAM.md'), 'utf8');
   const license = await readFile(join(root, 'LICENSE'), 'utf8');
@@ -41,7 +41,7 @@ test('pinned standalone import has metadata, six tools and real native hover', a
       const session = await openMcp(entryPath, { ...process.env, TSC_PATH });
       try {
         const { tools } = await session.client.listTools();
-        assert.equal(tools.length, 6);
+        assert.equal(tools.length, 12);
         assert.deepEqual(tools.map(t => t.name).sort(), expectedTools);
         const hover = await session.client.callTool({ name: 'hover', arguments: {
           file: join(fixture.root, 'sample.ts'), line: 12, character: 4,

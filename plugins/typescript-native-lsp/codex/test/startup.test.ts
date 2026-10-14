@@ -22,7 +22,7 @@ test('built MCP initializes and lists tools without tsc, then gives actionable t
     const session = await openMcp(join(process.cwd(), 'dist/server.js'), { PATH: '', TSC_PATH: '' })
     try {
       const { tools } = await session.client.listTools()
-      assert.equal(tools.length, 6)
+      assert.equal(tools.length, 12)
       const response = await session.client.callTool({ name: 'outline', arguments: { file: join(fixture.root, 'source.ts') } })
       assert.equal(response.isError, true)
       assert.match(JSON.stringify(response.content), /PATH.*TSC_PATH/)

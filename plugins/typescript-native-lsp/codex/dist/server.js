@@ -32432,6 +32432,167 @@ function inlayRange(text, startLine, endLine) {
 // src/lsp-client.ts
 import { spawn } from "node:child_process";
 
+// src/hierarchy.ts
+import { randomUUID } from "node:crypto";
+
+// src/protocol.ts
+var positionSchema = external_exports3.object({ line: external_exports3.number().int().nonnegative(), character: external_exports3.number().int().nonnegative() });
+var rangeSchema = external_exports3.object({ start: positionSchema, end: positionSchema }).refine((r) => r.start.line < r.end.line || r.start.line === r.end.line && r.start.character <= r.end.character, "Invalid range");
+var locationSchema = external_exports3.object({ uri: external_exports3.string(), range: rangeSchema });
+var diagnosticItemSchema = external_exports3.object({ range: rangeSchema, severity: external_exports3.number().int().min(1).max(4).optional(), code: external_exports3.union([external_exports3.number(), external_exports3.string()]).optional(), source: external_exports3.string().optional(), message: external_exports3.string() });
+var textEditSchema = external_exports3.object({ range: rangeSchema, newText: external_exports3.string() });
+var SEVERITY_LABELS = ["", "error", "warning", "info", "hint"];
+var SYMBOL_KIND_LABELS = {
+  1: "file",
+  2: "module",
+  3: "namespace",
+  5: "class",
+  6: "method",
+  7: "property",
+  8: "field",
+  9: "constructor",
+  10: "enum",
+  11: "interface",
+  12: "function",
+  13: "variable",
+  14: "constant",
+  22: "enum member",
+  26: "type parameter"
+};
+var INLAY_HINT_KIND_LABELS = {
+  1: "type",
+  2: "parameter"
+};
+function parseLocations(value) {
+  if (value === null) return [];
+  return (Array.isArray(value) ? value : [value]).map((item) => {
+    const loc = locationSchema.safeParse(item);
+    if (loc.success) return { file: uriToPath(loc.data.uri), ...loc.data.range.start, range: loc.data.range };
+    const link = external_exports3.object({ targetUri: external_exports3.string(), targetRange: rangeSchema, targetSelectionRange: rangeSchema.optional(), originSelectionRange: rangeSchema.optional() }).safeParse(item);
+    if (!link.success) throw new Error("Invalid LSP protocol location response");
+    const range = link.data.targetSelectionRange ?? link.data.targetRange;
+    return { file: uriToPath(link.data.targetUri), ...range.start, range, targetRange: link.data.targetRange, ...link.data.targetSelectionRange ? { targetSelectionRange: link.data.targetSelectionRange } : {}, ...link.data.originSelectionRange ? { originSelectionRange: link.data.originSelectionRange } : {} };
+  });
+}
+function parseSymbols(value, file2) {
+  if (value === null) return [];
+  if (!Array.isArray(value)) throw new Error("Invalid LSP protocol symbol response");
+  const seen = /* @__PURE__ */ new WeakSet();
+  const parseNested = (item) => {
+    const parsed = external_exports3.object({ name: external_exports3.string(), kind: external_exports3.number().int(), range: rangeSchema, selectionRange: rangeSchema, children: external_exports3.array(external_exports3.unknown()).optional() }).safeParse(item);
+    if (!parsed.success || seen.has(item)) throw new Error("Invalid or cyclic LSP protocol document symbol");
+    seen.add(item);
+    return { name: parsed.data.name, kind: SYMBOL_KIND_LABELS[parsed.data.kind] ?? `kind(${parsed.data.kind})`, ...parsed.data.selectionRange.start, children: (parsed.data.children ?? []).map(parseNested) };
+  };
+  if (value.some((item) => item && typeof item === "object" && "selectionRange" in item)) return value.map(parseNested);
+  const entries = value.map((item) => {
+    const parsed = external_exports3.object({ name: external_exports3.string(), kind: external_exports3.number().int(), location: locationSchema, containerName: external_exports3.string().optional() }).safeParse(item);
+    if (!parsed.success) throw new Error("Invalid LSP protocol symbol information");
+    const data = parsed.data;
+    return { ...data, file: uriToPath(data.location.uri), symbol: { name: data.name, kind: SYMBOL_KIND_LABELS[data.kind] ?? `kind(${data.kind})`, ...data.location.range.start, children: [] } };
+  });
+  const roots = [];
+  const parents = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    const candidates = entries.filter((parent2) => parent2 !== entry && parent2.name === entry.containerName && parent2.file === entry.file);
+    const parent = candidates.length === 1 ? candidates[0] : void 0;
+    let ancestor = parent?.symbol;
+    const visited = /* @__PURE__ */ new Set([entry.symbol]);
+    while (ancestor && !visited.has(ancestor)) {
+      visited.add(ancestor);
+      ancestor = parents.get(ancestor);
+    }
+    if (entry.file === file2 && parent && !ancestor) {
+      parent.symbol.children.push(entry.symbol);
+      parents.set(entry.symbol, parent.symbol);
+    } else roots.push(entry.symbol);
+  }
+  return roots;
+}
+var CAPABILITIES = {
+  "textDocument/hover": "hoverProvider",
+  "textDocument/definition": "definitionProvider",
+  "textDocument/diagnostic": "diagnosticProvider",
+  "textDocument/codeAction": "codeActionProvider",
+  "textDocument/documentSymbol": "documentSymbolProvider",
+  "textDocument/rename": "renameProvider",
+  "textDocument/inlayHint": "inlayHintProvider",
+  "textDocument/references": "referencesProvider",
+  "workspace/symbol": "workspaceSymbolProvider",
+  "textDocument/implementation": "implementationProvider",
+  "textDocument/prepareCallHierarchy": "callHierarchyProvider",
+  "callHierarchy/incomingCalls": "callHierarchyProvider",
+  "callHierarchy/outgoingCalls": "callHierarchyProvider"
+};
+function requireCapability(method, capabilities) {
+  if (method === "workspaceSymbol/resolve") {
+    const provider = capabilities.workspaceSymbolProvider;
+    if (!provider || typeof provider !== "object" || !("resolveProvider" in provider) || provider.resolveProvider !== true) throw new Error("Missing LSP capability for workspaceSymbol/resolve");
+    return;
+  }
+  const key = CAPABILITIES[method];
+  const value = key && capabilities[key];
+  if (!key || !(value === true || value !== null && typeof value === "object" && !Array.isArray(value))) throw new Error(`Missing LSP capability for ${method}`);
+}
+function configurationResults(params) {
+  const parsed = external_exports3.object({ items: external_exports3.array(external_exports3.object({ section: external_exports3.string().optional(), scopeUri: external_exports3.string().optional() })) }).parse(params);
+  return parsed.items.map(({ section }) => {
+    if (section === "editor") return { tabSize: 2, insertSpaces: true };
+    if (!["js/ts", "typescript", "javascript"].includes(section ?? "")) return null;
+    return { inlayHints: { parameterNames: { enabled: "all" }, variableTypes: { enabled: true }, functionLikeReturnTypes: { enabled: true } }, tsserver: { automaticTypeAcquisition: { enabled: false } }, disableAutomaticTypeAcquisition: true };
+  });
+}
+function parseWorkspaceEdit(value) {
+  if (value === null) return [];
+  const parsed = external_exports3.object({ changes: external_exports3.record(external_exports3.string(), external_exports3.array(textEditSchema)).optional(), documentChanges: external_exports3.array(external_exports3.object({ textDocument: external_exports3.object({ uri: external_exports3.string(), version: external_exports3.number().nullable().optional() }), edits: external_exports3.array(textEditSchema) })).optional() }).safeParse(value);
+  if (!parsed.success) throw new Error("Invalid LSP protocol workspace edit");
+  const groups = [...Object.entries(parsed.data.changes ?? {}), ...(parsed.data.documentChanges ?? []).map((change) => [change.textDocument.uri, change.edits])];
+  return groups.flatMap(([uri, edits]) => edits.map((edit) => ({ file: uriToPath(uri), startLine: edit.range.start.line, startCharacter: edit.range.start.character, endLine: edit.range.end.line, endCharacter: edit.range.end.character, newText: edit.newText })));
+}
+var workspaceSymbolSchema = external_exports3.object({ name: external_exports3.string(), kind: external_exports3.number().int().min(1).max(26), location: external_exports3.object({ uri: external_exports3.string(), range: rangeSchema.optional() }), data: external_exports3.unknown().optional() }).passthrough();
+function parseWorkspaceSymbol(value) {
+  const parsed = workspaceSymbolSchema.safeParse(value);
+  if (!parsed.success || !parsed.data.location.range) throw new Error("Invalid LSP protocol workspace symbol range");
+  const { name, kind, location } = parsed.data;
+  return { name, kind: SYMBOL_KIND_LABELS[kind] ?? `kind(${kind})`, file: uriToPath(location.uri), ...location.range.start };
+}
+
+// src/hierarchy.ts
+var callHierarchyItemSchema = external_exports3.object({ name: external_exports3.string(), kind: external_exports3.number().int().min(1).max(26), uri: external_exports3.string(), range: rangeSchema, selectionRange: rangeSchema, detail: external_exports3.string().optional(), tags: external_exports3.array(external_exports3.number().int()).optional(), data: external_exports3.unknown().optional() }).passthrough();
+function parseHierarchyItem(value) {
+  const parsed = callHierarchyItemSchema.safeParse(value);
+  if (!parsed.success) throw new Error("Invalid LSP protocol call hierarchy item");
+  uriToPath(parsed.data.uri);
+  return parsed.data;
+}
+var HierarchyStore = class {
+  items = /* @__PURE__ */ new Map();
+  generation;
+  refresh(generation) {
+    if (this.generation !== generation) {
+      this.items.clear();
+      this.generation = generation;
+    }
+  }
+  put(item, generation) {
+    this.refresh(generation);
+    const original = structuredClone(parseHierarchyItem(item));
+    const item_id = randomUUID();
+    this.items.set(item_id, original);
+    return { item_id, name: original.name, kind: original.kind, file: uriToPath(original.uri), range: structuredClone(original.range), selectionRange: structuredClone(original.selectionRange), ...original.detail === void 0 ? {} : { detail: original.detail } };
+  }
+  get(itemId, generation) {
+    this.refresh(generation);
+    const item = this.items.get(itemId);
+    if (!item) throw new Error("Call hierarchy item ID is invalid or expired; prepare the hierarchy again");
+    return structuredClone(item);
+  }
+  clear() {
+    this.items.clear();
+    this.generation = void 0;
+  }
+};
+
 // src/documents.ts
 import { readFile } from "node:fs/promises";
 import { extname as extname2, relative as relative5, sep as sep3 } from "node:path";
@@ -34174,6 +34335,16 @@ function compileWatchPattern(root, raw) {
     watchRoot = parent;
   }
   if (existsSync(watchRoot) && !statSync(watchRoot).isDirectory()) watchRoot = dirname3(watchRoot);
+  const semanticRoot = scan.isGlob ? staticRoot : actualCase(absolute);
+  let ancestorWide = scan.isGlob && semanticRoot !== actualCase(root) && containedBy(actualCase(root), semanticRoot);
+  try {
+    const physicalScope = realpathSync(semanticRoot);
+    const physicalProject = realpathSync(actualCase(root));
+    ancestorWide = scan.isGlob && physicalScope !== physicalProject && containedBy(physicalProject, physicalScope);
+  } catch (error48) {
+    if (error48.code !== "ENOENT" && !permissionError(error48)) throw error48;
+  }
+  const semanticFileSignal = !ancestorWide || !/(?:^|\/)\*\*?(?:\/\*\*?)*$/.test(normalized);
   let nativeRecursive = false;
   if (caseInsensitive && staticRoot === watchRoot) {
     try {
@@ -34186,7 +34357,7 @@ function compileWatchPattern(root, raw) {
     }
   }
   const matches = (0, import_picomatch.default)(normalized, { dot: true, nocase: caseInsensitive });
-  return { root: watchRoot, nativeRecursive, kind: raw.kind ?? 7, matches: (file2) => matches(slash(file2)), ignored(file2, stats) {
+  return { root: watchRoot, semanticRoot, ancestorWide, semanticFileSignal, nativeRecursive, kind: raw.kind ?? 7, matches: (file2) => matches(slash(file2)), ignored(file2, stats) {
     if (stats && !stats.isFile() && !stats.isDirectory() && !stats.isSymbolicLink()) return true;
     return !containedBy(file2, staticRoot) && !containedBy(staticRoot, file2);
   } };
@@ -34317,6 +34488,7 @@ var DocumentSession = class {
   closing;
   syncKind = 1;
   revision = 0;
+  knownDependencies = /* @__PURE__ */ new Set();
   get generation() {
     return this.revision;
   }
@@ -34337,8 +34509,29 @@ var DocumentSession = class {
     const key = `${uri}:${type}`;
     if (!this.events.has(key)) {
       this.events.set(key, { uri, type });
-      this.revision++;
+      if (this.isSemanticEvent(file2, type)) this.revision++;
     }
+  }
+  /** Native notification scope may include entire ancestors; semantic scope does not. */
+  isSemanticEvent(file2, type) {
+    const opened = [...this.documents.keys()].map(uriToPath);
+    if (opened.some((path) => path === file2 || type === 3 && containedBy(path, file2))) return true;
+    const parts = relative5(this.root, file2).split(sep3);
+    const projectFile = containedBy(file2, this.root) && !parts.includes("node_modules") && !parts.includes(".git");
+    if (projectFile && (/\.(?:[cm]?[jt]sx?|json)$/.test(file2) || type === 3)) return true;
+    if (type === 3 && containedBy(this.root, file2)) return true;
+    if (type === 3 && [...this.knownDependencies].some((path) => containedBy(path, file2))) return true;
+    for (const { specs } of this.registrations.values()) {
+      for (const spec of specs) {
+        if (!(spec.kind & 1 << type - 1)) continue;
+        if (spec.semanticFileSignal && spec.matches(file2)) {
+          this.knownDependencies.add(file2);
+          return true;
+        }
+        if (type === 3 && !spec.ancestorWide && (containedBy(spec.semanticRoot, file2) || containedBy(file2, spec.semanticRoot))) return true;
+      }
+    }
+    return false;
   }
   watch(root, matches, kind, ignored, ignorePermissionErrors = false) {
     if (this.closed) throw new Error("Document session is closed");
@@ -34383,7 +34576,7 @@ var DocumentSession = class {
     const created = [];
     try {
       for (const entry of entries) {
-        const registration = { method: entry.method, watchers: [] };
+        const registration = { method: entry.method, watchers: [], specs: entry.specs };
         this.registrations.set(entry.id, registration);
         created.push(entry.id);
         for (const spec of entry.specs) {
@@ -34487,120 +34680,12 @@ var DocumentSession = class {
       this.registeredWatchers.clear();
       this.documents.clear();
       this.events.clear();
+      this.knownDependencies.clear();
       for (const registration of this.registrations.values()) registration.watchers = [];
     });
     return this.closing;
   }
 };
-
-// src/protocol.ts
-var positionSchema = external_exports3.object({ line: external_exports3.number().int().nonnegative(), character: external_exports3.number().int().nonnegative() });
-var rangeSchema = external_exports3.object({ start: positionSchema, end: positionSchema }).refine((r) => r.start.line < r.end.line || r.start.line === r.end.line && r.start.character <= r.end.character, "Invalid range");
-var locationSchema = external_exports3.object({ uri: external_exports3.string(), range: rangeSchema });
-var diagnosticItemSchema = external_exports3.object({ range: rangeSchema, severity: external_exports3.number().int().min(1).max(4).optional(), code: external_exports3.union([external_exports3.number(), external_exports3.string()]).optional(), source: external_exports3.string().optional(), message: external_exports3.string() });
-var textEditSchema = external_exports3.object({ range: rangeSchema, newText: external_exports3.string() });
-var SEVERITY_LABELS = ["", "error", "warning", "info", "hint"];
-var SYMBOL_KIND_LABELS = {
-  1: "file",
-  2: "module",
-  3: "namespace",
-  5: "class",
-  6: "method",
-  7: "property",
-  8: "field",
-  9: "constructor",
-  10: "enum",
-  11: "interface",
-  12: "function",
-  13: "variable",
-  14: "constant",
-  22: "enum member",
-  26: "type parameter"
-};
-var INLAY_HINT_KIND_LABELS = {
-  1: "type",
-  2: "parameter"
-};
-function parseLocations(value) {
-  if (value === null) return [];
-  return (Array.isArray(value) ? value : [value]).map((item) => {
-    const loc = locationSchema.safeParse(item);
-    if (loc.success) return { file: uriToPath(loc.data.uri), ...loc.data.range.start };
-    const link = external_exports3.object({ targetUri: external_exports3.string(), targetRange: rangeSchema, targetSelectionRange: rangeSchema.optional() }).safeParse(item);
-    if (!link.success) throw new Error("Invalid LSP protocol location response");
-    return { file: uriToPath(link.data.targetUri), ...(link.data.targetSelectionRange ?? link.data.targetRange).start };
-  });
-}
-function parseSymbols(value, file2) {
-  if (value === null) return [];
-  if (!Array.isArray(value)) throw new Error("Invalid LSP protocol symbol response");
-  const seen = /* @__PURE__ */ new WeakSet();
-  const parseNested = (item) => {
-    const parsed = external_exports3.object({ name: external_exports3.string(), kind: external_exports3.number().int(), range: rangeSchema, selectionRange: rangeSchema, children: external_exports3.array(external_exports3.unknown()).optional() }).safeParse(item);
-    if (!parsed.success || seen.has(item)) throw new Error("Invalid or cyclic LSP protocol document symbol");
-    seen.add(item);
-    return { name: parsed.data.name, kind: SYMBOL_KIND_LABELS[parsed.data.kind] ?? `kind(${parsed.data.kind})`, ...parsed.data.selectionRange.start, children: (parsed.data.children ?? []).map(parseNested) };
-  };
-  if (value.some((item) => item && typeof item === "object" && "selectionRange" in item)) return value.map(parseNested);
-  const entries = value.map((item) => {
-    const parsed = external_exports3.object({ name: external_exports3.string(), kind: external_exports3.number().int(), location: locationSchema, containerName: external_exports3.string().optional() }).safeParse(item);
-    if (!parsed.success) throw new Error("Invalid LSP protocol symbol information");
-    const data = parsed.data;
-    return { ...data, file: uriToPath(data.location.uri), symbol: { name: data.name, kind: SYMBOL_KIND_LABELS[data.kind] ?? `kind(${data.kind})`, ...data.location.range.start, children: [] } };
-  });
-  const roots = [];
-  const parents = /* @__PURE__ */ new Map();
-  for (const entry of entries) {
-    const candidates = entries.filter((parent2) => parent2 !== entry && parent2.name === entry.containerName && parent2.file === entry.file);
-    const parent = candidates.length === 1 ? candidates[0] : void 0;
-    let ancestor = parent?.symbol;
-    const visited = /* @__PURE__ */ new Set([entry.symbol]);
-    while (ancestor && !visited.has(ancestor)) {
-      visited.add(ancestor);
-      ancestor = parents.get(ancestor);
-    }
-    if (entry.file === file2 && parent && !ancestor) {
-      parent.symbol.children.push(entry.symbol);
-      parents.set(entry.symbol, parent.symbol);
-    } else roots.push(entry.symbol);
-  }
-  return roots;
-}
-var CAPABILITIES = {
-  "textDocument/hover": "hoverProvider",
-  "textDocument/definition": "definitionProvider",
-  "textDocument/diagnostic": "diagnosticProvider",
-  "textDocument/codeAction": "codeActionProvider",
-  "textDocument/documentSymbol": "documentSymbolProvider",
-  "textDocument/rename": "renameProvider",
-  "textDocument/inlayHint": "inlayHintProvider",
-  "textDocument/references": "referencesProvider",
-  "workspace/symbol": "workspaceSymbolProvider",
-  "textDocument/implementation": "implementationProvider",
-  "textDocument/prepareCallHierarchy": "callHierarchyProvider",
-  "callHierarchy/incomingCalls": "callHierarchyProvider",
-  "callHierarchy/outgoingCalls": "callHierarchyProvider"
-};
-function requireCapability(method, capabilities) {
-  const key = CAPABILITIES[method];
-  const value = key && capabilities[key];
-  if (!key || !(value === true || value !== null && typeof value === "object" && !Array.isArray(value))) throw new Error(`Missing LSP capability for ${method}`);
-}
-function configurationResults(params) {
-  const parsed = external_exports3.object({ items: external_exports3.array(external_exports3.object({ section: external_exports3.string().optional(), scopeUri: external_exports3.string().optional() })) }).parse(params);
-  return parsed.items.map(({ section }) => {
-    if (section === "editor") return { tabSize: 2, insertSpaces: true };
-    if (!["js/ts", "typescript", "javascript"].includes(section ?? "")) return null;
-    return { inlayHints: { parameterNames: { enabled: "all" }, variableTypes: { enabled: true }, functionLikeReturnTypes: { enabled: true } }, tsserver: { automaticTypeAcquisition: { enabled: false } }, disableAutomaticTypeAcquisition: true };
-  });
-}
-function parseWorkspaceEdit(value) {
-  if (value === null) return [];
-  const parsed = external_exports3.object({ changes: external_exports3.record(external_exports3.string(), external_exports3.array(textEditSchema)).optional(), documentChanges: external_exports3.array(external_exports3.object({ textDocument: external_exports3.object({ uri: external_exports3.string(), version: external_exports3.number().nullable().optional() }), edits: external_exports3.array(textEditSchema) })).optional() }).safeParse(value);
-  if (!parsed.success) throw new Error("Invalid LSP protocol workspace edit");
-  const groups = [...Object.entries(parsed.data.changes ?? {}), ...(parsed.data.documentChanges ?? []).map((change) => [change.textDocument.uri, change.edits])];
-  return groups.flatMap(([uri, edits]) => edits.map((edit) => ({ file: uriToPath(uri), startLine: edit.range.start.line, startCharacter: edit.range.start.character, endLine: edit.range.end.line, endCharacter: edit.range.end.character, newText: edit.newText })));
-}
 
 // src/lsp-client.ts
 var REQUEST_TIMEOUT_MS = 3e4;
@@ -34676,6 +34761,7 @@ var LspClient = class _LspClient {
   projectRoot;
   documentSession;
   capabilities = {};
+  hierarchy = new HierarchyStore();
   diagnosticCache = /* @__PURE__ */ new Map();
   alive = true;
   closing = false;
@@ -34739,6 +34825,57 @@ var LspClient = class _LspClient {
       position: { line, character }
     }, options);
     return parseLocations(result);
+  }
+  async implementations(file2, line, character, options) {
+    const content = await this.prepareDocument(file2);
+    positionToOffset(content, { line, character });
+    return parseLocations(await this.sendRequest("textDocument/implementation", { textDocument: { uri: pathToUri(file2) }, position: { line, character } }, options));
+  }
+  async workspaceSymbols(file2, query, options) {
+    await this.prepareDocument(file2);
+    const result = await this.sendRequest("workspace/symbol", { query }, options);
+    if (result === null) return [];
+    const parsed = external_exports3.array(workspaceSymbolSchema).safeParse(result);
+    if (!parsed.success) throw new Error("Invalid LSP protocol workspace symbol response");
+    const symbols = [];
+    for (const symbol2 of parsed.data) {
+      symbols.push(parseWorkspaceSymbol(symbol2.location.range ? symbol2 : await this.sendRequest("workspaceSymbol/resolve", symbol2, options)));
+    }
+    return symbols;
+  }
+  async prepareCallHierarchy(file2, line, character, options) {
+    const content = await this.prepareDocument(file2);
+    positionToOffset(content, { line, character });
+    const generation = this.documentSession.generation;
+    const result = await this.sendRequest("textDocument/prepareCallHierarchy", { textDocument: { uri: pathToUri(file2) }, position: { line, character } }, options);
+    if (result === null) return [];
+    if (!Array.isArray(result)) throw new Error("Invalid LSP protocol call hierarchy response");
+    const items = result.map(parseHierarchyItem);
+    await this.checkHierarchyGeneration(generation);
+    return items.map((item) => this.hierarchy.put(item, generation));
+  }
+  incomingCalls(file2, itemId, options) {
+    return this.callEdges(file2, itemId, "incoming", options);
+  }
+  outgoingCalls(file2, itemId, options) {
+    return this.callEdges(file2, itemId, "outgoing", options);
+  }
+  async checkHierarchyGeneration(generation) {
+    await this.documentSession.flushFileEvents();
+    if (this.documentSession.generation !== generation) throw new Error("Call hierarchy item is invalid after a document change; prepare the hierarchy again");
+  }
+  async callEdges(file2, itemId, direction, options) {
+    await this.prepareDocument(file2);
+    const generation = this.documentSession.generation;
+    const item = this.hierarchy.get(itemId, generation);
+    const result = await this.sendRequest(`callHierarchy/${direction}Calls`, { item }, options);
+    if (result === null) return [];
+    const edgeSchema = direction === "incoming" ? external_exports3.object({ from: callHierarchyItemSchema, fromRanges: external_exports3.array(rangeSchema) }).transform(({ from, fromRanges }) => ({ item: from, fromRanges })) : external_exports3.object({ to: callHierarchyItemSchema, fromRanges: external_exports3.array(rangeSchema) }).transform(({ to, fromRanges }) => ({ item: to, fromRanges }));
+    const parsed = external_exports3.array(edgeSchema).safeParse(result);
+    if (!parsed.success) throw new Error("Invalid LSP protocol call hierarchy edges");
+    const edges = parsed.data.map((edge) => ({ ...edge, item: parseHierarchyItem(edge.item) }));
+    await this.checkHierarchyGeneration(generation);
+    return edges.map((edge) => ({ item: this.hierarchy.put(edge.item, generation), fromFile: uriToPath(direction === "incoming" ? edge.item.uri : item.uri), fromRanges: edge.fromRanges }));
   }
   /**
    * Pull diagnostics for a file
@@ -34962,6 +35099,7 @@ var LspClient = class _LspClient {
         this.rejectPending(new Error("LSP client shut down"));
         this.buffer = Buffer.alloc(0);
         this.diagnosticCache.clear();
+        this.hierarchy.clear();
       }
     })();
     return this.shutdownPromise;
@@ -34972,7 +35110,7 @@ var LspClient = class _LspClient {
       rootUri: this.rootUri,
       capabilities: {
         general: { positionEncodings: ["utf-16"] },
-        workspace: { configuration: true, didChangeConfiguration: { dynamicRegistration: true }, didChangeWatchedFiles: { dynamicRegistration: true, relativePatternSupport: true } },
+        workspace: { symbol: { resolveSupport: { properties: ["location.range"] } }, configuration: true, didChangeConfiguration: { dynamicRegistration: true }, didChangeWatchedFiles: { dynamicRegistration: true, relativePatternSupport: true } },
         textDocument: { hover: { contentFormat: ["markdown", "plaintext"] }, documentSymbol: { hierarchicalDocumentSymbolSupport: true }, diagnostic: { dynamicRegistration: false } }
       }
     }, { signal });
@@ -35228,7 +35366,7 @@ var TypeScriptPool = class {
       }
     });
   }
-  hoverWithDefinition(filePath, line, character) {
+  hoverWithDefinition(filePath, line, character, options) {
     return this.withClient(filePath, (client) => client.withDocumentSnapshot(filePath, async () => {
       let failed = false;
       let firstError;
@@ -35240,31 +35378,49 @@ var TypeScriptPool = class {
         throw error48;
       };
       const [hover, definitions] = await Promise.allSettled([
-        client.hover(filePath, line, character).catch(captureFailure),
-        client.definition(filePath, line, character).catch(captureFailure)
+        client.hover(filePath, line, character, options).catch(captureFailure),
+        client.definition(filePath, line, character, options).catch(captureFailure)
       ]);
       if (hover.status === "rejected" || definitions.status === "rejected") throw firstError;
       return { hover: hover.value, definition: definitions.value[0] ?? null };
     }));
   }
-  diagnosticsWithFixes(filePath) {
+  diagnosticsWithFixes(filePath, options) {
     return this.withClient(filePath, (client) => client.withDocumentSnapshot(filePath, async (content) => {
-      const diagnostics = await client.diagnostics(filePath);
-      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: endPosition(content) }, diagnostics);
+      const diagnostics = await client.diagnostics(filePath, options);
+      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: endPosition(content) }, diagnostics, options);
       return { diagnostics, actions };
     }));
   }
-  references(filePath, line, character) {
-    return this.withClient(filePath, (client) => client.references(filePath, line, character));
+  references(filePath, line, character, options) {
+    return this.withClient(filePath, (client) => client.references(filePath, line, character, options));
   }
-  outline(filePath) {
-    return this.withClient(filePath, (client) => client.documentSymbols(filePath));
+  outline(filePath, options) {
+    return this.withClient(filePath, (client) => client.documentSymbols(filePath, options));
   }
-  rename(filePath, line, character, newName) {
-    return this.withClient(filePath, (client) => client.rename(filePath, line, character, newName));
+  rename(filePath, line, character, newName, options) {
+    return this.withClient(filePath, (client) => client.rename(filePath, line, character, newName, options));
   }
-  inlayHints(filePath, startLine, endLine) {
-    return this.withClient(filePath, (client) => client.inlayHints(filePath, startLine, endLine));
+  inlayHints(filePath, startLine, endLine, options) {
+    return this.withClient(filePath, (client) => client.inlayHints(filePath, startLine, endLine, options));
+  }
+  definition(file2, line, character, options) {
+    return this.withClient(file2, (client) => client.definition(file2, line, character, options));
+  }
+  workspaceSymbols(file2, query, options) {
+    return this.withClient(file2, (client) => client.workspaceSymbols(file2, query, options));
+  }
+  implementations(file2, line, character, options) {
+    return this.withClient(file2, (client) => client.implementations(file2, line, character, options));
+  }
+  prepareCallHierarchy(file2, line, character, options) {
+    return this.withClient(file2, (client) => client.prepareCallHierarchy(file2, line, character, options));
+  }
+  incomingCalls(file2, itemId, options) {
+    return this.withClient(file2, (client) => client.incomingCalls(file2, itemId, options));
+  }
+  outgoingCalls(file2, itemId, options) {
+    return this.withClient(file2, (client) => client.outgoingCalls(file2, itemId, options));
   }
   /** Keep idle/crashed sessions owned until their close promise settles. */
   retire(client) {
@@ -35496,12 +35652,13 @@ function message(error48) {
 // src/index.ts
 var pool = new TypeScriptPool((signal) => resolveTscBinary({ signal }));
 var server = new McpServer({
-  name: "ts-hover",
-  version: "0.3.0"
+  name: "typescript-native-lsp",
+  version: "1.1.0"
 });
 server.registerTool(
   "hover",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript Hover",
     description: "Get TypeScript type information at a position, plus where it's defined. Returns the same info you'd see hovering in an IDE \u2014 resolved types, inferred types, JSDoc \u2014 and the definition location.",
     inputSchema: {
@@ -35510,11 +35667,12 @@ server.registerTool(
       character: external_exports3.number().describe("Character position (0-indexed)")
     }
   },
-  async ({ file: file2, line, character }) => {
+  async ({ file: file2, line, character }, { signal }) => {
     const { hover, definition } = await pool.hoverWithDefinition(
       file2,
       line,
-      character
+      character,
+      { signal }
     );
     const parts = [];
     if (hover) parts.push(hover);
@@ -35536,14 +35694,15 @@ server.registerTool(
 server.registerTool(
   "diagnostics",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript Diagnostics",
     description: "Get TypeScript errors and warnings for a file, along with available quick fixes and their exact text edits. Use this after editing a file to check for type errors.",
     inputSchema: {
       file: external_exports3.string().describe("Absolute path to the TypeScript/JavaScript file")
     }
   },
-  async ({ file: file2 }) => {
-    const { diagnostics, actions } = await pool.diagnosticsWithFixes(file2);
+  async ({ file: file2 }, { signal }) => {
+    const { diagnostics, actions } = await pool.diagnosticsWithFixes(file2, { signal });
     if (diagnostics.length === 0 && actions.length === 0) {
       return {
         content: [{ type: "text", text: "No errors or warnings." }]
@@ -35585,6 +35744,7 @@ server.registerTool(
 server.registerTool(
   "references",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript References",
     description: "Find all references to a symbol across the project. Returns a list of file locations where the symbol is used.",
     inputSchema: {
@@ -35593,8 +35753,8 @@ server.registerTool(
       character: external_exports3.number().describe("Character position (0-indexed)")
     }
   },
-  async ({ file: file2, line, character }) => {
-    const locations = await pool.references(file2, line, character);
+  async ({ file: file2, line, character }, { signal }) => {
+    const locations = await pool.references(file2, line, character, { signal });
     if (locations.length === 0) {
       return {
         content: [{ type: "text", text: "No references found." }]
@@ -35613,14 +35773,15 @@ server.registerTool(
 server.registerTool(
   "outline",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript Outline",
     description: "Get a structured outline of all symbols in a file \u2014 functions, classes, interfaces, types, variables, etc. with their line numbers. Useful for understanding what's in a file without reading it.",
     inputSchema: {
       file: external_exports3.string().describe("Absolute path to the TypeScript/JavaScript file")
     }
   },
-  async ({ file: file2 }) => {
-    const symbols = await pool.outline(file2);
+  async ({ file: file2 }, { signal }) => {
+    const symbols = await pool.outline(file2, { signal });
     if (symbols.length === 0) {
       return {
         content: [{ type: "text", text: "No symbols found." }]
@@ -35636,6 +35797,7 @@ server.registerTool(
 server.registerTool(
   "rename",
   {
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
     title: "TypeScript Rename",
     description: "Rename a symbol across the project. Applies the edits directly to all affected files. Use this instead of manually find-and-replace to ensure type-safe renames.",
     inputSchema: {
@@ -35645,8 +35807,8 @@ server.registerTool(
       newName: external_exports3.string().describe("The new name for the symbol")
     }
   },
-  async ({ file: file2, line, character, newName }) => {
-    const edits = await pool.rename(file2, line, character, newName);
+  async ({ file: file2, line, character, newName }, { signal }) => {
+    const edits = await pool.rename(file2, line, character, newName, { signal });
     if (edits.length === 0) {
       return {
         content: [{ type: "text", text: "No rename edits." }]
@@ -35677,6 +35839,7 @@ ${parts.join("\n")}`
 server.registerTool(
   "inlay_hints",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript Inlay Hints",
     description: "Get inferred type annotations for a line range \u2014 variable types, parameter types, return types that TypeScript infers but aren't written in code. Useful for understanding what types TS has inferred.",
     inputSchema: {
@@ -35685,8 +35848,8 @@ server.registerTool(
       endLine: external_exports3.number().describe("End line (0-indexed, exclusive)")
     }
   },
-  async ({ file: file2, startLine, endLine }) => {
-    const hints = await pool.inlayHints(file2, startLine, endLine);
+  async ({ file: file2, startLine, endLine }, { signal }) => {
+    const hints = await pool.inlayHints(file2, startLine, endLine, { signal });
     if (hints.length === 0) {
       return {
         content: [{ type: "text", text: "No inlay hints." }]
@@ -35702,6 +35865,50 @@ server.registerTool(
     };
   }
 );
+var navigationPosition = {
+  file: external_exports3.string().describe("Absolute path to a file in the target project"),
+  line: external_exports3.number().int().nonnegative().describe("Line number (0-indexed)"),
+  character: external_exports3.number().int().nonnegative().describe("UTF-16 character position (0-indexed)")
+};
+var readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
+var jsonResult = (value) => ({ content: [{ type: "text", text: JSON.stringify(value) }] });
+server.registerTool("definition", {
+  title: "TypeScript Definition",
+  description: "Find all definition locations and ranges at a position.",
+  inputSchema: navigationPosition,
+  annotations: readOnly
+}, async ({ file: file2, line, character }, { signal }) => jsonResult(await pool.definition(file2, line, character, { signal })));
+server.registerTool("workspace_symbols", {
+  title: "TypeScript Workspace Symbols",
+  description: "Search symbols across the project selected by file.",
+  inputSchema: { file: navigationPosition.file, query: external_exports3.string().describe("Symbol search query") },
+  annotations: readOnly
+}, async ({ file: file2, query }, { signal }) => jsonResult(await pool.workspaceSymbols(file2, query, { signal })));
+server.registerTool("implementations", {
+  title: "TypeScript Implementations",
+  description: "Find all implementation locations and ranges at a position.",
+  inputSchema: navigationPosition,
+  annotations: readOnly
+}, async ({ file: file2, line, character }, { signal }) => jsonResult(await pool.implementations(file2, line, character, { signal })));
+server.registerTool("prepare_call_hierarchy", {
+  title: "TypeScript Prepare Call Hierarchy",
+  description: "Prepare call hierarchy nodes with opaque item IDs for further traversal. IDs expire after relevant file changes or session restart.",
+  inputSchema: navigationPosition,
+  annotations: readOnly
+}, async ({ file: file2, line, character }, { signal }) => jsonResult(await pool.prepareCallHierarchy(file2, line, character, { signal })));
+var hierarchyInput = { file: navigationPosition.file, item_id: external_exports3.string().describe("Opaque item_id from this project's call hierarchy") };
+server.registerTool("incoming_calls", {
+  title: "TypeScript Incoming Calls",
+  description: "Find callers of a prepared item. fromRanges belong to each caller's fromFile. Use the same project file for traversal.",
+  inputSchema: hierarchyInput,
+  annotations: readOnly
+}, async ({ file: file2, item_id }, { signal }) => jsonResult(await pool.incomingCalls(file2, item_id, { signal })));
+server.registerTool("outgoing_calls", {
+  title: "TypeScript Outgoing Calls",
+  description: "Find callees of a prepared item. fromRanges belong to the original item's fromFile. Use the same project file for traversal.",
+  inputSchema: hierarchyInput,
+  annotations: readOnly
+}, async ({ file: file2, item_id }, { signal }) => jsonResult(await pool.outgoingCalls(file2, item_id, { signal })));
 function formatSymbolTree(symbols, lines, depth) {
   for (const sym of symbols) {
     lines.push(

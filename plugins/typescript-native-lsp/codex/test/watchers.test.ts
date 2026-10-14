@@ -169,3 +169,19 @@ for (const known of [false, true]) {
     })
   }
 }
+
+
+test('semantic pattern scope is independent from the native backend and distinguishes broad roots from concrete dependencies', async () => {
+  const project = await temporaryProject({ 'project/source.ts': 'x', 'deps/types.d.ts': 'x' })
+  try {
+    const root = join(project.root, 'project')
+    const broad = compileWatchPattern(root, { globPattern: join(project.root, '**/*') })
+    const suffix = compileWatchPattern(root, { globPattern: join(project.root, '**/*.d.ts') })
+    const concrete = compileWatchPattern(root, { globPattern: join(project.root, 'deps/**/*.d.ts') })
+    const exact = compileWatchPattern(root, { globPattern: join(project.root, 'tsconfig.json') })
+    assert.equal(broad.ancestorWide, true); assert.equal(broad.semanticFileSignal, false)
+    assert.equal(suffix.ancestorWide, true); assert.equal(suffix.semanticFileSignal, true)
+    assert.equal(concrete.ancestorWide, false); assert.equal(concrete.semanticRoot, join(project.root, 'deps'))
+    assert.equal(exact.ancestorWide, false); assert.equal(exact.semanticRoot, join(project.root, 'tsconfig.json'))
+  } finally { await project.dispose() }
+})

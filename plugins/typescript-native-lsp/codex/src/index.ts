@@ -10,13 +10,14 @@ import { resolveTscBinary } from "./resolve-binary.ts"
 const pool = new TypeScriptPool(signal => resolveTscBinary({ signal }))
 
 const server = new McpServer({
-  name: "ts-hover",
-  version: "0.3.0",
+  name: "typescript-native-lsp",
+  version: "1.1.0",
 })
 
 server.registerTool(
   "hover",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript Hover",
     description:
       "Get TypeScript type information at a position, plus where it's defined. Returns the same info you'd see hovering in an IDE — resolved types, inferred types, JSDoc — and the definition location.",
@@ -28,11 +29,12 @@ server.registerTool(
       character: z.number().describe("Character position (0-indexed)"),
     },
   },
-  async ({ file, line, character }) => {
+  async ({ file, line, character }, { signal }) => {
     const { hover, definition } = await pool.hoverWithDefinition(
       file,
       line,
       character,
+      { signal },
     )
 
     const parts: string[] = []
@@ -57,6 +59,7 @@ server.registerTool(
 server.registerTool(
   "diagnostics",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript Diagnostics",
     description:
       "Get TypeScript errors and warnings for a file, along with available quick fixes and their exact text edits. Use this after editing a file to check for type errors.",
@@ -66,8 +69,8 @@ server.registerTool(
         .describe("Absolute path to the TypeScript/JavaScript file"),
     },
   },
-  async ({ file }) => {
-    const { diagnostics, actions } = await pool.diagnosticsWithFixes(file)
+  async ({ file }, { signal }) => {
+    const { diagnostics, actions } = await pool.diagnosticsWithFixes(file, { signal })
 
     if (diagnostics.length === 0 && actions.length === 0) {
       return {
@@ -117,6 +120,7 @@ server.registerTool(
 server.registerTool(
   "references",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript References",
     description:
       "Find all references to a symbol across the project. Returns a list of file locations where the symbol is used.",
@@ -128,8 +132,8 @@ server.registerTool(
       character: z.number().describe("Character position (0-indexed)"),
     },
   },
-  async ({ file, line, character }) => {
-    const locations = await pool.references(file, line, character)
+  async ({ file, line, character }, { signal }) => {
+    const locations = await pool.references(file, line, character, { signal })
 
     if (locations.length === 0) {
       return {
@@ -153,6 +157,7 @@ server.registerTool(
 server.registerTool(
   "outline",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript Outline",
     description:
       "Get a structured outline of all symbols in a file — functions, classes, interfaces, types, variables, etc. with their line numbers. Useful for understanding what's in a file without reading it.",
@@ -162,8 +167,8 @@ server.registerTool(
         .describe("Absolute path to the TypeScript/JavaScript file"),
     },
   },
-  async ({ file }) => {
-    const symbols = await pool.outline(file)
+  async ({ file }, { signal }) => {
+    const symbols = await pool.outline(file, { signal })
 
     if (symbols.length === 0) {
       return {
@@ -183,6 +188,7 @@ server.registerTool(
 server.registerTool(
   "rename",
   {
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
     title: "TypeScript Rename",
     description:
       "Rename a symbol across the project. Applies the edits directly to all affected files. Use this instead of manually find-and-replace to ensure type-safe renames.",
@@ -195,8 +201,8 @@ server.registerTool(
       newName: z.string().describe("The new name for the symbol"),
     },
   },
-  async ({ file, line, character, newName }) => {
-    const edits = await pool.rename(file, line, character, newName)
+  async ({ file, line, character, newName }, { signal }) => {
+    const edits = await pool.rename(file, line, character, newName, { signal })
 
     if (edits.length === 0) {
       return {
@@ -231,6 +237,7 @@ server.registerTool(
 server.registerTool(
   "inlay_hints",
   {
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     title: "TypeScript Inlay Hints",
     description:
       "Get inferred type annotations for a line range — variable types, parameter types, return types that TypeScript infers but aren't written in code. Useful for understanding what types TS has inferred.",
@@ -242,8 +249,8 @@ server.registerTool(
       endLine: z.number().describe("End line (0-indexed, exclusive)"),
     },
   },
-  async ({ file, startLine, endLine }) => {
-    const hints = await pool.inlayHints(file, startLine, endLine)
+  async ({ file, startLine, endLine }, { signal }) => {
+    const hints = await pool.inlayHints(file, startLine, endLine, { signal })
 
     if (hints.length === 0) {
       return {
@@ -263,6 +270,40 @@ server.registerTool(
     }
   },
 )
+
+const navigationPosition = {
+  file: z.string().describe("Absolute path to a file in the target project"),
+  line: z.number().int().nonnegative().describe("Line number (0-indexed)"),
+  character: z.number().int().nonnegative().describe("UTF-16 character position (0-indexed)"),
+}
+const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+const jsonResult = (value: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(value) }] })
+
+server.registerTool("definition", {
+  title: "TypeScript Definition", description: "Find all definition locations and ranges at a position.", inputSchema: navigationPosition, annotations: readOnly,
+}, async ({ file, line, character }, { signal }) => jsonResult(await pool.definition(file, line, character, { signal })))
+
+server.registerTool("workspace_symbols", {
+  title: "TypeScript Workspace Symbols", description: "Search symbols across the project selected by file.",
+  inputSchema: { file: navigationPosition.file, query: z.string().describe("Symbol search query") }, annotations: readOnly,
+}, async ({ file, query }, { signal }) => jsonResult(await pool.workspaceSymbols(file, query, { signal })))
+
+server.registerTool("implementations", {
+  title: "TypeScript Implementations", description: "Find all implementation locations and ranges at a position.", inputSchema: navigationPosition, annotations: readOnly,
+}, async ({ file, line, character }, { signal }) => jsonResult(await pool.implementations(file, line, character, { signal })))
+
+server.registerTool("prepare_call_hierarchy", {
+  title: "TypeScript Prepare Call Hierarchy", description: "Prepare call hierarchy nodes with opaque item IDs for further traversal. IDs expire after relevant file changes or session restart.", inputSchema: navigationPosition, annotations: readOnly,
+}, async ({ file, line, character }, { signal }) => jsonResult(await pool.prepareCallHierarchy(file, line, character, { signal })))
+
+const hierarchyInput = { file: navigationPosition.file, item_id: z.string().describe("Opaque item_id from this project's call hierarchy") }
+server.registerTool("incoming_calls", {
+  title: "TypeScript Incoming Calls", description: "Find callers of a prepared item. fromRanges belong to each caller's fromFile. Use the same project file for traversal.", inputSchema: hierarchyInput, annotations: readOnly,
+}, async ({ file, item_id }, { signal }) => jsonResult(await pool.incomingCalls(file, item_id, { signal })))
+
+server.registerTool("outgoing_calls", {
+  title: "TypeScript Outgoing Calls", description: "Find callees of a prepared item. fromRanges belong to the original item's fromFile. Use the same project file for traversal.", inputSchema: hierarchyInput, annotations: readOnly,
+}, async ({ file, item_id }, { signal }) => jsonResult(await pool.outgoingCalls(file, item_id, { signal })))
 
 /**
  * Recursively format a symbol tree with indentation

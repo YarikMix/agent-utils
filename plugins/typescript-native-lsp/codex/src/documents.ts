@@ -4,11 +4,11 @@ import { extname, relative, sep } from 'node:path'
 import chokidar, { type FSWatcher } from 'chokidar'
 import { z } from 'zod'
 import { endPosition, pathToUri, uriToPath } from './files.ts'
-import { compileWatchPattern, createRegisteredWatcher, type RegisteredWatcher } from './watchers.ts'
+import { compileWatchPattern, containedBy, createRegisteredWatcher, type RegisteredWatcher, type WatchPattern } from './watchers.ts'
 
 interface DocumentState { version: number; content: string }
 interface FileEvent { uri: string; type: number }
-interface Registration { method: string; watchers: RegisteredWatcher[] }
+interface Registration { method: string; watchers: RegisteredWatcher[]; specs: WatchPattern[] }
 const registrationSchema = z.object({ registrations: z.array(z.object({ id: z.string().min(1), method: z.string(), registerOptions: z.unknown().optional() })) })
 const watcherSchema = z.object({ globPattern: z.union([z.string().min(1), z.object({ baseUri: z.union([z.string(), z.object({ uri: z.string(), name: z.string().optional() })]), pattern: z.string().min(1) })]), kind: z.number().int().min(1).max(7).optional() })
 /** One leased document snapshot and queued filesystem notifications per project. */
@@ -25,6 +25,7 @@ export class DocumentSession {
   private closing?: Promise<void>
   private syncKind = 1
   private revision = 0
+  private knownDependencies = new Set<string>()
 
   constructor(private root: string, private notify: (method: string, params: unknown) => void) {
     pathToUri(root)
@@ -50,7 +51,33 @@ export class DocumentSession {
     if (this.closed) return
     const uri = pathToUri(file)
     const key = `${uri}:${type}`
-    if (!this.events.has(key)) { this.events.set(key, { uri, type }); this.revision++ }
+    if (!this.events.has(key)) {
+      this.events.set(key, { uri, type })
+      if (this.isSemanticEvent(file, type)) this.revision++
+    }
+  }
+
+  /** Native notification scope may include entire ancestors; semantic scope does not. */
+  private isSemanticEvent(file: string, type: number): boolean {
+    const opened = [...this.documents.keys()].map(uriToPath)
+    if (opened.some(path => path === file || (type === 3 && containedBy(path, file)))) return true
+    const parts = relative(this.root, file).split(sep)
+    const projectFile = containedBy(file, this.root) && !parts.includes('node_modules') && !parts.includes('.git')
+    if (projectFile && (/\.(?:[cm]?[jt]sx?|json)$/.test(file) || type === 3)) return true
+    if (type === 3 && containedBy(this.root, file)) return true
+    if (type === 3 && [...this.knownDependencies].some(path => containedBy(path, file))) return true
+    for (const { specs } of this.registrations.values()) {
+      for (const spec of specs) {
+        if (!(spec.kind & (1 << (type - 1)))) continue
+        if (spec.semanticFileSignal && spec.matches(file)) {
+          this.knownDependencies.add(file)
+          return true
+        }
+        // A concrete registration also identifies possible unopened descendants.
+        if (type === 3 && !spec.ancestorWide && (containedBy(spec.semanticRoot, file) || containedBy(file, spec.semanticRoot))) return true
+      }
+    }
+    return false
   }
 
   private watch(root: string, matches: (file: string) => boolean, kind: number, ignored?: (file: string, stats?: Stats) => boolean, ignorePermissionErrors = false): FSWatcher {
@@ -92,7 +119,7 @@ export class DocumentSession {
     const created: string[] = []
     try {
       for (const entry of entries) {
-        const registration: Registration = { method: entry.method, watchers: [] }
+        const registration: Registration = { method: entry.method, watchers: [], specs: entry.specs }
         this.registrations.set(entry.id, registration); created.push(entry.id)
         for (const spec of entry.specs) {
           const watcher = createRegisteredWatcher(spec, (file, type) => this.enqueue(file, type), error => { this.watcherError = error })
@@ -191,7 +218,7 @@ export class DocumentSession {
     this.closed = true
     for (const settle of this.settleReady.values()) settle()
     this.closing = Promise.all([...this.watchers, ...this.registeredWatchers].map(watcher => watcher.close())).then(() => {
-      this.watchers.clear(); this.registeredWatchers.clear(); this.documents.clear(); this.events.clear()
+      this.watchers.clear(); this.registeredWatchers.clear(); this.documents.clear(); this.events.clear(); this.knownDependencies.clear()
       // Native shutdown can unregister capabilities after local handles are closed.
       for (const registration of this.registrations.values()) registration.watchers = []
     })

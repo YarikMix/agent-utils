@@ -7,6 +7,9 @@ import { uriToPath } from './files.ts'
 
 export interface WatchPattern {
   root: string
+  semanticRoot: string
+  ancestorWide: boolean
+  semanticFileSignal: boolean
   nativeRecursive: boolean
   matches(file: string): boolean
   ignored(file: string, stats?: Stats): boolean
@@ -22,7 +25,7 @@ export interface RegisteredWatcher {
 const slash = (file: string) => file.split(sep).join('/')
 const caseInsensitive = process.platform === 'darwin' || process.platform === 'win32'
 const permissionError = (error: unknown) => ['EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')
-function containedBy(file: string, root: string): boolean {
+export function containedBy(file: string, root: string): boolean {
   const candidate = caseInsensitive ? slash(file).toLowerCase() : slash(file)
   const prefix = caseInsensitive ? slash(root).toLowerCase() : slash(root)
   return candidate === prefix || candidate.startsWith(prefix.endsWith('/') ? prefix : prefix + '/')
@@ -57,6 +60,15 @@ export function compileWatchPattern(root: string, raw: WatchInput): WatchPattern
   if (!watchRoot || !isAbsolute(watchRoot)) throw new Error('Invalid watcher pattern root')
   while (!existsSync(watchRoot)) { const parent = dirname(watchRoot); if (parent === watchRoot) break; watchRoot = parent }
   if (existsSync(watchRoot) && !statSync(watchRoot).isDirectory()) watchRoot = dirname(watchRoot)
+  const semanticRoot = scan.isGlob ? staticRoot : actualCase(absolute)
+  let ancestorWide = scan.isGlob && semanticRoot !== actualCase(root) && containedBy(actualCase(root), semanticRoot)
+  try {
+    const physicalScope = realpathSync(semanticRoot)
+    const physicalProject = realpathSync(actualCase(root))
+    ancestorWide = scan.isGlob && physicalScope !== physicalProject && containedBy(physicalProject, physicalScope)
+  } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT' && !permissionError(error)) throw error }
+  // A suffix restriction carries a file-level signal; an ancestor catch-all does not.
+  const semanticFileSignal = !ancestorWide || !/(?:^|\/)\*\*?(?:\/\*\*?)*$/.test(normalized)
   let nativeRecursive = false
   if (caseInsensitive && staticRoot === watchRoot) {
     try {
@@ -67,7 +79,7 @@ export function compileWatchPattern(root: string, raw: WatchInput): WatchPattern
     } catch (error) { if (!permissionError(error)) throw error }
   }
   const matches = picomatch(normalized, { dot: true, nocase: caseInsensitive })
-  return { root: watchRoot, nativeRecursive, kind: raw.kind ?? 7, matches: file => matches(slash(file)), ignored(file, stats) {
+  return { root: watchRoot, semanticRoot, ancestorWide, semanticFileSignal, nativeRecursive, kind: raw.kind ?? 7, matches: file => matches(slash(file)), ignored(file, stats) {
     if (stats && !stats.isFile() && !stats.isDirectory() && !stats.isSymbolicLink()) return true
     return !containedBy(file, staticRoot) && !containedBy(staticRoot, file)
   } }

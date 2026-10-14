@@ -1,8 +1,11 @@
+import type { WorkspaceSymbol } from "./protocol.ts"
+import type { HierarchyNode, CallEdge } from "./hierarchy.ts"
 import { existsSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { endPosition, pathToUri } from "./files.ts"
 import {
   type ClientOptions,
+  type RequestOptions,
   type LspCodeAction,
   type LspDiagnostic,
   type LspInlayHint,
@@ -104,7 +107,7 @@ export class TypeScriptPool {
     })
   }
 
-  hoverWithDefinition(filePath: string, line: number, character: number): Promise<{ hover: string | null; definition: LspLocation | null }> {
+  hoverWithDefinition(filePath: string, line: number, character: number, options?: RequestOptions): Promise<{ hover: string | null; definition: LspLocation | null }> {
     return this.withClient(filePath, client => client.withDocumentSnapshot(filePath, async () => {
       let failed = false
       let firstError: unknown
@@ -114,36 +117,60 @@ export class TypeScriptPool {
       }
       // Keep the lease until both requests settle, including after one fails.
       const [hover, definitions] = await Promise.allSettled([
-        client.hover(filePath, line, character).catch(captureFailure),
-        client.definition(filePath, line, character).catch(captureFailure),
+        client.hover(filePath, line, character, options).catch(captureFailure),
+        client.definition(filePath, line, character, options).catch(captureFailure),
       ])
       if (hover.status === "rejected" || definitions.status === "rejected") throw firstError
       return { hover: hover.value, definition: definitions.value[0] ?? null }
     }))
   }
 
-  diagnosticsWithFixes(filePath: string): Promise<{ diagnostics: LspDiagnostic[]; actions: LspCodeAction[] }> {
+  diagnosticsWithFixes(filePath: string, options?: RequestOptions): Promise<{ diagnostics: LspDiagnostic[]; actions: LspCodeAction[] }> {
     return this.withClient(filePath, client => client.withDocumentSnapshot(filePath, async content => {
-      const diagnostics = await client.diagnostics(filePath)
-      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: endPosition(content) }, diagnostics)
+      const diagnostics = await client.diagnostics(filePath, options)
+      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: endPosition(content) }, diagnostics, options)
       return { diagnostics, actions }
     }))
   }
 
-  references(filePath: string, line: number, character: number): Promise<LspLocation[]> {
-    return this.withClient(filePath, client => client.references(filePath, line, character))
+  references(filePath: string, line: number, character: number, options?: RequestOptions): Promise<LspLocation[]> {
+    return this.withClient(filePath, client => client.references(filePath, line, character, options))
   }
 
-  outline(filePath: string): Promise<LspSymbol[]> {
-    return this.withClient(filePath, client => client.documentSymbols(filePath))
+  outline(filePath: string, options?: RequestOptions): Promise<LspSymbol[]> {
+    return this.withClient(filePath, client => client.documentSymbols(filePath, options))
   }
 
-  rename(filePath: string, line: number, character: number, newName: string): Promise<LspTextEdit[]> {
-    return this.withClient(filePath, client => client.rename(filePath, line, character, newName))
+  rename(filePath: string, line: number, character: number, newName: string, options?: RequestOptions): Promise<LspTextEdit[]> {
+    return this.withClient(filePath, client => client.rename(filePath, line, character, newName, options))
   }
 
-  inlayHints(filePath: string, startLine: number, endLine: number): Promise<LspInlayHint[]> {
-    return this.withClient(filePath, client => client.inlayHints(filePath, startLine, endLine))
+  inlayHints(filePath: string, startLine: number, endLine: number, options?: RequestOptions): Promise<LspInlayHint[]> {
+    return this.withClient(filePath, client => client.inlayHints(filePath, startLine, endLine, options))
+  }
+
+  definition(file: string, line: number, character: number, options?: RequestOptions): Promise<LspLocation[]> {
+    return this.withClient(file, client => client.definition(file, line, character, options))
+  }
+
+  workspaceSymbols(file: string, query: string, options?: RequestOptions): Promise<WorkspaceSymbol[]> {
+    return this.withClient(file, client => client.workspaceSymbols(file, query, options))
+  }
+
+  implementations(file: string, line: number, character: number, options?: RequestOptions): Promise<LspLocation[]> {
+    return this.withClient(file, client => client.implementations(file, line, character, options))
+  }
+
+  prepareCallHierarchy(file: string, line: number, character: number, options?: RequestOptions): Promise<HierarchyNode[]> {
+    return this.withClient(file, client => client.prepareCallHierarchy(file, line, character, options))
+  }
+
+  incomingCalls(file: string, itemId: string, options?: RequestOptions): Promise<CallEdge[]> {
+    return this.withClient(file, client => client.incomingCalls(file, itemId, options))
+  }
+
+  outgoingCalls(file: string, itemId: string, options?: RequestOptions): Promise<CallEdge[]> {
+    return this.withClient(file, client => client.outgoingCalls(file, itemId, options))
   }
 
   /** Keep idle/crashed sessions owned until their close promise settles. */

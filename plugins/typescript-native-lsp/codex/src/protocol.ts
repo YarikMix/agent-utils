@@ -13,6 +13,10 @@ export interface LspLocation {
   file: string
   line: number
   character: number
+  range: Range
+  targetRange?: Range
+  targetSelectionRange?: Range
+  originSelectionRange?: Range
 }
 
 export const SEVERITY_LABELS = ["", "error", "warning", "info", "hint"] as const
@@ -42,7 +46,7 @@ export interface LspCodeAction {
   edits: LspTextEdit[]
 }
 
-const SYMBOL_KIND_LABELS: Record<number, string> = {
+export const SYMBOL_KIND_LABELS: Record<number, string> = {
   1: "file",
   2: "module",
   3: "namespace",
@@ -84,10 +88,11 @@ export function parseLocations(value: unknown): LspLocation[] {
   if (value === null) return []
   return (Array.isArray(value) ? value : [value]).map(item => {
     const loc = locationSchema.safeParse(item)
-    if (loc.success) return { file: uriToPath(loc.data.uri), ...loc.data.range.start }
-    const link = z.object({ targetUri: z.string(), targetRange: rangeSchema, targetSelectionRange: rangeSchema.optional() }).safeParse(item)
+    if (loc.success) return { file: uriToPath(loc.data.uri), ...loc.data.range.start, range: loc.data.range }
+    const link = z.object({ targetUri: z.string(), targetRange: rangeSchema, targetSelectionRange: rangeSchema.optional(), originSelectionRange: rangeSchema.optional() }).safeParse(item)
     if (!link.success) throw new Error('Invalid LSP protocol location response')
-    return { file: uriToPath(link.data.targetUri), ...(link.data.targetSelectionRange ?? link.data.targetRange).start }
+    const range = link.data.targetSelectionRange ?? link.data.targetRange
+    return { file: uriToPath(link.data.targetUri), ...range.start, range, targetRange: link.data.targetRange, ...(link.data.targetSelectionRange ? { targetSelectionRange: link.data.targetSelectionRange } : {}), ...(link.data.originSelectionRange ? { originSelectionRange: link.data.originSelectionRange } : {}) }
   })
 }
 
@@ -131,6 +136,11 @@ const CAPABILITIES: Record<string, string> = {
   'textDocument/prepareCallHierarchy': 'callHierarchyProvider', 'callHierarchy/incomingCalls': 'callHierarchyProvider', 'callHierarchy/outgoingCalls': 'callHierarchyProvider',
 }
 export function requireCapability(method: string, capabilities: Record<string, unknown>): void {
+  if (method === 'workspaceSymbol/resolve') {
+    const provider = capabilities.workspaceSymbolProvider
+    if (!provider || typeof provider !== 'object' || !('resolveProvider' in provider) || provider.resolveProvider !== true) throw new Error('Missing LSP capability for workspaceSymbol/resolve')
+    return
+  }
   const key = CAPABILITIES[method]
   const value = key && capabilities[key]
   if (!key || !(value === true || (value !== null && typeof value === 'object' && !Array.isArray(value)))) throw new Error(`Missing LSP capability for ${method}`)
@@ -152,4 +162,14 @@ export function parseWorkspaceEdit(value: unknown): LspTextEdit[] {
   if (!parsed.success) throw new Error('Invalid LSP protocol workspace edit')
   const groups = [...Object.entries(parsed.data.changes ?? {}), ...(parsed.data.documentChanges ?? []).map(change => [change.textDocument.uri, change.edits] as const)]
   return groups.flatMap(([uri, edits]) => edits.map(edit => ({ file: uriToPath(uri), startLine: edit.range.start.line, startCharacter: edit.range.start.character, endLine: edit.range.end.line, endCharacter: edit.range.end.character, newText: edit.newText })))
+}
+
+export interface WorkspaceSymbol { name: string; kind: string; file: string; line: number; character: number }
+export const workspaceSymbolSchema = z.object({ name: z.string(), kind: z.number().int().min(1).max(26), location: z.object({ uri: z.string(), range: rangeSchema.optional() }), data: z.unknown().optional() }).passthrough()
+
+export function parseWorkspaceSymbol(value: unknown): WorkspaceSymbol {
+  const parsed = workspaceSymbolSchema.safeParse(value)
+  if (!parsed.success || !parsed.data.location.range) throw new Error('Invalid LSP protocol workspace symbol range')
+  const { name, kind, location } = parsed.data
+  return { name, kind: SYMBOL_KIND_LABELS[kind] ?? `kind(${kind})`, file: uriToPath(location.uri), ...location.range!.start }
 }
