@@ -1,69 +1,51 @@
 # typescript-native-lsp
 
-Языковой сервер TypeScript 7 для Claude Code: переход к определению, поиск ссылок, hover, символы документа и иерархия вызовов. Ошибки типов плагин не показывает — см. «Ограничения».
+Нативный языковой сервер TypeScript 7 для Claude Code и Codex. Claude Code получает навигацию через встроенный LSP; Codex — [12 MCP-инструментов и скилл](codex/README.md), включая диагностику файла и переименование символа.
 
-Официальный плагин `typescript-lsp` запускает `typescript-language-server` — обёртку над `tsserver.js`. В TypeScript 7 `tsserver.js` нет: языковой сервер встроен в сам компилятор и запускается командой `tsc --lsp --stdio`. Этот плагин подключает именно его.
+Официальный `typescript-lsp` по состоянию на 14.10.2026 запускает `typescript-language-server`, обёртку над `tsserver`. Здесь используется нативный `tsc --lsp --stdio`. Проверенный официальный каталог: [8d392c8](https://github.com/anthropics/claude-plugins-official/blob/8d392c8169665866be1d95f2bfeda5aaae7149dd/.claude-plugin/marketplace.json).
 
 ## Требования
 
-TypeScript 7 или новее, установленный глобально:
+Установите TypeScript 7+ глобально:
 
-```bash
-npm install -g typescript@7
+```sh
+npm install -g typescript@7 --registry=https://registry.npmjs.org/
 tsc --version
 ```
 
-Ожидается `Version 7.x`. С TypeScript 6 и старше плагин не работает: флаг `--lsp` им неизвестен.
+Глобальный `tsc` должен быть доступен в PATH. Codex дополнительно требует Node.js 20+ и поддерживает `TSC_PATH=/absolute/path/to/native/tsc` (на Windows — `tsc.exe`). Это путь к нативному бинарнику, а не JS-обёртке. Локальный TypeScript из проекта автоматически не выбирается; TS 6 и fallback на tsserver не поддерживаются. Версия глобального компилятора может отличаться от проектной: сверяйте результаты со штатным typecheck проекта.
 
-## Установка
+## Claude Code
 
 ```text
-/plugin marketplace add YarikMix/claude-plugins
+/plugin marketplace add YarikMix/agent-plugins
 /plugin install typescript-native-lsp@yarikmix-plugins
 ```
 
-После установки перезапустите Claude Code: языковые серверы поднимаются на старте сессии.
+Перезапустите Claude Code. Отключите `typescript-lsp@claude-plugins-official`, поскольку оба плагина обрабатывают одинаковые расширения. Конфигурация Claude сохраняет прежний `tsc --lsp --stdio`.
 
-## Installation
+Claude Code использует навигацию. Нативный сервер отдаёт ошибки исходников по запросу `textDocument/diagnostic`; автоматического потока ошибок файлов здесь нет. Для ошибок проекта запускайте его команду typecheck, например `tsc --noEmit`.
 
-Requires TypeScript 7+ installed globally (`npm install -g typescript@7`; `tsc --version` must print `Version 7.x`).
+## Codex
 
-```text
-/plugin marketplace add YarikMix/claude-plugins
-/plugin install typescript-native-lsp@yarikmix-plugins
+```sh
+codex plugin marketplace add YarikMix/agent-plugins
+codex plugin add typescript-native-lsp@yarikmix-plugins
 ```
 
-Restart Claude Code afterwards. Disable the official `typescript-lsp` plugin: both claim the same file extensions.
+Откройте новую сессию после установки. Пакет включает готовый бандл и скилл `typescript-native-lsp`; сборка и `npm install` при запуске не выполняются. MCP запускает компилятор лениво при первом запросе к файлу. Авторизация сервису не требуется.
 
-Navigation only: the native server reports type errors on request (`textDocument/diagnostic`) and Claude Code does not ask for them. Run `tsc --noEmit` to see errors.
+Codex может запросить диагностику файла после правки. Quick fixes возвращаются как данные и автоматически не применяются. `rename` изменяет файлы — вызывайте его только по явной просьбе переименовать символ. Подробности позиций, freshness и проверки установки — в [Codex README](codex/README.md).
 
-## Несовместимость с `typescript-lsp`
+## Если сервер молчит
 
-Отключите официальный плагин `typescript-lsp@claude-plugins-official`: оба претендуют на одни и те же расширения файлов. Кроме того, с глобальным TypeScript 7 официальный плагин выдаёт ложные ошибки — `Cannot find name 'Element'`, `Cannot find name 'Node'`, `Property 'push' does not exist on type '{}'` — при чистом `tsc --noEmit`.
+| Симптом | Проверка |
+|---|---|
+| `tsc --version` ниже 7 | Установите глобальный TypeScript 7+ |
+| `tsc` не найден | Добавьте глобальный каталог npm в PATH: на POSIX это `<npm prefix -g>/bin` |
+| `TSC_PATH` отвергнут | Укажите абсолютный путь к нативному TS7-бинарнику |
+| Плагин не появился после установки | Начните новую сессию |
 
-В `~/.claude/settings.json`:
+Расширения: `.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`, `.cjs`. Изменения неоткрытой зависимости могут становиться видны до 2 секунд; после короткой задержки повторите запрос. Ошибки чтения или сбоя сервера не означают, что результатов нет.
 
-```json
-{
-  "enabledPlugins": {
-    "typescript-lsp@claude-plugins-official": false,
-    "typescript-native-lsp@yarikmix-plugins": true
-  }
-}
-```
-
-## Если LSP молчит
-
-| Симптом | Причина | Что сделать |
-|---|---|---|
-| `tsc --version` печатает 6.x или ниже | флаг `--lsp` неизвестен, сервер не стартует | `npm install -g typescript@7` |
-| `tsc: command not found` | глобальный каталог npm не в PATH | добавить в PATH каталог из `npm prefix -g` (на POSIX — его подкаталог `bin`) |
-| всё установлено, но ссылок и hover нет | сессия запущена до установки плагина | перезапустить Claude Code |
-
-## Ограничения
-
-**Только навигация, без ошибок типов.** Сервер `typescript-go` 7.0.2 не рассылает ошибки исходников сам: через `textDocument/publishDiagnostics` он публикует только диагностику `tsconfig.json`, а ошибки файла отдаёт в ответ на запрос `textDocument/diagnostic`. Claude Code такой запрос не делает, поэтому после правки с ошибкой типа блок диагностики не приходит. Проверено 2026-09-19: файл с `const x: number = "text"` даёт `TS2322` от `tsc --noEmit` и ничего — от плагина. Ошибки смотрите компилятором: `tsc --noEmit`.
-
-**Глобальный TypeScript.** Работает глобальный TypeScript, а не копия из `node_modules` проекта. Держите глобальную версию не ниже той, что записана в `package.json`: на расходящихся версиях типы в hover могут отличаться от того, что видит компилятор проекта.
-
-Расширения файлов: `.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`, `.cjs`.
+MCP импортирован из закреплённого upstream вручную. Автоматической синхронизации нет; процесс обновления и лицензии описаны в [UPSTREAM.md](codex/UPSTREAM.md).
