@@ -339,3 +339,65 @@ test('ordinary hover refreshes an unopened project source without hierarchy meta
   assert.equal(wire.filter(entry => entry.direction === 'client' && entry.message.method === 'textDocument/didOpen').length, 1)
   await s.close()
 })
+
+
+test('omitted external re-export barrel refreshes diagnostics and hierarchy without widening dependency directories', async t => {
+  const outside = await temporaryProject({
+    'shared/a.ts': 'export function dep(): number { return 1; }\n',
+    'shared/b.ts': 'export function dep(): string { return "changed"; }\n',
+    'shared/barrel.ts': "export { dep } from './a.js';\n",
+    'shared/trace.log': 'initial',
+    'shared/trace.json': '{}',
+    'shared/unrelated-project/source.ts': 'export const unrelated = 1;\n',
+    'other-project/source.ts': 'export const other = 1;\n',
+  })
+  const p = await project(t, { 'main.ts': '' })
+  const shared = relative(p.root, outside.root).split('\\').join('/')
+  const main = join(p.root, 'main.ts'); const barrel = join(outside.root, 'shared/barrel.ts')
+  await writeFile(main, `import { dep } from '${shared}/shared/barrel.js';\nexport function consume(): number { return dep(); }\n`)
+  const s = await session(t, p)
+  const wire = async (): Promise<any[]> => (await readFile(s.wireLog, 'utf8')).trim().split('\n').map(line => JSON.parse(line))
+  try {
+    assert.doesNotMatch(await s.call('diagnostics', { file: main }), /TS2322/)
+    const [node] = await s.json<HierarchyNode[]>('prepare_call_hierarchy', { file: main, line: 1, character: 17 })
+    const initialWire = await wire()
+    const metadataRequest = initialWire.find(e => e.direction === 'client' && e.message.method === 'workspace/symbol')
+    const metadata = initialWire.find(e => e.direction === 'server' && e.message.id === metadataRequest.message.id).message.result as Array<{ location: { uri: string } }>
+    assert.ok(metadata.some(symbol => symbol.location.uri === pathToUri(join(outside.root, 'shared/a.ts'))))
+    assert.ok(metadata.every(symbol => symbol.location.uri !== pathToUri(barrel)), 'native symbol inventory actually omits the re-export barrel')
+    const edges = (id: string) => s.json<CallEdge[]>('outgoing_calls', { file: main, item_id: id })
+    assert.deepEqual((await edges(node!.item_id)).map(edge => edge.item.file), [join(outside.root, 'shared/a.ts')])
+    const noise = ['shared/trace.log', 'shared/trace.json', 'shared/unrelated-project/source.ts', 'other-project/source.ts']
+    for (const name of noise) await writeFile(join(outside.root, name), name.endsWith('.ts') ? 'export const changed = 2;\n' : 'changed noise')
+    await poll(async () => {
+      assert.equal((await edges(node!.item_id)).length, 1)
+      const changes = (await wire()).filter(e => e.direction === 'client' && e.message.method === 'workspace/didChangeWatchedFiles').flatMap(e => e.message.params.changes)
+      return noise.every(name => changes.some(event => event.uri === pathToUri(join(outside.root, name))))
+    }, 'unrelated directory and log notifications')
+    const changedAt = performance.now()
+    await writeFile(barrel, "export { dep } from './b.js';\n")
+    t.diagnostic(`omitted barrel expiry ${await poll(async () => {
+      const response = await s.raw('outgoing_calls', { file: main, item_id: node!.item_id })
+      if (!response.isError) return false
+      assert.match(JSON.stringify(response.content), /invalid|expired/)
+      return true
+    }, 'omitted barrel hierarchy expiry')}ms`)
+    t.diagnostic(`omitted barrel diagnostics ${await poll(async () => /^1:\d+ .*TS2322/m.test(await s.call('diagnostics', { file: main })), 'omitted barrel diagnostics')}ms`)
+    assert.ok(performance.now() - changedAt <= 2000, 'both hierarchy expiry and diagnostics must refresh within 2000ms of the write')
+    t.diagnostic(`omitted barrel combined freshness ${performance.now() - changedAt}ms`)
+    const [fresh] = await s.json<HierarchyNode[]>('prepare_call_hierarchy', { file: main, line: 1, character: 17 })
+    assert.deepEqual((await edges(fresh!.item_id)).map(edge => edge.item.file), [join(outside.root, 'shared/b.ts')])
+    const independent = await compiler(p.root)
+    assert.notEqual(independent.exitCode, 0)
+    assert.match(independent.stderrAndStdout, /TS2322/)
+    const finalWire = await wire()
+    assert.equal(finalWire.filter(e => e.direction === 'client' && e.message.method === 'textDocument/didOpen').length, 1)
+    const barrelChanges = finalWire.filter(e => e.direction === 'client' && e.message.method === 'workspace/didChangeWatchedFiles').flatMap(e => e.message.params.changes).filter(event => event.uri === pathToUri(barrel))
+    assert.ok(barrelChanges.length > 0)
+    assert.ok(barrelChanges.every(event => event.type === 2), 'existing barrel must be delivered as Changed without false Created')
+  } finally {
+    await s.close()
+    await cp(outside.root, join(artifactRoot, 'omitted-barrel-external-fixture'), { recursive: true })
+    await outside.dispose()
+  }
+})

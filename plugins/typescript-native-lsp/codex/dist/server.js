@@ -32695,7 +32695,7 @@ async function applyWorkspaceEdit(prepared, io = fs) {
 
 // src/pool.ts
 import { existsSync as existsSync3 } from "node:fs";
-import { dirname as dirname5, join as join5 } from "node:path";
+import { dirname as dirname6, join as join6 } from "node:path";
 
 // src/lsp-client.ts
 import { spawn } from "node:child_process";
@@ -32739,8 +32739,8 @@ var HierarchyStore = class {
 
 // src/documents.ts
 import { existsSync as existsSync2 } from "node:fs";
-import { readFile, realpath as realpath3 } from "node:fs/promises";
-import { extname as extname2, relative as relative5, sep as sep3 } from "node:path";
+import { readFile, readdir as readdir4, realpath as realpath3 } from "node:fs/promises";
+import { dirname as dirname5, extname as extname2, join as join5, relative as relative5, sep as sep3 } from "node:path";
 
 // node_modules/chokidar/esm/index.js
 import { stat as statcb } from "fs";
@@ -33471,9 +33471,9 @@ var NodeFsHandler = class {
     if (this.fsw.closed) {
       return;
     }
-    const dirname7 = sysPath.dirname(file2);
+    const dirname8 = sysPath.dirname(file2);
     const basename3 = sysPath.basename(file2);
-    const parent = this.fsw._getWatchedDir(dirname7);
+    const parent = this.fsw._getWatchedDir(dirname8);
     let prevStats = stats;
     if (parent.has(basename3))
       return;
@@ -33500,7 +33500,7 @@ var NodeFsHandler = class {
             prevStats = newStats2;
           }
         } catch (error48) {
-          this.fsw._remove(dirname7, basename3);
+          this.fsw._remove(dirname8, basename3);
         }
       } else if (parent.has(basename3)) {
         const at = newStats.atimeMs;
@@ -34659,6 +34659,21 @@ var DocumentSession = class {
       (file2) => event.type === 3 ? containedBy(file2, uriToPath(event.uri)) : containedBy(file2, uriToPath(event.uri)) && containedBy(uriToPath(event.uri), file2)
     ))) this.revision++;
   }
+  /** One nonrecursive baseline per native-used source directory, during metadata refresh.
+   * Re-export-only siblings can be absent from the native symbol index. */
+  async noteDependencyDirectories(files) {
+    const sources = /\.(?:[cm]?[jt]sx?)$/;
+    const configs = /^(?:package|(?:tsconfig|jsconfig)(?:\..+)?)\.json$/;
+    const known = new Set(files);
+    const parents = new Set(files.filter((file2) => sources.test(file2)).map(dirname5));
+    for (const parent of parents) {
+      const entries = await readdir4(parent, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isFile() && (sources.test(entry.name) || configs.test(entry.name))) known.add(join5(parent, entry.name));
+      }
+    }
+    this.noteDependencies([...known]);
+  }
   setSyncKind(value) {
     const parsed = external_exports3.union([external_exports3.number().int().min(0).max(2), external_exports3.object({ openClose: external_exports3.boolean().optional(), change: external_exports3.number().int().min(0).max(2).optional() })]).safeParse(value);
     if (!parsed.success) throw new Error("Invalid LSP textDocumentSync capability");
@@ -35029,13 +35044,13 @@ var LspClient = class _LspClient {
     await this.checkHierarchyGeneration(generation);
     return items.map((item) => this.hierarchy.put(item, generation));
   }
-  /** Native symbol identities supplement broad watchers without parsing an import graph.
-   * Symbol-free/omitted dependencies are not a complete program-file inventory. */
+  /** Native identities and immediate source/config siblings supplement broad watchers.
+   * This bounded baseline is not a complete program-file inventory or import graph. */
   async refreshHierarchyDependencies(options) {
     const generation = this.documentSession.generation;
     if (this.hierarchyDependenciesGeneration === generation) return;
     const symbols = await this.queryWorkspaceSymbols("", options);
-    this.documentSession.noteDependencies(symbols.map((symbol2) => symbol2.file));
+    await this.documentSession.noteDependencyDirectories(symbols.map((symbol2) => symbol2.file));
     await this.checkHierarchyGeneration(generation);
     this.hierarchyDependenciesGeneration = generation;
   }
@@ -35665,21 +35680,21 @@ var TypeScriptPool = class {
   }
 };
 function findProjectRoot(filePath) {
-  let dir = dirname5(filePath);
+  let dir = dirname6(filePath);
   for (; ; ) {
-    if (existsSync3(join5(dir, "tsconfig.json"))) return dir;
-    const parent = dirname5(dir);
+    if (existsSync3(join6(dir, "tsconfig.json"))) return dir;
+    const parent = dirname6(dir);
     if (parent === dir) break;
     dir = parent;
   }
-  return dirname5(filePath);
+  return dirname6(filePath);
 }
 
 // src/resolve-binary.ts
 import { spawn as spawn2 } from "node:child_process";
 import { constants as constants2 } from "node:fs";
 import { access, open as open2, realpath as realpath4, stat as stat4 } from "node:fs/promises";
-import { dirname as dirname6, isAbsolute as isAbsolute4, join as join6, normalize as normalize2, relative as relative6, resolve as resolve4, sep as sep4 } from "node:path";
+import { dirname as dirname7, isAbsolute as isAbsolute4, join as join7, normalize as normalize2, relative as relative6, resolve as resolve4, sep as sep4 } from "node:path";
 var GUIDANCE = "Install TypeScript 7+ globally and add tsc to PATH, or set TSC_PATH to its absolute native binary path.";
 async function resolveTscBinary(options = {}) {
   options.signal?.throwIfAborted();
@@ -35715,7 +35730,7 @@ async function discoverTscBinary(options = {}) {
     const localBin = /(?:^|[\\/])node_modules[\\/]\.bin[\\/]?$/i;
     if (localBin.test(normalizedDirectory) || localBin.test(directory)) continue;
     for (const name of names) {
-      const launcher = join6(directory, name);
+      const launcher = join7(directory, name);
       try {
         await stat4(launcher);
       } catch {
@@ -35746,21 +35761,21 @@ async function nativeFromLauncher(launcher, platform, arch) {
     }
     const reference = text.match(/["'](?:%dp0%|%~dp0|\$basedir|\$\{basedir\}|\$PSScriptRoot)[\\/]((?:\.\.[\\/])?(?:lib[\\/])?node_modules[\\/]typescript[\\/]bin[\\/]tsc)["']/i)?.[1];
     if (!reference) throw new Error("tsc is not a standard TypeScript npm launcher or native executable");
-    script = await realpath4(resolve4(dirname6(target), reference.replaceAll("\\", "/")));
+    script = await realpath4(resolve4(dirname7(target), reference.replaceAll("\\", "/")));
   }
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) throw new Error("npm launcher does not target typescript/bin/tsc");
-  const packageRoot = dirname6(dirname6(script));
-  const installationRoot = await realpath4(dirname6(packageRoot));
+  const packageRoot = dirname7(dirname7(script));
+  const installationRoot = await realpath4(dirname7(packageRoot));
   const nativePackage = `@typescript/typescript-${platform}-${arch}`;
-  for (const nativeRoot of [join6(packageRoot, "node_modules", nativePackage), join6(dirname6(packageRoot), nativePackage)]) {
+  for (const nativeRoot of [join7(packageRoot, "node_modules", nativePackage), join7(dirname7(packageRoot), nativePackage)]) {
     try {
-      await stat4(join6(nativeRoot, "package.json"));
+      await stat4(join7(nativeRoot, "package.json"));
     } catch {
       continue;
     }
     const canonicalRoot = await realpath4(nativeRoot);
     requireInInstallation(installationRoot, canonicalRoot);
-    const binary = await realpath4(join6(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"));
+    const binary = await realpath4(join7(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"));
     requireInInstallation(installationRoot, binary);
     return nativeBinary(binary, platform);
   }

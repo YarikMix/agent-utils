@@ -1,6 +1,6 @@
 import { existsSync, type Stats } from 'node:fs'
-import { readFile, realpath } from 'node:fs/promises'
-import { extname, relative, sep } from 'node:path'
+import { readFile, readdir, realpath } from 'node:fs/promises'
+import { dirname, extname, join, relative, sep } from 'node:path'
 import chokidar, { type FSWatcher } from 'chokidar'
 import { z } from 'zod'
 import { endPosition, pathToUri, uriToPath } from './files.ts'
@@ -59,6 +59,22 @@ export class DocumentSession {
     if ([...this.events.values()].some(event => added.some(file =>
       event.type === 3 ? containedBy(file, uriToPath(event.uri)) : containedBy(file, uriToPath(event.uri)) && containedBy(uriToPath(event.uri), file),
     ))) this.revision++
+  }
+
+  /** One nonrecursive baseline per native-used source directory, during metadata refresh.
+   * Re-export-only siblings can be absent from the native symbol index. */
+  async noteDependencyDirectories(files: readonly string[]): Promise<void> {
+    const sources = /\.(?:[cm]?[jt]sx?)$/
+    const configs = /^(?:package|(?:tsconfig|jsconfig)(?:\..+)?)\.json$/
+    const known = new Set(files)
+    const parents = new Set(files.filter(file => sources.test(file)).map(dirname))
+    for (const parent of parents) {
+      const entries = await readdir(parent, { withFileTypes: true })
+      for (const entry of entries) {
+        if (entry.isFile() && (sources.test(entry.name) || configs.test(entry.name))) known.add(join(parent, entry.name))
+      }
+    }
+    this.noteDependencies([...known])
   }
 
   setSyncKind(value: unknown): void {

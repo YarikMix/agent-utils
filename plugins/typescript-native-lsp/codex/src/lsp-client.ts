@@ -229,13 +229,13 @@ export class LspClient {
     return items.map(item => this.hierarchy.put(item, generation))
   }
 
-  /** Native symbol identities supplement broad watchers without parsing an import graph.
-   * Symbol-free/omitted dependencies are not a complete program-file inventory. */
+  /** Native identities and immediate source/config siblings supplement broad watchers.
+   * This bounded baseline is not a complete program-file inventory or import graph. */
   private async refreshHierarchyDependencies(options?: RequestOptions): Promise<void> {
     const generation = this.documentSession.generation
     if (this.hierarchyDependenciesGeneration === generation) return
     const symbols = await this.queryWorkspaceSymbols("", options)
-    this.documentSession.noteDependencies(symbols.map(symbol => symbol.file))
+    await this.documentSession.noteDependencyDirectories(symbols.map(symbol => symbol.file))
     await this.checkHierarchyGeneration(generation)
     this.hierarchyDependenciesGeneration = generation
   }

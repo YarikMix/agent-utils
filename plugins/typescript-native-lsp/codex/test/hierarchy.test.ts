@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { writeFile, rm } from 'node:fs/promises'
+import { writeFile, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import fs from 'node:fs'
 import { EventEmitter } from 'node:events'
@@ -260,4 +260,73 @@ test('late native registrations inherit known dependency identities instead of r
     const changes = (await recordedMessages(log)).filter(m => m.method === 'workspace/didChangeWatchedFiles').flatMap(m => m.params.changes)
     assert.deepEqual(changes.filter(change => change.uri === pathToUri(dependency)), [{ uri: pathToUri(dependency), type: 2 }])
   } finally { await client.shutdown(); await fake.dispose(); t.mock.restoreAll(); syncBuiltinESMExports(); await p.dispose() }
+})
+
+
+test('native-used dependency parents cover only immediate regular source/config siblings', async () => {
+  const project = await temporaryProject({ 'main.ts': 'x' })
+  const outside = await temporaryProject({ 'shared/a.ts': 'x', 'shared/barrel.ts': 'x', 'shared/package.json': '{}', 'shared/tsconfig.build.json': '{}', 'shared/trace.log': 'x', 'shared/trace.json': '{}', 'shared/nested/barrel.ts': 'x', 'other/barrel.ts': 'x' })
+  const file = join(project.root, 'main.ts'); const dependency = join(outside.root, 'shared/a.ts')
+  const fake = fakeLsp({ capabilities: { callHierarchyProvider: true }, results: { 'workspace/symbol': [{ name: 'a', kind: 13, location: { uri: pathToUri(dependency), range } }], 'textDocument/prepareCallHierarchy': [item(file)] } })
+  const client = await LspClient.create('fake', pathToUri(project.root), { spawnProcess: fake.spawnProcess })
+  const session = client.documentSession as unknown as { enqueue(file: string, type: number): void }
+  try {
+    if (process.platform !== 'win32') await symlink(join(outside.root, 'shared/a.ts'), join(outside.root, 'shared/alias.ts'))
+    const [node] = await client.prepareCallHierarchy(file, 0, 0)
+    for (const name of ['shared/trace.log', 'shared/trace.json', 'shared/nested/barrel.ts', 'other/barrel.ts', ...(process.platform !== 'win32' ? ['shared/alias.ts'] : [])]) session.enqueue(join(outside.root, name), 2)
+    await client.incomingCalls(file, node!.item_id)
+    for (const name of ['shared/barrel.ts', 'shared/package.json', 'shared/tsconfig.build.json']) {
+      const [current] = await client.prepareCallHierarchy(file, 0, 0)
+      session.enqueue(join(outside.root, name), 2)
+      await assert.rejects(client.incomingCalls(file, current!.item_id), /invalid|expired/)
+    }
+    assert.equal(client.documentSession.getOpenedDocuments().length, 1)
+  } finally { await client.shutdown(); await fake.dispose(); await Promise.all([project.dispose(), outside.dispose()]) }
+})
+
+test('omitted sibling event during native metadata cannot mint a hierarchy ID', async t => {
+  const project = await temporaryProject({ 'main.ts': 'x' }); const outside = await temporaryProject({ 'a.ts': 'x', 'barrel.ts': 'x' })
+  const file = join(project.root, 'main.ts')
+  const fake = fakeLsp({ capabilities: { callHierarchyProvider: true }, results: { 'workspace/symbol': [{ name: 'a', kind: 13, location: { uri: pathToUri(join(outside.root, 'a.ts')), range } }], 'textDocument/prepareCallHierarchy': [item(file)] } })
+  const client = await LspClient.create('fake', pathToUri(project.root), { spawnProcess: fake.spawnProcess })
+  try {
+    const raw = client as any; const send = raw.sendRequest.bind(client)
+    t.mock.method(raw, 'sendRequest', async (...args: any[]) => {
+      const result = await send(...args)
+      if (args[0] === 'workspace/symbol') (client.documentSession as any).enqueue(join(outside.root, 'barrel.ts'), 2)
+      return result
+    })
+    await assert.rejects(client.prepareCallHierarchy(file, 0, 0), /invalid|change/)
+  } finally { await client.shutdown(); await fake.dispose(); await Promise.all([project.dispose(), outside.dispose()]) }
+})
+
+
+test('dependency directory baseline seeds late watchers but keeps new-file create masks', { skip: !['darwin', 'win32'].includes(process.platform) }, async t => {
+  const p = await temporaryProject({ 'project/main.ts': 'x', 'shared/a.ts': 'x', 'shared/barrel.ts': 'x' })
+  const file = join(p.root, 'project/main.ts'); const log = join(p.root, 'wire.jsonl')
+  let callback!: (event: string, file: string) => void
+  t.mock.method(fs, 'watch', ((...args: any[]) => { callback = args.at(-1); const handle = new EventEmitter() as EventEmitter & { close(): void }; handle.close = () => {}; return handle }) as typeof fs.watch); syncBuiltinESMExports()
+  const fake = fakeLsp({ log, capabilities: { callHierarchyProvider: true }, results: { 'workspace/symbol': [{ name: 'a', kind: 13, location: { uri: pathToUri(join(p.root, 'shared/a.ts')), range } }], 'textDocument/prepareCallHierarchy': [item(file)] } })
+  const client = await LspClient.create('fake', pathToUri(join(p.root, 'project')), { spawnProcess: fake.spawnProcess })
+  try {
+    await client.prepareCallHierarchy(file, 0, 0)
+    await client.documentSession.register({ registrations: [{ id: 'late', method: 'workspace/didChangeWatchedFiles', registerOptions: { watchers: [{ globPattern: join(p.root, '**/*'), kind: 7 }] } }] })
+    callback('change', 'shared/barrel.ts')
+    await writeFile(join(p.root, 'shared/new.ts'), 'x')
+    callback('rename', 'shared/new.ts')
+    await client.hover(file, 0, 0)
+    const changes = (await recordedMessages(log)).filter(m => m.method === 'workspace/didChangeWatchedFiles').flatMap(m => m.params.changes)
+    assert.deepEqual(changes.filter(change => change.uri === pathToUri(join(p.root, 'shared/barrel.ts'))).map(change => change.type), [2])
+    assert.deepEqual(changes.filter(change => change.uri === pathToUri(join(p.root, 'shared/new.ts'))).map(change => change.type), [1, 2])
+  } finally { await client.shutdown(); await fake.dispose(); t.mock.restoreAll(); syncBuiltinESMExports(); await p.dispose() }
+})
+
+
+test('unavailable native dependency parent fails metadata explicitly before issuing a hierarchy ID', async () => {
+  const project = await temporaryProject({ 'main.ts': 'x', 'unavailable.ts': 'regular file, not a directory' })
+  const file = join(project.root, 'main.ts')
+  const fake = fakeLsp({ capabilities: { callHierarchyProvider: true }, results: { 'workspace/symbol': [{ name: 'a', kind: 13, location: { uri: pathToUri(join(project.root, 'unavailable.ts/a.ts')), range } }], 'textDocument/prepareCallHierarchy': [item(file)] } })
+  const client = await LspClient.create('fake', pathToUri(project.root), { spawnProcess: fake.spawnProcess })
+  try { await assert.rejects(client.prepareCallHierarchy(file, 0, 0), /ENOTDIR/) }
+  finally { await client.shutdown(); await fake.dispose(); await project.dispose() }
 })
