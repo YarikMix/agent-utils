@@ -142,3 +142,49 @@ test('malformed prepare/outgoing items reject entire results and valid null resp
     }
   } finally { await project.dispose() }
 })
+
+test('hierarchy selector accepts another unchanged project file without opening it and preserves explicit errors', async () => {
+  const project = await temporaryProject({ 'source.ts': 'x', 'other.ts': 'x' })
+  const file = join(project.root, 'source.ts'); const other = join(project.root, 'other.ts'); const missing = join(project.root, 'missing.ts'); const log = join(project.root, 'wire.jsonl')
+  const fake = fakeLsp({ log, capabilities: { callHierarchyProvider: true }, results: { 'textDocument/prepareCallHierarchy': [item(file)] } })
+  const pool = new TypeScriptPool(async () => 'fake', { createClient: (binary, uri, options) => LspClient.create(binary, uri, { ...options, spawnProcess: fake.spawnProcess }) })
+  try {
+    const [prepared] = await pool.prepareCallHierarchy(file, 0, 0)
+    for (const call of [pool.incomingCalls.bind(pool), pool.outgoingCalls.bind(pool)]) {
+      await assert.rejects(call(missing, prepared!.item_id), { code: 'ENOENT' })
+      await assert.rejects(async () => call('relative.ts', prepared!.item_id), /absolute/i)
+      assert.deepEqual(await call(other, prepared!.item_id), [])
+    }
+    assert.equal(fake.processes.length, 1)
+    assert.deepEqual((await recordedMessages(log)).filter(m => m.method === 'textDocument/didOpen').map(m => m.params.textDocument.uri), [pathToUri(file)])
+    await writeFile(file, 'changed')
+    await assert.rejects(pool.incomingCalls(other, prepared!.item_id), /item.*invalid/i)
+  } finally { await pool.shutdown(); await fake.dispose(); await project.dispose() }
+})
+
+for (const direction of ['prepare', 'incoming', 'outgoing'] as const) {
+  for (const result of [null, []]) {
+    for (const changed of [false, true]) {
+      test(`${direction} empty ${result === null ? 'null' : 'array'} response ${changed ? 'rejects relevant concurrent event' : 'succeeds without change'}`, async t => {
+        const project = await temporaryProject({ 'source.ts': 'x' }); const file = join(project.root, 'source.ts')
+        const method = direction === 'prepare' ? 'textDocument/prepareCallHierarchy' : `callHierarchy/${direction}Calls`
+        const fake = fakeLsp({ capabilities: { callHierarchyProvider: true }, results: { 'textDocument/prepareCallHierarchy': [item(file)], [method]: result } })
+        const client = await LspClient.create('fake', pathToUri(project.root), { spawnProcess: fake.spawnProcess })
+        try {
+          const node = direction === 'prepare' ? undefined : (await client.prepareCallHierarchy(file, 0, 0))[0]!
+          // Inject the same relevant watcher event at the response boundary for both empty forms.
+          const transport = client as unknown as { sendRequest(method: string, params: unknown, options?: import('../src/lsp-client.ts').RequestOptions): Promise<unknown> }
+          const send = transport.sendRequest.bind(client)
+          t.mock.method(transport, 'sendRequest', async (...args: Parameters<typeof send>) => {
+            const response = await send(...args)
+            if (changed && args[0] === method) (client.documentSession as unknown as { enqueue(file: string, type: number): void }).enqueue(file, 2)
+            return response
+          })
+          const operation = direction === 'prepare' ? client.prepareCallHierarchy(file, 0, 0) : direction === 'incoming' ? client.incomingCalls(file, node!.item_id) : client.outgoingCalls(file, node!.item_id)
+          if (changed) await assert.rejects(operation, /item.*invalid/i)
+          else assert.deepEqual(await operation, [])
+        } finally { t.mock.restoreAll(); await client.shutdown(); await fake.dispose(); await project.dispose() }
+      })
+    }
+  }
+}

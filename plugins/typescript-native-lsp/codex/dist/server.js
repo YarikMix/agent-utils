@@ -34643,7 +34643,8 @@ var DocumentSession = class {
     this.documents.set(uri, { version: version2, content });
     this.revision++;
   }
-  async sync(file2) {
+  /** A project selector is validated/read without opening a new native document. */
+  async sync(file2, options = {}) {
     const uri = pathToUri(file2);
     await this.flushFileEvents();
     for (const [openUri, state2] of this.documents) {
@@ -34662,7 +34663,7 @@ var DocumentSession = class {
     for (const watcher of this.registeredWatchers) watcher.noteFile(file2);
     const state = this.documents.get(uri);
     if (state) this.changed(uri, state, content);
-    else {
+    else if (options.open !== false) {
       const extension = extname2(file2);
       const languageId = extension === ".tsx" ? "typescriptreact" : extension === ".jsx" ? "javascriptreact" : [".js", ".mjs", ".cjs"].includes(extension) ? "javascript" : "typescript";
       this.notify("textDocument/didOpen", { textDocument: { uri, languageId, version: 1, text: content } });
@@ -34848,9 +34849,8 @@ var LspClient = class _LspClient {
     positionToOffset(content, { line, character });
     const generation = this.documentSession.generation;
     const result = await this.sendRequest("textDocument/prepareCallHierarchy", { textDocument: { uri: pathToUri(file2) }, position: { line, character } }, options);
-    if (result === null) return [];
-    if (!Array.isArray(result)) throw new Error("Invalid LSP protocol call hierarchy response");
-    const items = result.map(parseHierarchyItem);
+    if (result !== null && !Array.isArray(result)) throw new Error("Invalid LSP protocol call hierarchy response");
+    const items = (result ?? []).map(parseHierarchyItem);
     await this.checkHierarchyGeneration(generation);
     return items.map((item) => this.hierarchy.put(item, generation));
   }
@@ -34865,13 +34865,12 @@ var LspClient = class _LspClient {
     if (this.documentSession.generation !== generation) throw new Error("Call hierarchy item is invalid after a document change; prepare the hierarchy again");
   }
   async callEdges(file2, itemId, direction, options) {
-    await this.prepareDocument(file2);
+    await this.documentSession.sync(file2, { open: false });
     const generation = this.documentSession.generation;
     const item = this.hierarchy.get(itemId, generation);
     const result = await this.sendRequest(`callHierarchy/${direction}Calls`, { item }, options);
-    if (result === null) return [];
     const edgeSchema = direction === "incoming" ? external_exports3.object({ from: callHierarchyItemSchema, fromRanges: external_exports3.array(rangeSchema) }).transform(({ from, fromRanges }) => ({ item: from, fromRanges })) : external_exports3.object({ to: callHierarchyItemSchema, fromRanges: external_exports3.array(rangeSchema) }).transform(({ to, fromRanges }) => ({ item: to, fromRanges }));
-    const parsed = external_exports3.array(edgeSchema).safeParse(result);
+    const parsed = external_exports3.array(edgeSchema).safeParse(result === null ? [] : result);
     if (!parsed.success) throw new Error("Invalid LSP protocol call hierarchy edges");
     const edges = parsed.data.map((edge) => ({ ...edge, item: parseHierarchyItem(edge.item) }));
     await this.checkHierarchyGeneration(generation);

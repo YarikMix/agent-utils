@@ -187,7 +187,8 @@ export class DocumentSession {
     this.documents.set(uri, { version, content }); this.revision++
   }
 
-  async sync(file: string): Promise<string> {
+  /** A project selector is validated/read without opening a new native document. */
+  async sync(file: string, options: { open?: boolean } = {}): Promise<string> {
     const uri = pathToUri(file)
     await this.flushFileEvents()
     for (const [openUri, state] of this.documents) {
@@ -204,7 +205,7 @@ export class DocumentSession {
     for (const watcher of this.registeredWatchers) watcher.noteFile(file)
     const state = this.documents.get(uri)
     if (state) this.changed(uri, state, content)
-    else {
+    else if (options.open !== false) {
       const extension = extname(file)
       const languageId = extension === '.tsx' ? 'typescriptreact' : extension === '.jsx' ? 'javascriptreact' : ['.js', '.mjs', '.cjs'].includes(extension) ? 'javascript' : 'typescript'
       this.notify('textDocument/didOpen', { textDocument: { uri, languageId, version: 1, text: content } })
