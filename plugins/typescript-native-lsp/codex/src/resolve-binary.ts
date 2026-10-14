@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process"
 import { constants } from "node:fs"
 import { access, open, realpath, stat } from "node:fs/promises"
-import { dirname, isAbsolute, join, normalize, resolve } from "node:path"
+import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path"
 
 export interface ResolveOptions {
   env?: NodeJS.ProcessEnv
@@ -78,14 +78,27 @@ async function nativeFromLauncher(launcher: string, platform: NodeJS.Platform, a
   }
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) throw new Error("npm launcher does not target typescript/bin/tsc")
   const packageRoot = dirname(dirname(script))
+  const installationRoot = await realpath(dirname(packageRoot))
   const nativePackage = `@typescript/typescript-${platform}-${arch}`
   // Only package-local or hoisted global dependencies belong to this installation.
   // Node's normal ancestor lookup could silently fall back to a checkout package.
   for (const nativeRoot of [join(packageRoot, "node_modules", nativePackage), join(dirname(packageRoot), nativePackage)]) {
     try { await stat(join(nativeRoot, "package.json")) } catch { continue }
-    return nativeBinary(join(nativeRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"), platform)
+    const canonicalRoot = await realpath(nativeRoot)
+    requireInInstallation(installationRoot, canonicalRoot)
+    const binary = await realpath(join(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"))
+    requireInInstallation(installationRoot, binary)
+    return nativeBinary(binary, platform)
   }
   throw new Error(`Global TypeScript installation is missing native package ${nativePackage}`)
+}
+
+/** Automatic discovery must stay physically inside this global npm dependency tree. */
+function requireInInstallation(installationRoot: string, target: string): void {
+  const path = relative(installationRoot, target)
+  if (path === ".." || path.startsWith(`..${sep}`) || isAbsolute(path)) {
+    throw new Error(`Native TypeScript target "${target}" is outside the global installation "${installationRoot}"`)
+  }
 }
 
 /** Validate native ownership: scripts/shims would create an unowned compiler child. */

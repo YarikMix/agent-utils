@@ -79,6 +79,53 @@ for (const location of ['ancestor checkout', 'global sibling']) {
   })
 }
 
+for (const linkKind of ['native package directory', 'native binary']) {
+  for (const inTree of [false, true]) {
+    test(`${linkKind} symlink ${inTree ? 'inside' : 'outside'} global installation ${inTree ? 'is accepted' : 'is rejected'}`, async () => {
+      const fixture = await temporaryProject({})
+      try {
+        const checkout = join(fixture.root, 'checkout')
+        const prefix = join(checkout, 'global prefix')
+        const bin = process.platform === 'win32' ? prefix : join(prefix, 'bin')
+        const globalModules = process.platform === 'win32' ? join(prefix, 'node_modules') : join(prefix, 'lib/node_modules')
+        const packageRoot = join(globalModules, 'typescript')
+        const nativePackage = `@typescript/typescript-${process.platform}-${process.arch}`
+        const nativeRoot = join(globalModules, nativePackage)
+        const actualRoot = join(inTree ? join(globalModules, '.native-store') : join(checkout, 'node_modules'), nativePackage)
+        const binaryName = process.platform === 'win32' ? 'tsc.exe' : 'tsc'
+        const actualBinary = join(actualRoot, 'lib', binaryName)
+        await mkdir(bin, { recursive: true })
+        await mkdir(join(packageRoot, 'bin'), { recursive: true })
+        await mkdir(actualRoot, { recursive: true })
+        await mkdir(dirname(nativeRoot), { recursive: true })
+        await writeFile(join(packageRoot, 'package.json'), '{"name":"typescript"}')
+        await writeFile(join(packageRoot, 'bin/tsc'), '#!/usr/bin/env node\nthrow new Error("launcher must never run")')
+        await writeFile(join(actualRoot, 'package.json'), '{"name":"native"}')
+        await cp(dirname(native), join(actualRoot, 'lib'), { recursive: true })
+        if (linkKind === 'native package directory') {
+          await symlink(actualRoot, nativeRoot, process.platform === 'win32' ? 'junction' : 'dir')
+        } else {
+          await mkdir(join(nativeRoot, 'lib'), { recursive: true })
+          await writeFile(join(nativeRoot, 'package.json'), '{"name":"native"}')
+          await symlink(actualBinary, join(nativeRoot, 'lib', binaryName), 'file')
+        }
+        if (process.platform === 'win32') {
+          await writeFile(join(bin, 'tsc.cmd'), '@ECHO off\n"%dp0%\\node.exe" "%dp0%\\node_modules\\typescript\\bin\\tsc" %*\n')
+        } else {
+          await symlink('../lib/node_modules/typescript/bin/tsc', join(bin, 'tsc'))
+        }
+        if (inTree) {
+          assert.equal(await resolver.resolveTscBinary({ env: { PATH: bin } }), await realpath(actualBinary))
+        } else {
+          await assert.rejects(resolver.resolveTscBinary({ env: { PATH: bin } }), /outside.*global.*installation.*PATH.*TSC_PATH/s)
+          // A user-selected explicit native binary remains valid across this boundary.
+          assert.equal(await resolver.resolveTscBinary({ env: { TSC_PATH: actualBinary } }), await realpath(actualBinary))
+        }
+      } finally { await fixture.dispose() }
+    })
+  }
+}
+
 test('absolute explicit native binary and its symlink resolve identically', async () => {
   const fixture = await temporaryProject({})
   try {

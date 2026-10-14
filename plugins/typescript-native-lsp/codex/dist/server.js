@@ -3875,49 +3875,49 @@ var require_fast_uri = __commonJS({
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative, options, skipNormalization) {
+    function resolveComponent(base, relative2, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse3(serialize(base, options), options);
-        relative = parse3(serialize(relative, options), options);
+        relative2 = parse3(serialize(relative2, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative.scheme) {
-        target.scheme = relative.scheme;
-        target.userinfo = relative.userinfo;
-        target.host = relative.host;
-        target.port = relative.port;
-        target.path = removeDotSegments(relative.path || "");
-        target.query = relative.query;
+      if (!options.tolerant && relative2.scheme) {
+        target.scheme = relative2.scheme;
+        target.userinfo = relative2.userinfo;
+        target.host = relative2.host;
+        target.port = relative2.port;
+        target.path = removeDotSegments(relative2.path || "");
+        target.query = relative2.query;
       } else {
-        if (relative.userinfo !== void 0 || relative.host !== void 0 || relative.port !== void 0) {
-          target.userinfo = relative.userinfo;
-          target.host = relative.host;
-          target.port = relative.port;
-          target.path = removeDotSegments(relative.path || "");
-          target.query = relative.query;
+        if (relative2.userinfo !== void 0 || relative2.host !== void 0 || relative2.port !== void 0) {
+          target.userinfo = relative2.userinfo;
+          target.host = relative2.host;
+          target.port = relative2.port;
+          target.path = removeDotSegments(relative2.path || "");
+          target.query = relative2.query;
         } else {
-          if (!relative.path) {
+          if (!relative2.path) {
             target.path = base.path;
-            if (relative.query !== void 0) {
-              target.query = relative.query;
+            if (relative2.query !== void 0) {
+              target.query = relative2.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative.path[0] === "/") {
-              target.path = removeDotSegments(relative.path);
+            if (relative2.path[0] === "/") {
+              target.path = removeDotSegments(relative2.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative.path;
+                target.path = "/" + relative2.path;
               } else if (!base.path) {
-                target.path = relative.path;
+                target.path = relative2.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative2.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative.query;
+            target.query = relative2.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -3925,7 +3925,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative.fragment;
+      target.fragment = relative2.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -31301,7 +31301,7 @@ function findProjectRoot(filePath) {
 import { spawn as spawn2 } from "node:child_process";
 import { constants } from "node:fs";
 import { access, open, realpath, stat } from "node:fs/promises";
-import { dirname as dirname2, isAbsolute, join as join2, normalize, resolve } from "node:path";
+import { dirname as dirname2, isAbsolute, join as join2, normalize, relative, resolve, sep } from "node:path";
 var GUIDANCE = "Install TypeScript 7+ globally and add tsc to PATH, or set TSC_PATH to its absolute native binary path.";
 async function resolveTscBinary(options = {}) {
   const binary = await discoverTscBinary(options);
@@ -31370,6 +31370,7 @@ async function nativeFromLauncher(launcher, platform, arch) {
   }
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) throw new Error("npm launcher does not target typescript/bin/tsc");
   const packageRoot = dirname2(dirname2(script));
+  const installationRoot = await realpath(dirname2(packageRoot));
   const nativePackage = `@typescript/typescript-${platform}-${arch}`;
   for (const nativeRoot of [join2(packageRoot, "node_modules", nativePackage), join2(dirname2(packageRoot), nativePackage)]) {
     try {
@@ -31377,9 +31378,19 @@ async function nativeFromLauncher(launcher, platform, arch) {
     } catch {
       continue;
     }
-    return nativeBinary(join2(nativeRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"), platform);
+    const canonicalRoot = await realpath(nativeRoot);
+    requireInInstallation(installationRoot, canonicalRoot);
+    const binary = await realpath(join2(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"));
+    requireInInstallation(installationRoot, binary);
+    return nativeBinary(binary, platform);
   }
   throw new Error(`Global TypeScript installation is missing native package ${nativePackage}`);
+}
+function requireInInstallation(installationRoot, target) {
+  const path = relative(installationRoot, target);
+  if (path === ".." || path.startsWith(`..${sep}`) || isAbsolute(path)) {
+    throw new Error(`Native TypeScript target "${target}" is outside the global installation "${installationRoot}"`);
+  }
 }
 async function nativeBinary(path, platform) {
   let binary;
