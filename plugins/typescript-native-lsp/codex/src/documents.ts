@@ -1,4 +1,4 @@
-import type { Stats } from 'node:fs'
+import { existsSync, type Stats } from 'node:fs'
 import { readFile, realpath } from 'node:fs/promises'
 import { extname, relative, sep } from 'node:path'
 import chokidar, { type FSWatcher } from 'chokidar'
@@ -46,6 +46,21 @@ export class DocumentSession {
     return [...this.documents].map(([uri, { content, physicalPath }]) => ({ uri, content, physicalPath }))
   }
 
+  /** Native-returned file identities, without opening files or widening watcher scope. */
+  noteDependencies(files: readonly string[]): void {
+    const added = files.filter(file => !this.knownDependencies.has(file))
+    for (const file of added) {
+      pathToUri(file)
+      this.knownDependencies.add(file)
+      for (const watcher of this.registeredWatchers) watcher.noteFile(file)
+    }
+    // A watcher event may have arrived while native metadata was in flight, before
+    // this session knew that its path mattered. Do not mint an ID across that race.
+    if ([...this.events.values()].some(event => added.some(file =>
+      event.type === 3 ? containedBy(file, uriToPath(event.uri)) : containedBy(file, uriToPath(event.uri)) && containedBy(uriToPath(event.uri), file),
+    ))) this.revision++
+  }
+
   setSyncKind(value: unknown): void {
     const parsed = z.union([z.number().int().min(0).max(2), z.object({ openClose: z.boolean().optional(), change: z.number().int().min(0).max(2).optional() })]).safeParse(value)
     if (!parsed.success) throw new Error('Invalid LSP textDocumentSync capability')
@@ -70,7 +85,7 @@ export class DocumentSession {
     const projectFile = containedBy(file, this.root) && !parts.includes('node_modules') && !parts.includes('.git')
     if (projectFile && (/\.(?:[cm]?[jt]sx?|json)$/.test(file) || type === 3)) return true
     if (type === 3 && containedBy(this.root, file)) return true
-    if (type === 3 && [...this.knownDependencies].some(path => containedBy(path, file))) return true
+    if ([...this.knownDependencies].some(path => containedBy(path, file) && (type === 3 || containedBy(file, path)))) return true
     for (const { specs } of this.registrations.values()) {
       for (const spec of specs) {
         if (!(spec.kind & (1 << (type - 1)))) continue
@@ -128,6 +143,9 @@ export class DocumentSession {
         this.registrations.set(entry.id, registration); created.push(entry.id)
         for (const spec of entry.specs) {
           const watcher = createRegisteredWatcher(spec, (file, type) => this.enqueue(file, type), error => { this.watcherError = error })
+          // Native may register an ancestor after documents/metadata were loaded.
+          for (const file of this.knownDependencies) if (existsSync(file)) watcher.noteFile(file)
+          for (const uri of this.documents.keys()) { const file = uriToPath(uri); if (existsSync(file)) watcher.noteFile(file) }
           registration.watchers.push(watcher); this.registeredWatchers.add(watcher)
           this.readiness.add(watcher.ready)
           void watcher.ready.catch(() => {}).finally(() => this.readiness.delete(watcher.ready))

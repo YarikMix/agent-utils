@@ -188,3 +188,76 @@ for (const direction of ['prepare', 'incoming', 'outgoing'] as const) {
     }
   }
 }
+
+test('hierarchy indexes native dependency identities once per generation and subset searches retain them', async t => {
+  const project = await temporaryProject({ 'source.ts': 'x' }); const outside = await temporaryProject({ 'shared/types.d.ts': 'declare const value: 1' })
+  const file = join(project.root, 'source.ts'); const dependency = join(outside.root, 'shared/types.d.ts'); const log = join(project.root, 'wire.jsonl')
+  const fake = fakeLsp({ log, capabilities: { callHierarchyProvider: true, workspaceSymbolProvider: true }, results: {
+    'workspace/symbol': [{ name: 'value', kind: 13, location: { uri: pathToUri(dependency), range } }],
+    'textDocument/prepareCallHierarchy': [item(file)],
+  } })
+  const client = await LspClient.create('fake', pathToUri(project.root), { spawnProcess: fake.spawnProcess })
+  const session = client.documentSession as unknown as { enqueue(file: string, type: number): void }
+  try {
+    const [first] = await client.prepareCallHierarchy(file, 0, 0)
+    await client.prepareCallHierarchy(file, 0, 0)
+    assert.equal((await recordedMessages(log)).filter(m => m.method === 'workspace/symbol' && m.params.query === '').length, 1)
+    const raw = client as unknown as { sendRequest(method: string, params: { query?: string }, options?: import('../src/lsp-client.ts').RequestOptions): Promise<unknown> }
+    const send = raw.sendRequest.bind(client)
+    t.mock.method(raw, 'sendRequest', async (...args: Parameters<typeof send>) => {
+      const result = await send(...args)
+      return args[0] === 'workspace/symbol' && args[1].query === 'subset' ? [] : result
+    })
+    assert.deepEqual(await client.workspaceSymbols(file, 'subset'), [])
+    session.enqueue(join(outside.root, 'independent.ts'), 2)
+    await client.incomingCalls(file, first!.item_id)
+    session.enqueue(dependency, 2)
+    await assert.rejects(client.incomingCalls(file, first!.item_id), /invalid|expired/)
+    const [second] = await client.prepareCallHierarchy(file, 0, 0)
+    assert.equal((await recordedMessages(log)).filter(m => m.method === 'workspace/symbol' && m.params.query === '').length, 2)
+    session.enqueue(join(outside.root, 'shared'), 3)
+    await assert.rejects(client.incomingCalls(file, second!.item_id), /invalid|expired/)
+    assert.equal(client.documentSession.getVersion(pathToUri(dependency)), undefined)
+  } finally { await client.shutdown(); await fake.dispose(); await Promise.all([project.dispose(), outside.dispose()]) }
+})
+
+for (const metadata of ['unsupported', 'malformed', 'concurrent'] as const) {
+  test(`hierarchy dependency metadata ${metadata} fails explicitly before returning an ID`, async t => {
+    const project = await temporaryProject({ 'source.ts': 'x' }); const outside = await temporaryProject({ 'dep.d.ts': 'x' })
+    const file = join(project.root, 'source.ts'); const dependency = join(outside.root, 'dep.d.ts')
+    const fake = fakeLsp({ capabilities: { callHierarchyProvider: true, workspaceSymbolProvider: metadata !== 'unsupported' }, results: {
+      'workspace/symbol': metadata === 'malformed' ? [{ name: 'broken', location: {} }] : [{ name: 'value', kind: 13, location: { uri: pathToUri(dependency), range } }],
+      'textDocument/prepareCallHierarchy': [item(file)],
+    } })
+    const client = await LspClient.create('fake', pathToUri(project.root), { spawnProcess: fake.spawnProcess })
+    try {
+      if (metadata === 'concurrent') {
+        const raw = client as any
+        const send = raw.sendRequest.bind(client)
+        t.mock.method(raw, 'sendRequest', async (...args: any[]) => {
+          const result = await send(...args)
+          if (args[0] === 'workspace/symbol') (client.documentSession as any).enqueue(dependency, 2)
+          return result
+        })
+      }
+      await assert.rejects(client.prepareCallHierarchy(file, 0, 0), metadata === 'unsupported' ? /capability/ : metadata === 'malformed' ? /protocol/ : /invalid|change/)
+    } finally { await client.shutdown(); await fake.dispose(); await Promise.all([project.dispose(), outside.dispose()]) }
+  })
+}
+
+test('late native registrations inherit known dependency identities instead of reporting an existing file as newly created', { skip: !['darwin', 'win32'].includes(process.platform) }, async t => {
+  const p = await temporaryProject({ 'project/source.ts': 'x', 'shared/dependency.ts': 'x' })
+  const file = join(p.root, 'project/source.ts'); const dependency = join(p.root, 'shared/dependency.ts'); const log = join(p.root, 'wire.jsonl')
+  let callback!: (event: string, file: string) => void
+  t.mock.method(fs, 'watch', ((...args: any[]) => { callback = args.at(-1); const handle = new EventEmitter() as EventEmitter & { close(): void }; handle.close = () => {}; return handle }) as typeof fs.watch); syncBuiltinESMExports()
+  const fake = fakeLsp({ log })
+  const client = await LspClient.create('fake', pathToUri(join(p.root, 'project')), { spawnProcess: fake.spawnProcess })
+  try {
+    client.documentSession.noteDependencies([dependency])
+    await client.documentSession.register({ registrations: [{ id: 'late', method: 'workspace/didChangeWatchedFiles', registerOptions: { watchers: [{ globPattern: join(p.root, '**/*') }] } }] })
+    callback('change', 'shared/dependency.ts')
+    await client.hover(file, 0, 0)
+    const changes = (await recordedMessages(log)).filter(m => m.method === 'workspace/didChangeWatchedFiles').flatMap(m => m.params.changes)
+    assert.deepEqual(changes.filter(change => change.uri === pathToUri(dependency)), [{ uri: pathToUri(dependency), type: 2 }])
+  } finally { await client.shutdown(); await fake.dispose(); t.mock.restoreAll(); syncBuiltinESMExports(); await p.dispose() }
+})

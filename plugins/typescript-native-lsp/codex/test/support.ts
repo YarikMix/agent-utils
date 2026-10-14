@@ -2,7 +2,7 @@ import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -18,12 +18,13 @@ export function devNativeBinary(): string {
 }
 
 /** SDK protocol client around a test-owned stdio process, shared by future tests. */
-export async function openMcp(entryPath: string, env?: NodeJS.ProcessEnv): Promise<{
+export async function openMcp(entryPath: string, env?: NodeJS.ProcessEnv, options: { preload?: string } = {}): Promise<{
   client: Client
   process: ChildProcessWithoutNullStreams
+  stderr(): string
   close(): Promise<void>
 }> {
-  const child = spawn(process.execPath, [...(entryPath.endsWith('.ts') ? ['--import', 'tsx'] : []), entryPath], { env, stdio: 'pipe', shell: false })
+  const child = spawn(process.execPath, [...(options.preload ? ['--require', options.preload] : []), ...(entryPath.endsWith('.ts') ? ['--import', 'tsx'] : []), entryPath], { env, stdio: 'pipe', shell: false })
   const client = new Client({ name: 'typescript-native-lsp-test', version: '1.0.0' })
   const buffer = new ReadBuffer()
   let stderr = ''
@@ -67,7 +68,7 @@ export async function openMcp(entryPath: string, env?: NodeJS.ProcessEnv): Promi
     await transport.close()
     throw new Error(`MCP connection failed: ${stderr}`, { cause: error })
   }
-  return { client, process: child, close: () => client.close() }
+  return { client, process: child, stderr: () => stderr, close: () => client.close() }
 }
 
 /** Isolated on-disk project with tsconfig, removed even after a failing assertion. */
@@ -170,4 +171,56 @@ export async function nativeProtocolPeer(root: string, options: Record<string, u
     child.once('close', code => code === 0 ? resolve() : reject(new Error(`Protocol peer compilation failed: ${stderr}`)))
   })
   return binary
+}
+
+/** Portable isolated npm-global PATH; never inherit a user's explicit compiler override. */
+export async function nativeTestEnv(prefix: string): Promise<NodeJS.ProcessEnv> {
+  const env = { ...process.env }
+  const paths = Object.keys(env).filter(key => key.toLowerCase() === 'path')
+  const inheritedPath = paths.map(key => env[key]).filter(Boolean).join(delimiter)
+  for (const key of paths) delete env[key]
+  delete env.TSC_PATH
+  env.PATH = [process.platform === 'win32' ? prefix : join(prefix, 'bin'), inheritedPath].join(delimiter)
+  return env
+}
+
+/** Passive child-spawn observation in the real bundled MCP; no fake native responses. */
+export async function nativeSpawnRecorder(root: string): Promise<{ preload: string; log: string }> {
+  const preload = join(root, 'record-spawn.cjs')
+  const log = join(root, 'owned-native.jsonl')
+  await writeFile(preload, String.raw`const cp = require('node:child_process');
+const fs = require('node:fs');
+const original = cp.spawn;
+cp.spawn = function (...args) {
+  const child = Reflect.apply(original, this, args);
+  fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ pid: child.pid, binary: args[0], args: args[1] }) + '\n');
+  child.stderr?.on('data', chunk => fs.appendFileSync(${JSON.stringify(join(root, 'native.stderr'))}, chunk));
+  const wireLog = ${JSON.stringify(join(root, 'native-wire.jsonl'))};
+  const capture = direction => {
+    let buffer = Buffer.alloc(0);
+    return chunk => {
+      buffer = Buffer.concat([buffer, Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)]);
+      for (;;) {
+        const boundary = buffer.indexOf('\r\n\r\n');
+        if (boundary < 0) return;
+        const length = /Content-Length: (\d+)/i.exec(buffer.subarray(0, boundary).toString());
+        if (!length) return;
+        const end = boundary + 4 + Number(length[1]);
+        if (buffer.length < end) return;
+        fs.appendFileSync(wireLog, JSON.stringify({ pid: child.pid, direction, message: JSON.parse(buffer.subarray(boundary + 4, end).toString()) }) + '\n');
+        buffer = buffer.subarray(end);
+      }
+    };
+  };
+  if (args[1]?.includes('--lsp')) {
+    child.stdout.on('data', capture('server'));
+    const outgoing = capture('client');
+    const write = child.stdin.write;
+    child.stdin.write = function (chunk, ...rest) { outgoing(chunk); return Reflect.apply(write, this, [chunk, ...rest]); };
+  }
+  return child;
+};
+require('node:module').syncBuiltinESMExports();
+`)
+  return { preload, log }
 }

@@ -29,6 +29,7 @@ try {
   // 2. Diagnostics with fixes
   console.error(`\n--- diagnostics ---`)
   const { diagnostics, actions } = await pool.diagnosticsWithFixes(testFile)
+  assert.deepEqual(diagnostics.filter(d => d.severity === "error"), [])
   console.log(`Errors/warnings: ${diagnostics.length}`)
   for (const d of diagnostics) {
     console.log(`  ${d.line}:${d.character} ${d.severity}: ${d.message}`)
@@ -74,6 +75,8 @@ try {
   // 6. Inlay hints (lines 49-64 — example usage section with inferred types)
   console.error(`\n--- inlay hints (lines 49-64) ---`)
   const hints = await pool.inlayHints(testFile, 49, 64)
+  assert.ok(hints.length > 0)
+  assert.ok(hints.some(hint => hint.kind === "type" || hint.kind === "parameter"))
   console.log(`Inlay hints: ${hints.length}`)
   for (const h of hints) {
     console.log(`  ${h.line}:${h.character} ${h.kind}: ${h.text}`)

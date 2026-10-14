@@ -32694,7 +32694,7 @@ async function applyWorkspaceEdit(prepared, io = fs) {
 }
 
 // src/pool.ts
-import { existsSync as existsSync2 } from "node:fs";
+import { existsSync as existsSync3 } from "node:fs";
 import { dirname as dirname5, join as join5 } from "node:path";
 
 // src/lsp-client.ts
@@ -32738,6 +32738,7 @@ var HierarchyStore = class {
 };
 
 // src/documents.ts
+import { existsSync as existsSync2 } from "node:fs";
 import { readFile, realpath as realpath3 } from "node:fs/promises";
 import { extname as extname2, relative as relative5, sep as sep3 } from "node:path";
 
@@ -34646,6 +34647,18 @@ var DocumentSession = class {
   getOpenedDocuments() {
     return [...this.documents].map(([uri, { content, physicalPath }]) => ({ uri, content, physicalPath }));
   }
+  /** Native-returned file identities, without opening files or widening watcher scope. */
+  noteDependencies(files) {
+    const added = files.filter((file2) => !this.knownDependencies.has(file2));
+    for (const file2 of added) {
+      pathToUri(file2);
+      this.knownDependencies.add(file2);
+      for (const watcher of this.registeredWatchers) watcher.noteFile(file2);
+    }
+    if ([...this.events.values()].some((event) => added.some(
+      (file2) => event.type === 3 ? containedBy(file2, uriToPath(event.uri)) : containedBy(file2, uriToPath(event.uri)) && containedBy(uriToPath(event.uri), file2)
+    ))) this.revision++;
+  }
   setSyncKind(value) {
     const parsed = external_exports3.union([external_exports3.number().int().min(0).max(2), external_exports3.object({ openClose: external_exports3.boolean().optional(), change: external_exports3.number().int().min(0).max(2).optional() })]).safeParse(value);
     if (!parsed.success) throw new Error("Invalid LSP textDocumentSync capability");
@@ -34668,7 +34681,7 @@ var DocumentSession = class {
     const projectFile = containedBy(file2, this.root) && !parts.includes("node_modules") && !parts.includes(".git");
     if (projectFile && (/\.(?:[cm]?[jt]sx?|json)$/.test(file2) || type === 3)) return true;
     if (type === 3 && containedBy(this.root, file2)) return true;
-    if (type === 3 && [...this.knownDependencies].some((path) => containedBy(path, file2))) return true;
+    if ([...this.knownDependencies].some((path) => containedBy(path, file2) && (type === 3 || containedBy(file2, path)))) return true;
     for (const { specs } of this.registrations.values()) {
       for (const spec of specs) {
         if (!(spec.kind & 1 << type - 1)) continue;
@@ -34731,6 +34744,11 @@ var DocumentSession = class {
           const watcher = createRegisteredWatcher(spec, (file2, type) => this.enqueue(file2, type), (error48) => {
             this.watcherError = error48;
           });
+          for (const file2 of this.knownDependencies) if (existsSync2(file2)) watcher.noteFile(file2);
+          for (const uri of this.documents.keys()) {
+            const file2 = uriToPath(uri);
+            if (existsSync2(file2)) watcher.noteFile(file2);
+          }
           registration.watchers.push(watcher);
           this.registeredWatchers.add(watcher);
           this.readiness.add(watcher.ready);
@@ -34914,6 +34932,7 @@ var LspClient = class _LspClient {
   documentSession;
   capabilities = {};
   hierarchy = new HierarchyStore();
+  hierarchyDependenciesGeneration;
   diagnosticCache = /* @__PURE__ */ new Map();
   alive = true;
   closing = false;
@@ -34985,6 +35004,9 @@ var LspClient = class _LspClient {
   }
   async workspaceSymbols(file2, query, options) {
     await this.prepareDocument(file2);
+    return this.queryWorkspaceSymbols(query, options);
+  }
+  async queryWorkspaceSymbols(query, options) {
     const result = await this.sendRequest("workspace/symbol", { query }, options);
     if (result === null) return [];
     const parsed = external_exports3.array(workspaceSymbolSchema).safeParse(result);
@@ -34996,14 +35018,26 @@ var LspClient = class _LspClient {
     return symbols;
   }
   async prepareCallHierarchy(file2, line, character, options) {
+    requireCapability("textDocument/prepareCallHierarchy", this.capabilities);
     const content = await this.prepareDocument(file2);
     positionToOffset(content, { line, character });
+    await this.refreshHierarchyDependencies(options);
     const generation = this.documentSession.generation;
     const result = await this.sendRequest("textDocument/prepareCallHierarchy", { textDocument: { uri: pathToUri(file2) }, position: { line, character } }, options);
     if (result !== null && !Array.isArray(result)) throw new Error("Invalid LSP protocol call hierarchy response");
     const items = (result ?? []).map(parseHierarchyItem);
     await this.checkHierarchyGeneration(generation);
     return items.map((item) => this.hierarchy.put(item, generation));
+  }
+  /** Native symbol identities supplement broad watchers without parsing an import graph.
+   * Symbol-free/omitted dependencies are not a complete program-file inventory. */
+  async refreshHierarchyDependencies(options) {
+    const generation = this.documentSession.generation;
+    if (this.hierarchyDependenciesGeneration === generation) return;
+    const symbols = await this.queryWorkspaceSymbols("", options);
+    this.documentSession.noteDependencies(symbols.map((symbol2) => symbol2.file));
+    await this.checkHierarchyGeneration(generation);
+    this.hierarchyDependenciesGeneration = generation;
   }
   incomingCalls(file2, itemId, options) {
     return this.callEdges(file2, itemId, "incoming", options);
@@ -35633,7 +35667,7 @@ var TypeScriptPool = class {
 function findProjectRoot(filePath) {
   let dir = dirname5(filePath);
   for (; ; ) {
-    if (existsSync2(join5(dir, "tsconfig.json"))) return dir;
+    if (existsSync3(join5(dir, "tsconfig.json"))) return dir;
     const parent = dirname5(dir);
     if (parent === dir) break;
     dir = parent;

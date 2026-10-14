@@ -13,6 +13,7 @@
     "verify-build": "node scripts/verify-build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node scripts/test.mjs",
+    "test:live": "node scripts/test-native.mjs",
     "smoke": "node --import tsx test/smoke.ts"
   },
   "dependencies": {

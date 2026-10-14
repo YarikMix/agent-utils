@@ -58,6 +58,7 @@ export class LspClient {
   readonly documentSession: DocumentSession
   private capabilities: Record<string, unknown> = {}
   private hierarchy = new HierarchyStore()
+  private hierarchyDependenciesGeneration?: number
   private diagnosticCache = new Map<string, { resultId?: string; items: LspDiagnostic[] }>()
   private alive = true
   private closing = false
@@ -200,6 +201,10 @@ export class LspClient {
 
   async workspaceSymbols(file: string, query: string, options?: RequestOptions): Promise<WorkspaceSymbol[]> {
     await this.prepareDocument(file)
+    return this.queryWorkspaceSymbols(query, options)
+  }
+
+  private async queryWorkspaceSymbols(query: string, options?: RequestOptions): Promise<WorkspaceSymbol[]> {
     const result = await this.sendRequest("workspace/symbol", { query }, options)
     if (result === null) return []
     const parsed = z.array(workspaceSymbolSchema).safeParse(result)
@@ -212,14 +217,27 @@ export class LspClient {
   }
 
   async prepareCallHierarchy(file: string, line: number, character: number, options?: RequestOptions): Promise<HierarchyNode[]> {
+    requireCapability("textDocument/prepareCallHierarchy", this.capabilities)
     const content = await this.prepareDocument(file)
     positionToOffset(content, { line, character })
+    await this.refreshHierarchyDependencies(options)
     const generation = this.documentSession.generation
     const result = await this.sendRequest("textDocument/prepareCallHierarchy", { textDocument: { uri: pathToUri(file) }, position: { line, character } }, options)
     if (result !== null && !Array.isArray(result)) throw new Error("Invalid LSP protocol call hierarchy response")
     const items = (result ?? []).map(parseHierarchyItem)
     await this.checkHierarchyGeneration(generation)
     return items.map(item => this.hierarchy.put(item, generation))
+  }
+
+  /** Native symbol identities supplement broad watchers without parsing an import graph.
+   * Symbol-free/omitted dependencies are not a complete program-file inventory. */
+  private async refreshHierarchyDependencies(options?: RequestOptions): Promise<void> {
+    const generation = this.documentSession.generation
+    if (this.hierarchyDependenciesGeneration === generation) return
+    const symbols = await this.queryWorkspaceSymbols("", options)
+    this.documentSession.noteDependencies(symbols.map(symbol => symbol.file))
+    await this.checkHierarchyGeneration(generation)
+    this.hierarchyDependenciesGeneration = generation
   }
 
   incomingCalls(file: string, itemId: string, options?: RequestOptions): Promise<CallEdge[]> {

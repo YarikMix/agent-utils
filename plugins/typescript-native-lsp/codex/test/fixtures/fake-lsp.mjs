@@ -44,7 +44,7 @@ function handle(message) {
   if (message.method === 'initialize') {
     if (options.noise) process.stderr.write('native compiler warning\n'.repeat(10000))
     if (options.hangInitialize) return
-    send({ jsonrpc: '2.0', id: message.id, result: { capabilities: { textDocumentSync: options.syncKind ?? 1, hoverProvider: true, definitionProvider: true, diagnosticProvider: {}, codeActionProvider: true, documentSymbolProvider: true, renameProvider: true, inlayHintProvider: true, referencesProvider: true, ...(options.encoding ? { positionEncoding: options.encoding } : {}), ...options.capabilities } } })
+    send({ jsonrpc: '2.0', id: message.id, result: { capabilities: { textDocumentSync: options.syncKind ?? 1, hoverProvider: true, definitionProvider: true, diagnosticProvider: {}, codeActionProvider: true, documentSymbolProvider: true, workspaceSymbolProvider: true, renameProvider: true, inlayHintProvider: true, referencesProvider: true, ...(options.encoding ? { positionEncoding: options.encoding } : {}), ...options.capabilities } } })
   } else if (message.method === 'textDocument/diagnostic') {
     send({ jsonrpc: '2.0', id: message.id, result: options.diagnosticReports?.[diagnosticIndex++] ?? { kind: 'full', items: [] } })
   } else if (message.method === 'shutdown') {
