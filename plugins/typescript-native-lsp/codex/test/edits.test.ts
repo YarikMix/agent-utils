@@ -148,3 +148,94 @@ test('null and empty workspace edits are successful no-ops', async () => {
     }
   } finally { await f.close() }
 })
+
+for (const aliasCount of [1, 2]) test(`stale ${aliasCount} opened symlink alias snapshots reject canonical edits before staging`, async () => {
+  const f = await fixture()
+  try {
+    for (let index = 0; index < aliasCount; index++) {
+      const alias = join(f.root, `alias-${index}.ts`)
+      await fs.symlink(f.b, alias); await f.docs.sync(alias)
+    }
+    const external = Buffer.from('prefix foo\r\n'); await fs.writeFile(f.b, external)
+    const names = (await fs.readdir(f.root)).sort()
+    let writes = 0
+    const io: EditIO = { ...fs, writeFile: (async (...args: Parameters<typeof fs.writeFile>) => { writes++; return fs.writeFile(...args) }) as typeof fs.writeFile }
+    await assert.rejects(async () => {
+      const prepared = await prepareWorkspaceEdit(f.root, { changes: { [pathToUri(await fs.realpath(f.b))]: [edit(0, 3)] } }, f.docs, io)
+      await applyWorkspaceEdit(prepared, io)
+    }, /snapshot.*changed/i)
+    assert.equal(writes, 0); assert.deepEqual(await fs.readFile(f.b), external)
+    assert.deepEqual((await fs.readdir(f.root)).sort(), names)
+  } finally { await f.close() }
+})
+
+test('all physical aliases are checked even when the first opened snapshot matches', async () => {
+  const f = await fixture()
+  try {
+    const first = join(f.root, 'fresh.ts'); const second = join(f.root, 'stale.ts')
+    await fs.symlink(f.b, first); await fs.symlink(f.a, second)
+    await f.docs.sync(first); await f.docs.sync(second)
+    // A later retarget makes snapshots for the same current target disagree.
+    await fs.rm(second); await fs.symlink(f.b, second)
+    const names = (await fs.readdir(f.root)).sort()
+    await assert.rejects(prepareWorkspaceEdit(f.root, { changes: { [pathToUri(f.b)]: [edit(0, 3)] } }, f.docs), /snapshot.*changed/i)
+    assert.deepEqual(await f.bytes(), f.before); assert.deepEqual((await fs.readdir(f.root)).sort(), names)
+  } finally { await f.close() }
+})
+
+test('physical alias snapshots never lend their versions to another native URI', async () => {
+  const f = await fixture()
+  try {
+    const alias = join(f.root, 'alias.ts'); await fs.symlink(f.b, alias); await f.docs.sync(alias)
+    const change = (uri: string, version: number | null) => ({ documentChanges: [{ textDocument: { uri, version }, edits: [edit(0, 3)] }] })
+    assert.equal((await prepareWorkspaceEdit(f.root, change(pathToUri(alias), 1), f.docs)).files.length, 1)
+    assert.equal((await prepareWorkspaceEdit(f.root, change(pathToUri(f.b), null), f.docs)).files.length, 1)
+    await assert.rejects(prepareWorkspaceEdit(f.root, change(pathToUri(f.b), 1), f.docs), /version/)
+    await assert.rejects(prepareWorkspaceEdit(f.root, change(pathToUri(alias), 2), f.docs), /version/)
+  } finally { await f.close() }
+})
+
+for (const failure of ['deleted', 'inaccessible'] as const) test(`unresolvable ${failure} opened alias fails closed before staging`, async () => {
+  const f = await fixture()
+  try {
+    const alias = join(f.root, 'alias.ts'); await fs.symlink(f.b, alias); await f.docs.sync(alias)
+    if (failure === 'deleted') await fs.rm(alias)
+    const io: EditIO = { ...fs, realpath: (async (path: Parameters<typeof fs.realpath>[0]) => {
+      if (failure === 'inaccessible' && path === alias) throw new Error('EACCES alias')
+      return fs.realpath(path)
+    }) as typeof fs.realpath }
+    const names = (await fs.readdir(f.root)).sort()
+    await assert.rejects(prepareWorkspaceEdit(f.root, { changes: { [pathToUri(f.b)]: [edit(0, 3)] } }, f.docs, io), /Cannot verify opened.*snapshot/)
+    assert.deepEqual(await f.bytes(), f.before); assert.deepEqual((await fs.readdir(f.root)).sort(), names)
+  } finally { await f.close() }
+})
+
+test('retargeted alias cannot hide its old target stale snapshot even when new target content matches', async () => {
+  const f = await fixture()
+  try {
+    const alias = join(f.root, 'alias.ts'); const other = join(f.root, 'other.ts')
+    await fs.symlink(f.b, alias); await f.docs.sync(alias)
+    await fs.writeFile(other, f.before[1]!)
+    await fs.rm(alias); await fs.symlink(other, alias)
+    const external = Buffer.from('prefix foo\r\n'); await fs.writeFile(f.b, external)
+    const names = (await fs.readdir(f.root)).sort(); let writes = 0
+    const io: EditIO = { ...fs, writeFile: (async (...args: Parameters<typeof fs.writeFile>) => { writes++; return fs.writeFile(...args) }) as typeof fs.writeFile }
+    await assert.rejects(async () => {
+      const prepared = await prepareWorkspaceEdit(f.root, { changes: { [pathToUri(await fs.realpath(f.b))]: [edit(0, 3)] } }, f.docs, io)
+      await applyWorkspaceEdit(prepared, io)
+    }, /snapshot.*changed/)
+    assert.equal(writes, 0); assert.deepEqual(await fs.readFile(f.b), external)
+    assert.deepEqual(await fs.readFile(other), f.before[1]); assert.deepEqual((await fs.readdir(f.root)).sort(), names)
+  } finally { await f.close() }
+})
+
+test('retarget outside edited physical targets does not block unrelated valid edits', async () => {
+  const f = await fixture()
+  try {
+    const alias = join(f.root, 'alias.ts'); const other = join(f.root, 'other.ts')
+    await fs.symlink(f.b, alias); await f.docs.sync(alias)
+    await fs.writeFile(other, 'unrelated'); await fs.rm(alias); await fs.symlink(other, alias)
+    const prepared = await prepareWorkspaceEdit(f.root, { changes: { [pathToUri(f.a)]: f.changes[pathToUri(f.a)]! } }, f.docs)
+    assert.equal(prepared.files.length, 1); assert.deepEqual(await f.bytes(), f.before)
+  } finally { await f.close() }
+})

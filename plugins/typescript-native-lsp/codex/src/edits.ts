@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import type { DocumentSession } from './documents.ts'
-import { assertProjectWritePath, pathToUri, positionToOffset, uriToPath } from './files.ts'
+import { assertProjectWritePath, positionToOffset, uriToPath } from './files.ts'
 import { renameWorkspaceEditSchema } from './protocol.ts'
 
 export type EditIO = Pick<typeof fs, 'readFile' | 'writeFile' | 'rename' | 'rm' | 'stat' | 'access' | 'realpath' | 'chmod'>
@@ -22,6 +22,10 @@ export async function prepareWorkspaceEdit(root: string, value: unknown, documen
     : (parsed.data.documentChanges ?? []).map(({ textDocument, edits }) => ({ ...textDocument, edits }))
   const files: PreparedFile[] = []; const seen = new Set<string>()
   const canonicalRoot = await io.realpath(root)
+  const opened = groups.some(group => group.edits.length) ? await Promise.all(documents.getOpenedDocuments().map(async snapshot => {
+    try { return { ...snapshot, file: await io.realpath(uriToPath(snapshot.uri)) } }
+    catch (error) { throw new Error(`Cannot verify opened workspace edit snapshot ${snapshot.uri}: ${String(error)}`) }
+  })) : []
   for (const { uri, edits, version } of groups) {
     const source = uriToPath(uri)
     const file = await assertProjectWritePath(root, source, io)
@@ -36,10 +40,11 @@ export async function prepareWorkspaceEdit(root: string, value: unknown, documen
     const before = await io.readFile(file)
     const text = before.toString('utf8')
     if (!Buffer.from(text).equals(before)) throw new Error(`Workspace edit requires valid UTF-8: ${file}`)
-    // A versionless response must not silently use a newer disk snapshot either.
-    for (const candidate of new Set([uri, pathToUri(file)])) {
-      const opened = documents.getText(candidate)
-      if (opened !== undefined && opened !== text) throw new Error(`Workspace edit snapshot changed: ${file}`)
+    // Every currently resolved physical alias can carry stale native coordinates.
+    // Numeric versions above deliberately remain scoped to the response's URI.
+    for (const snapshot of opened) {
+      if ((snapshot.file === file || snapshot.physicalPath === file) && snapshot.file !== snapshot.physicalPath) throw new Error(`Workspace edit snapshot path changed: ${snapshot.uri}`)
+      if (snapshot.file === file && snapshot.content !== text) throw new Error(`Workspace edit snapshot changed: ${file} (opened as ${snapshot.uri})`)
     }
     const offsets = edits.map(edit => ({ start: positionToOffset(text, edit.range.start), end: positionToOffset(text, edit.range.end), newText: edit.newText })).sort((a, b) => a.start - b.start || a.end - b.end)
     for (let i = 0; i < offsets.length; i++) {

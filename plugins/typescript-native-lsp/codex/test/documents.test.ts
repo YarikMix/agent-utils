@@ -229,3 +229,26 @@ test('external concrete declaration edits and config edits raise semantic genera
     assert.ok(session.generation > changedDependency)
   } finally { await session.close(); await Promise.all([project.dispose(), outside.dispose()]) }
 })
+
+test('opened enumeration copies content and current synchronized physical identity without lending versions', async () => {
+  const { realpath, symlink } = await import('node:fs/promises')
+  const project = await temporaryProject({ 'one.ts': 'same', 'two.ts': 'same' })
+  const messages: Array<{ method: string; params: any }> = []
+  const session = new DocumentSession(project.root, (method, params) => messages.push({ method, params }))
+  const alias = join(project.root, 'alias.ts'); const first = join(project.root, 'one.ts'); const second = join(project.root, 'two.ts')
+  try {
+    await symlink(first, alias); await session.sync(alias)
+    const snapshots = session.getOpenedDocuments()
+    assert.deepEqual(snapshots, [{ uri: pathToUri(alias), content: 'same', physicalPath: await realpath(first) }])
+    Reflect.set(snapshots[0]!, 'content', 'corrupt')
+    assert.equal(session.getText(pathToUri(alias)), 'same')
+    const generation = session.generation
+    await rm(alias); await symlink(second, alias); await session.sync(alias)
+    assert.equal(session.getOpenedDocuments()[0]!.physicalPath, await realpath(second))
+    assert.equal(snapshots[0]!.physicalPath, await realpath(first))
+    assert.equal(session.getVersion(pathToUri(alias)), 2)
+    assert.ok(session.generation > generation)
+    assert.deepEqual(messages.find(message => message.method === 'textDocument/didChange')?.params, { textDocument: { uri: pathToUri(alias), version: 2 }, contentChanges: [{ text: 'same' }] })
+    assert.equal(session.getVersion(pathToUri(second)), undefined)
+  } finally { await session.close(); await project.dispose() }
+})

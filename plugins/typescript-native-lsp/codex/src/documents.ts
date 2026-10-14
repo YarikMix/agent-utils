@@ -1,12 +1,12 @@
 import type { Stats } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, realpath } from 'node:fs/promises'
 import { extname, relative, sep } from 'node:path'
 import chokidar, { type FSWatcher } from 'chokidar'
 import { z } from 'zod'
 import { endPosition, pathToUri, uriToPath } from './files.ts'
 import { compileWatchPattern, containedBy, createRegisteredWatcher, type RegisteredWatcher, type WatchPattern } from './watchers.ts'
 
-interface DocumentState { version: number; content: string }
+interface DocumentState { version: number; content: string; physicalPath: string }
 interface FileEvent { uri: string; type: number }
 interface Registration { method: string; watchers: RegisteredWatcher[]; specs: WatchPattern[] }
 const registrationSchema = z.object({ registrations: z.array(z.object({ id: z.string().min(1), method: z.string(), registerOptions: z.unknown().optional() })) })
@@ -40,6 +40,11 @@ export class DocumentSession {
   get generation(): number { return this.revision }
   getVersion(uri: string): number | undefined { return this.documents.get(uri)?.version }
   getText(uri: string): string | undefined { return this.documents.get(uri)?.content }
+
+  /** Detached snapshots for physical-alias validation; callers cannot mutate session state. */
+  getOpenedDocuments(): ReadonlyArray<Readonly<{ uri: string; content: string; physicalPath: string }>> {
+    return [...this.documents].map(([uri, { content, physicalPath }]) => ({ uri, content, physicalPath }))
+  }
 
   setSyncKind(value: unknown): void {
     const parsed = z.union([z.number().int().min(0).max(2), z.object({ openClose: z.boolean().optional(), change: z.number().int().min(0).max(2).optional() })]).safeParse(value)
@@ -178,13 +183,14 @@ export class DocumentSession {
     this.enqueue(uriToPath(uri), 3)
   }
 
-  private changed(uri: string, state: DocumentState, content: string): void {
-    if (state.content === content) return
+  private changed(uri: string, state: DocumentState, content: string, physicalPath: string): void {
+    // Retargeting is a new native snapshot even when the replacement bytes match.
+    if (state.content === content && state.physicalPath === physicalPath) return
     if (!this.syncKind) throw new Error('LSP server does not support document changes')
     const version = state.version + 1
     const change = this.syncKind === 2 ? { range: { start: { line: 0, character: 0 }, end: endPosition(state.content) }, text: content } : { text: content }
     this.notify('textDocument/didChange', { textDocument: { uri, version }, contentChanges: [change] })
-    this.documents.set(uri, { version, content }); this.revision++
+    this.documents.set(uri, { version, content, physicalPath }); this.revision++
   }
 
   /** A project selector is validated/read without opening a new native document. */
@@ -192,24 +198,28 @@ export class DocumentSession {
     const uri = pathToUri(file)
     await this.flushFileEvents()
     for (const [openUri, state] of this.documents) {
-      let content: string
-      try { content = await readFile(uriToPath(openUri), 'utf8') }
+      let content: string; let physicalPath: string
+      try {
+        physicalPath = await realpath(uriToPath(openUri))
+        content = await readFile(physicalPath, 'utf8')
+      }
       catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
         this.deleted(openUri); continue
       }
-      this.changed(openUri, state, content)
+      this.changed(openUri, state, content, physicalPath)
     }
     await this.flushFileEvents()
-    const content = await readFile(file, 'utf8')
+    const physicalPath = await realpath(file)
+    const content = await readFile(physicalPath, 'utf8')
     for (const watcher of this.registeredWatchers) watcher.noteFile(file)
     const state = this.documents.get(uri)
-    if (state) this.changed(uri, state, content)
+    if (state) this.changed(uri, state, content, physicalPath)
     else if (options.open !== false) {
       const extension = extname(file)
       const languageId = extension === '.tsx' ? 'typescriptreact' : extension === '.jsx' ? 'javascriptreact' : ['.js', '.mjs', '.cjs'].includes(extension) ? 'javascript' : 'typescript'
       this.notify('textDocument/didOpen', { textDocument: { uri, languageId, version: 1, text: content } })
-      this.documents.set(uri, { version: 1, content }); this.revision++
+      this.documents.set(uri, { version: 1, content, physicalPath }); this.revision++
     }
     return content
   }

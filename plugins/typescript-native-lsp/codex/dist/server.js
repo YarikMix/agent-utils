@@ -32576,6 +32576,13 @@ async function prepareWorkspaceEdit(root, value, documents, io = fs) {
   const files = [];
   const seen = /* @__PURE__ */ new Set();
   const canonicalRoot = await io.realpath(root);
+  const opened = groups.some((group) => group.edits.length) ? await Promise.all(documents.getOpenedDocuments().map(async (snapshot) => {
+    try {
+      return { ...snapshot, file: await io.realpath(uriToPath(snapshot.uri)) };
+    } catch (error48) {
+      throw new Error(`Cannot verify opened workspace edit snapshot ${snapshot.uri}: ${String(error48)}`);
+    }
+  })) : [];
   for (const { uri, edits, version: version2 } of groups) {
     const source = uriToPath(uri);
     const file2 = await assertProjectWritePath(root, source, io);
@@ -32590,9 +32597,9 @@ async function prepareWorkspaceEdit(root, value, documents, io = fs) {
     const before = await io.readFile(file2);
     const text = before.toString("utf8");
     if (!Buffer.from(text).equals(before)) throw new Error(`Workspace edit requires valid UTF-8: ${file2}`);
-    for (const candidate of /* @__PURE__ */ new Set([uri, pathToUri(file2)])) {
-      const opened = documents.getText(candidate);
-      if (opened !== void 0 && opened !== text) throw new Error(`Workspace edit snapshot changed: ${file2}`);
+    for (const snapshot of opened) {
+      if ((snapshot.file === file2 || snapshot.physicalPath === file2) && snapshot.file !== snapshot.physicalPath) throw new Error(`Workspace edit snapshot path changed: ${snapshot.uri}`);
+      if (snapshot.file === file2 && snapshot.content !== text) throw new Error(`Workspace edit snapshot changed: ${file2} (opened as ${snapshot.uri})`);
     }
     const offsets = edits.map((edit) => ({ start: positionToOffset(text, edit.range.start), end: positionToOffset(text, edit.range.end), newText: edit.newText })).sort((a, b) => a.start - b.start || a.end - b.end);
     for (let i = 0; i < offsets.length; i++) {
@@ -32731,7 +32738,7 @@ var HierarchyStore = class {
 };
 
 // src/documents.ts
-import { readFile } from "node:fs/promises";
+import { readFile, realpath as realpath3 } from "node:fs/promises";
 import { extname as extname2, relative as relative5, sep as sep3 } from "node:path";
 
 // node_modules/chokidar/esm/index.js
@@ -33620,7 +33627,7 @@ var NodeFsHandler = class {
    * @param realpath
    * @returns closer for the watcher instance.
    */
-  async _handleDir(dir, stats, initialAdd, depth, target, wh, realpath4) {
+  async _handleDir(dir, stats, initialAdd, depth, target, wh, realpath5) {
     const parentDir = this.fsw._getWatchedDir(sysPath.dirname(dir));
     const tracked = parentDir.has(sysPath.basename(dir));
     if (!(initialAdd && this.fsw.options.ignoreInitial) && !target && !tracked) {
@@ -33631,7 +33638,7 @@ var NodeFsHandler = class {
     let throttler;
     let closer;
     const oDepth = this.fsw.options.depth;
-    if ((oDepth == null || depth <= oDepth) && !this.fsw._symlinkPaths.has(realpath4)) {
+    if ((oDepth == null || depth <= oDepth) && !this.fsw._symlinkPaths.has(realpath5)) {
       if (!target) {
         await this._handleRead(dir, initialAdd, wh, target, dir, depth, throttler);
         if (this.fsw.closed)
@@ -34635,6 +34642,10 @@ var DocumentSession = class {
   getText(uri) {
     return this.documents.get(uri)?.content;
   }
+  /** Detached snapshots for physical-alias validation; callers cannot mutate session state. */
+  getOpenedDocuments() {
+    return [...this.documents].map(([uri, { content, physicalPath }]) => ({ uri, content, physicalPath }));
+  }
   setSyncKind(value) {
     const parsed = external_exports3.union([external_exports3.number().int().min(0).max(2), external_exports3.object({ openClose: external_exports3.boolean().optional(), change: external_exports3.number().int().min(0).max(2).optional() })]).safeParse(value);
     if (!parsed.success) throw new Error("Invalid LSP textDocumentSync capability");
@@ -34771,13 +34782,13 @@ var DocumentSession = class {
     this.revision++;
     this.enqueue(uriToPath(uri), 3);
   }
-  changed(uri, state, content) {
-    if (state.content === content) return;
+  changed(uri, state, content, physicalPath) {
+    if (state.content === content && state.physicalPath === physicalPath) return;
     if (!this.syncKind) throw new Error("LSP server does not support document changes");
     const version2 = state.version + 1;
     const change = this.syncKind === 2 ? { range: { start: { line: 0, character: 0 }, end: endPosition(state.content) }, text: content } : { text: content };
     this.notify("textDocument/didChange", { textDocument: { uri, version: version2 }, contentChanges: [change] });
-    this.documents.set(uri, { version: version2, content });
+    this.documents.set(uri, { version: version2, content, physicalPath });
     this.revision++;
   }
   /** A project selector is validated/read without opening a new native document. */
@@ -34786,25 +34797,28 @@ var DocumentSession = class {
     await this.flushFileEvents();
     for (const [openUri, state2] of this.documents) {
       let content2;
+      let physicalPath2;
       try {
-        content2 = await readFile(uriToPath(openUri), "utf8");
+        physicalPath2 = await realpath3(uriToPath(openUri));
+        content2 = await readFile(physicalPath2, "utf8");
       } catch (error48) {
         if (error48.code !== "ENOENT") throw error48;
         this.deleted(openUri);
         continue;
       }
-      this.changed(openUri, state2, content2);
+      this.changed(openUri, state2, content2, physicalPath2);
     }
     await this.flushFileEvents();
-    const content = await readFile(file2, "utf8");
+    const physicalPath = await realpath3(file2);
+    const content = await readFile(physicalPath, "utf8");
     for (const watcher of this.registeredWatchers) watcher.noteFile(file2);
     const state = this.documents.get(uri);
-    if (state) this.changed(uri, state, content);
+    if (state) this.changed(uri, state, content, physicalPath);
     else if (options.open !== false) {
       const extension = extname2(file2);
       const languageId = extension === ".tsx" ? "typescriptreact" : extension === ".jsx" ? "javascriptreact" : [".js", ".mjs", ".cjs"].includes(extension) ? "javascript" : "typescript";
       this.notify("textDocument/didOpen", { textDocument: { uri, languageId, version: 1, text: content } });
-      this.documents.set(uri, { version: 1, content });
+      this.documents.set(uri, { version: 1, content, physicalPath });
       this.revision++;
     }
     return content;
@@ -35630,7 +35644,7 @@ function findProjectRoot(filePath) {
 // src/resolve-binary.ts
 import { spawn as spawn2 } from "node:child_process";
 import { constants as constants2 } from "node:fs";
-import { access, open as open2, realpath as realpath3, stat as stat4 } from "node:fs/promises";
+import { access, open as open2, realpath as realpath4, stat as stat4 } from "node:fs/promises";
 import { dirname as dirname6, isAbsolute as isAbsolute4, join as join6, normalize as normalize2, relative as relative6, resolve as resolve4, sep as sep4 } from "node:path";
 var GUIDANCE = "Install TypeScript 7+ globally and add tsc to PATH, or set TSC_PATH to its absolute native binary path.";
 async function resolveTscBinary(options = {}) {
@@ -35660,7 +35674,7 @@ async function discoverTscBinary(options = {}) {
     const normalizedDirectory = normalize2(rawDirectory);
     let directory;
     try {
-      directory = await realpath3(normalizedDirectory);
+      directory = await realpath4(normalizedDirectory);
     } catch {
       continue;
     }
@@ -35683,7 +35697,7 @@ async function discoverTscBinary(options = {}) {
   throw new Error(`Could not find TypeScript 7+ on PATH. ${GUIDANCE}`);
 }
 async function nativeFromLauncher(launcher, platform, arch) {
-  const target = await realpath3(launcher);
+  const target = await realpath4(launcher);
   if (await hasNativeHeader(target, platform)) return nativeBinary(target, platform);
   let script = target;
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) {
@@ -35698,11 +35712,11 @@ async function nativeFromLauncher(launcher, platform, arch) {
     }
     const reference = text.match(/["'](?:%dp0%|%~dp0|\$basedir|\$\{basedir\}|\$PSScriptRoot)[\\/]((?:\.\.[\\/])?(?:lib[\\/])?node_modules[\\/]typescript[\\/]bin[\\/]tsc)["']/i)?.[1];
     if (!reference) throw new Error("tsc is not a standard TypeScript npm launcher or native executable");
-    script = await realpath3(resolve4(dirname6(target), reference.replaceAll("\\", "/")));
+    script = await realpath4(resolve4(dirname6(target), reference.replaceAll("\\", "/")));
   }
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) throw new Error("npm launcher does not target typescript/bin/tsc");
   const packageRoot = dirname6(dirname6(script));
-  const installationRoot = await realpath3(dirname6(packageRoot));
+  const installationRoot = await realpath4(dirname6(packageRoot));
   const nativePackage = `@typescript/typescript-${platform}-${arch}`;
   for (const nativeRoot of [join6(packageRoot, "node_modules", nativePackage), join6(dirname6(packageRoot), nativePackage)]) {
     try {
@@ -35710,9 +35724,9 @@ async function nativeFromLauncher(launcher, platform, arch) {
     } catch {
       continue;
     }
-    const canonicalRoot = await realpath3(nativeRoot);
+    const canonicalRoot = await realpath4(nativeRoot);
     requireInInstallation(installationRoot, canonicalRoot);
-    const binary = await realpath3(join6(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"));
+    const binary = await realpath4(join6(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"));
     requireInInstallation(installationRoot, binary);
     return nativeBinary(binary, platform);
   }
@@ -35727,7 +35741,7 @@ function requireInInstallation(installationRoot, target) {
 async function nativeBinary(path, platform) {
   let binary;
   try {
-    binary = await realpath3(path);
+    binary = await realpath4(path);
   } catch {
     throw new Error(`binary "${path}" does not exist`);
   }
