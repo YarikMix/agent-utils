@@ -99,8 +99,25 @@ export class DocumentSession {
   }
 
   /** Settle callbacks without draining events that metadata may still reclassify. */
-  async settleReconciliation(snapshot: ReconciliationSnapshot): Promise<void> {
-    await this.settleFileEvents()
+  async settleReconciliation(snapshot: ReconciliationSnapshot, options: { timeoutMs: number; signal?: AbortSignal }): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      let settled = false
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const finish = (complete: () => void) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        options.signal?.removeEventListener('abort', abort)
+        complete()
+      }
+      const abort = () => finish(() => reject(new Error('Watcher reconciliation aborted')))
+      timer = setTimeout(() => finish(() => reject(new Error('Watcher reconciliation timed out'))), options.timeoutMs)
+      options.signal?.addEventListener('abort', abort, { once: true })
+      if (options.signal?.aborted) abort()
+      // Cancelling the waiter does not cancel watcher-owned filesystem work or
+      // drain its events. Late completion is handled and cannot resume the RPC.
+      else void this.settleFileEvents().then(() => finish(resolve), error => finish(() => reject(error)))
+    })
     this.assertReconciliationSnapshot(snapshot)
     if (this.ambiguousChanges([...this.events.values()]).length) {
       throw new Error('Files changed during native request; retry the operation')

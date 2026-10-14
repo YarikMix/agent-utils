@@ -34691,8 +34691,23 @@ var DocumentSession = class {
     }
   }
   /** Settle callbacks without draining events that metadata may still reclassify. */
-  async settleReconciliation(snapshot) {
-    await this.settleFileEvents();
+  async settleReconciliation(snapshot, options) {
+    await new Promise((resolve5, reject) => {
+      let settled = false;
+      let timer;
+      const finish = (complete) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        options.signal?.removeEventListener("abort", abort);
+        complete();
+      };
+      const abort = () => finish(() => reject(new Error("Watcher reconciliation aborted")));
+      timer = setTimeout(() => finish(() => reject(new Error("Watcher reconciliation timed out"))), options.timeoutMs);
+      options.signal?.addEventListener("abort", abort, { once: true });
+      if (options.signal?.aborted) abort();
+      else void this.settleFileEvents().then(() => finish(resolve5), (error48) => finish(() => reject(error48)));
+    });
     this.assertReconciliationSnapshot(snapshot);
     if (this.ambiguousChanges([...this.events.values()]).length) {
       throw new Error("Files changed during native request; retry the operation");
@@ -35428,12 +35443,12 @@ var LspClient = class _LspClient {
     };
     const snapshot = this.documentSession.reconciliationSnapshot();
     const result = await this.sendRawRequest(method, params, remainingOptions());
-    await this.documentSession.settleReconciliation(snapshot);
+    await this.documentSession.settleReconciliation(snapshot, remainingOptions());
     remainingOptions();
     if (!snapshot.pending) return result;
     this.documentSession.replayReconciliation(snapshot);
     const repeated = await this.sendRawRequest(method, params, remainingOptions());
-    await this.documentSession.settleReconciliation(snapshot);
+    await this.documentSession.settleReconciliation(snapshot, remainingOptions());
     remainingOptions();
     this.documentSession.completeReconciliation(snapshot);
     return repeated;

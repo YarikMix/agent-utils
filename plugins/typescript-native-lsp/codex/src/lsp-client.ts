@@ -615,7 +615,7 @@ export class LspClient {
     if (method === 'initialize' || method === 'shutdown') return this.sendRawRequest(method, params, options)
     const timeoutMs = options.timeoutMs ?? this.requestTimeoutMs
     const deadline = performance.now() + timeoutMs
-    const remainingOptions = (): RequestOptions => {
+    const remainingOptions = (): RequestOptions & { timeoutMs: number } => {
       if (options.signal?.aborted) throw new Error(`Request "${method}" aborted`)
       const remaining = deadline - performance.now()
       if (remaining <= 0) throw new Error(`Request "${method}" timed out after ${timeoutMs}ms`)
@@ -623,7 +623,7 @@ export class LspClient {
     }
     const snapshot = this.documentSession.reconciliationSnapshot()
     const result = await this.sendRawRequest(method, params, remainingOptions())
-    await this.documentSession.settleReconciliation(snapshot)
+    await this.documentSession.settleReconciliation(snapshot, remainingOptions())
     remainingOptions()
     if (!snapshot.pending) return result
     // TS7 can coalesce Created+Changed without refreshing a cached source. The
@@ -631,7 +631,7 @@ export class LspClient {
     // replay only their permitted Changed, and repeat this pure read at most once.
     this.documentSession.replayReconciliation(snapshot)
     const repeated = await this.sendRawRequest(method, params, remainingOptions())
-    await this.documentSession.settleReconciliation(snapshot)
+    await this.documentSession.settleReconciliation(snapshot, remainingOptions())
     remainingOptions()
     this.documentSession.completeReconciliation(snapshot)
     return repeated

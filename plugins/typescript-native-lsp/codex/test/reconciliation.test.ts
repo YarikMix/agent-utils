@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
+import fs from 'node:fs'
+import fsp from 'node:fs/promises'
+import { EventEmitter } from 'node:events'
+import { syncBuiltinESMExports } from 'node:module'
+import { setTimeout as delay } from 'node:timers/promises'
 import test from 'node:test'
 import { LspClient } from '../src/lsp-client.ts'
 import { TypeScriptPool } from '../src/pool.ts'
@@ -157,3 +162,57 @@ test('omitted sibling event during actual native metadata response remains avail
     assert.deepEqual(changes.map(event => event.type), [1, 2, 2])
   } finally { await f.dispose(); await outside.dispose() }
 })
+
+
+for (const phase of ['first', 'repeat']) for (const trigger of ['timeout', 'abort']) {
+  test(`${phase} post-response watcher wait honors ${trigger} before IO release and retains queued metadata events`, { skip: !['darwin', 'win32'].includes(process.platform) }, async t => {
+    const p = await temporaryProject({ 'project/main.ts': 'export const value = 1', 'project/dependency.ts': 'x', 'shared/a.ts': 'x', 'shared/barrel.ts': 'x', 'noise.log': 'noise' })
+    let callback!: (event: string, file: string) => void
+    t.mock.method(fs, 'watch', ((...args: any[]) => { callback = args.at(-1); const handle = new EventEmitter() as EventEmitter & { close(): void }; handle.close = () => {}; return handle }) as typeof fs.watch)
+    syncBuiltinESMExports()
+    const file = join(p.root, 'project/main.ts'); const log = join(p.root, 'wire.jsonl'); const noise = join(p.root, 'noise.log'); const barrel = join(p.root, 'shared/barrel.ts')
+    const expectedReads = phase === 'first' ? 1 : 2
+    const fake = fakeLsp({ log, responseSequences: { 'textDocument/hover': [...(phase === 'repeat' ? [hover('barrier')] : []), hover('answer', 30), hover('after release')] } })
+    const client = await LspClient.create('fake', pathToUri(join(p.root, 'project')), { spawnProcess: fake.spawnProcess })
+    let release!: () => void; let entered!: () => void
+    const gate = new Promise<void>(resolve => { release = resolve }); const inspecting = new Promise<void>(resolve => { entered = resolve })
+    const originalStat = fsp.lstat
+    const session = client.documentSession as any
+    const reads = async () => (await recordedMessages(log)).filter(message => message.method === 'textDocument/hover')
+    try {
+      await client.documentSession.sync(file)
+      await client.documentSession.register({ registrations: [{ id: 'native', method: 'workspace/didChangeWatchedFiles', registerOptions: { watchers: [{ globPattern: join(p.root, '**/*'), kind: 7 }] } }] })
+      if (phase === 'repeat') for (const type of [1, 2]) session.enqueue(join(p.root, 'project/dependency.ts'), type)
+      t.mock.method(fsp, 'lstat', (async (...args: any[]) => { if (String(args[0]) === noise) { entered(); await gate } return originalStat(...args as Parameters<typeof originalStat>) }) as typeof fsp.lstat)
+      syncBuiltinESMExports()
+      const controller = new AbortController(); let settled = false
+      const request = client.hover(file, 0, 0, { timeoutMs: trigger === 'timeout' ? 90 : 2000, signal: controller.signal }).then(
+        () => { settled = true; return 'unexpected success' },
+        error => { settled = true; return String(error) },
+      )
+      await waitFor(async () => (await reads()).length === expectedReads)
+      callback('change', 'noise.log'); await inspecting
+      callback('rename', 'shared/barrel.ts')
+      await delay(50)
+      if (trigger === 'abort') controller.abort()
+      await delay(90)
+      assert.equal(settled, true, `${trigger} must settle before releasing unrelated watcher IO`)
+      assert.match(await request, trigger === 'timeout' ? /timed out/ : /abort/i)
+      assert.equal((await reads()).length, expectedReads)
+      release()
+      await waitFor(() => session.events.has(`${pathToUri(barrel)}:1`))
+      // The abandoned waiter must neither issue a late RPC nor drain this unknown
+      // sidecar event before native metadata can make it semantically relevant.
+      assert.equal((await reads()).length, expectedReads)
+      const before = client.documentSession.generation
+      await client.documentSession.noteDependencyDirectories([join(p.root, 'shared/a.ts')])
+      assert.ok(client.documentSession.generation > before)
+      assert.equal(await client.hover(file, 0, 0), 'after release')
+      assert.equal((await reads()).length, expectedReads + 2)
+      const changes = (await recordedMessages(log)).filter(message => message.method === 'workspace/didChangeWatchedFiles').flatMap(message => message.params.changes)
+      assert.deepEqual(changes.filter(event => event.uri === pathToUri(barrel)).map(event => event.type), [1, 2, 2])
+      if (phase === 'repeat') assert.deepEqual(changes.filter(event => event.uri === pathToUri(join(p.root, 'project/dependency.ts'))).map(event => event.type), [1, 2, 2])
+      assert.equal((client as any).pending.size, 0)
+    } finally { release(); await client.shutdown(); await fake.dispose(); t.mock.restoreAll(); syncBuiltinESMExports(); await p.dispose() }
+  })
+}
