@@ -1,6 +1,7 @@
-import { type ChildProcess, spawn } from "node:child_process"
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process"
 import { readFile } from "node:fs/promises"
 import { extname } from "node:path"
+import { fileURLToPath } from "node:url"
 import { z } from "zod"
 
 const REQUEST_TIMEOUT_MS = 30_000
@@ -111,10 +112,22 @@ export interface LspInlayHint {
   kind: string
 }
 
+export interface RequestOptions {
+  signal?: AbortSignal
+  timeoutMs?: number
+}
+
+export interface ClientOptions {
+  spawnProcess?: (binaryPath: string, projectRoot: string) => ChildProcessWithoutNullStreams
+  requestTimeoutMs?: number
+  shutdownTimeoutMs?: number
+  signal?: AbortSignal
+}
+
 interface PendingRequest {
   resolve: (result: unknown) => void
   reject: (error: Error) => void
-  timer: ReturnType<typeof setTimeout>
+  dispose: () => void
 }
 
 interface DocumentState {
@@ -129,65 +142,84 @@ interface DocumentState {
  * document open/change tracking.
  */
 export class LspClient {
-  private proc: ChildProcess
-  private stdin: NodeJS.WritableStream
+  private proc: ChildProcessWithoutNullStreams
   private nextId = 1
   private pending = new Map<number, PendingRequest>()
   private buffer = Buffer.alloc(0)
   private documents = new Map<string, DocumentState>()
   private alive = true
+  private closing = false
+  private shutdownPromise?: Promise<void>
+  private writeQueue: Promise<void> = Promise.resolve()
+  private closed: Promise<void>
+  private requestTimeoutMs: number
+  private shutdownTimeoutMs: number
+  private removeAbortListener: () => void = () => {}
 
-  /**
-   * Start a TypeScript LSP child process.
-   *
-   * @param binaryPath - Absolute path to the native tsc binary.
-   * @param rootUri - LSP root URI for the project.
-   * @throws When the child process does not expose piped stdio.
-   */
-  private constructor(
-    binaryPath: string,
-    private rootUri: string,
-  ) {
-    this.proc = spawn(binaryPath, ["--lsp", "--stdio"], {
-      stdio: ["pipe", "pipe", "pipe"],
+  private constructor(binaryPath: string, private rootUri: string, options: ClientOptions) {
+    this.requestTimeoutMs = options.requestTimeoutMs ?? REQUEST_TIMEOUT_MS
+    this.shutdownTimeoutMs = options.shutdownTimeoutMs ?? 2000
+    const projectRoot = fileURLToPath(rootUri)
+    this.proc = options.spawnProcess
+      ? options.spawnProcess(binaryPath, projectRoot)
+      : spawn(binaryPath, ["--lsp", "--stdio"], { cwd: projectRoot, stdio: "pipe", shell: false })
+    this.closed = new Promise(resolve => {
+      this.proc.once("close", () => {
+        this.alive = false
+        this.rejectPending(new Error("TypeScript process closed"))
+        this.removeAbortListener()
+        resolve()
+      })
     })
-
-    if (!this.proc.stdin || !this.proc.stdout) {
-      throw new Error("Failed to create TypeScript process with piped stdio")
-    }
-    this.stdin = this.proc.stdin
-
+    this.proc.once("error", error => this.failTransport(error))
+    this.proc.once("exit", code => {
+      this.alive = false
+      this.rejectPending(new Error(`TypeScript exited with code ${code}`))
+    })
+    this.proc.stdin.on("error", error => this.failTransport(error))
+    this.proc.stdout.on("error", error => this.failTransport(error))
     this.proc.stdout.on("data", (chunk: Buffer) => {
       this.buffer = Buffer.concat([this.buffer, chunk])
-      this.drainBuffer()
-    })
-
-    this.proc.on("exit", (code) => {
-      this.alive = false
-      for (const [, req] of this.pending) {
-        req.reject(new Error(`TypeScript exited with code ${code}`))
-        clearTimeout(req.timer)
+      try { this.drainBuffer() } catch (error) {
+        this.failTransport(error instanceof Error ? error : new Error(String(error)))
       }
-      this.pending.clear()
     })
+    this.proc.stdout.once("end", () => {
+      if (!this.closing) this.failTransport(new Error("TypeScript transport closed"))
+    })
+    let stderrBudget = 8192
+    this.proc.stderr.on("data", (chunk: Buffer) => {
+      if (stderrBudget <= 0) return
+      const text = chunk.subarray(0, stderrBudget).toString("utf8")
+      stderrBudget -= chunk.length
+      console.error(text)
+    })
+    this.proc.stderr.on("error", error => this.failTransport(error))
+    if (options.signal) {
+      const abort = () => {
+        this.rejectPending(new Error("LSP initialization aborted"))
+        this.failTransport(new Error("LSP session aborted"))
+      }
+      options.signal.addEventListener("abort", abort, { once: true })
+      this.removeAbortListener = () => options.signal?.removeEventListener("abort", abort)
+      if (options.signal.aborted) abort()
+    }
   }
 
-  /**
-   * Create and initialize a new LSP client for a project root
-   *
-   * @param binaryPath - Absolute path to the native tsc binary.
-   * @param rootUri - LSP root URI for the project.
-   */
-  static async create(binaryPath: string, rootUri: string): Promise<LspClient> {
-    const client = new LspClient(binaryPath, rootUri)
-    await client.initialize()
-    return client
+  static async create(binaryPath: string, rootUri: string, options: ClientOptions = {}): Promise<LspClient> {
+    if (options.signal?.aborted) throw new Error("LSP initialization aborted")
+    const client = new LspClient(binaryPath, rootUri, options)
+    try {
+      await client.initialize(options.signal)
+      client.removeAbortListener()
+      return client
+    } catch (error) {
+      await client.shutdown()
+      throw error
+    }
   }
 
-  /** Check whether the child process is available for requests. */
-  get isAlive() {
-    return this.alive
-  }
+  get isAlive(): boolean { return this.alive && !this.closing }
 
   /**
    * Get hover information at a position in a file
@@ -200,8 +232,9 @@ export class LspClient {
     filePath: string,
     line: number,
     character: number,
+    options?: RequestOptions,
   ): Promise<string | null> {
-    if (!this.alive) throw new Error("LSP client is not alive")
+    if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
     await this.ensureDocumentOpen(filePath, uri)
@@ -209,7 +242,7 @@ export class LspClient {
     const result: unknown = await this.sendRequest("textDocument/hover", {
       textDocument: { uri },
       position: { line, character },
-    })
+    }, options)
 
     const parsed = z.object({ contents: z.unknown() }).safeParse(result)
     if (!parsed.success) return null
@@ -228,8 +261,9 @@ export class LspClient {
     filePath: string,
     line: number,
     character: number,
+    options?: RequestOptions,
   ): Promise<LspLocation[]> {
-    if (!this.alive) throw new Error("LSP client is not alive")
+    if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
     await this.ensureDocumentOpen(filePath, uri)
@@ -237,7 +271,7 @@ export class LspClient {
     const result: unknown = await this.sendRequest("textDocument/definition", {
       textDocument: { uri },
       position: { line, character },
-    })
+    }, options)
 
     return parseLocations(result)
   }
@@ -247,15 +281,15 @@ export class LspClient {
    *
    * @param filePath - Absolute path to the source file.
    */
-  async diagnostics(filePath: string): Promise<LspDiagnostic[]> {
-    if (!this.alive) throw new Error("LSP client is not alive")
+  async diagnostics(filePath: string, options?: RequestOptions): Promise<LspDiagnostic[]> {
+    if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
     await this.ensureDocumentOpen(filePath, uri)
 
     const result: unknown = await this.sendRequest("textDocument/diagnostic", {
       textDocument: { uri },
-    })
+    }, options)
 
     const parsed = z
       .object({
@@ -296,8 +330,9 @@ export class LspClient {
       end: { line: number; character: number }
     },
     diagnostics: LspDiagnostic[] = [],
+    options?: RequestOptions,
   ): Promise<LspCodeAction[]> {
-    if (!this.alive) throw new Error("LSP client is not alive")
+    if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
     await this.ensureDocumentOpen(filePath, uri)
@@ -326,7 +361,7 @@ export class LspClient {
           }),
         ),
       },
-    })
+    }, options)
 
     if (!Array.isArray(result)) return []
 
@@ -361,8 +396,8 @@ export class LspClient {
    *
    * @param filePath - Absolute path to the source file.
    */
-  async documentSymbols(filePath: string): Promise<LspSymbol[]> {
-    if (!this.alive) throw new Error("LSP client is not alive")
+  async documentSymbols(filePath: string, options?: RequestOptions): Promise<LspSymbol[]> {
+    if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
     await this.ensureDocumentOpen(filePath, uri)
@@ -370,6 +405,7 @@ export class LspClient {
     const result: unknown = await this.sendRequest(
       "textDocument/documentSymbol",
       { textDocument: { uri } },
+      options,
     )
 
     if (!Array.isArray(result)) return []
@@ -390,8 +426,9 @@ export class LspClient {
     line: number,
     character: number,
     newName: string,
+    options?: RequestOptions,
   ): Promise<LspTextEdit[]> {
-    if (!this.alive) throw new Error("LSP client is not alive")
+    if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
     await this.ensureDocumentOpen(filePath, uri)
@@ -400,7 +437,7 @@ export class LspClient {
       textDocument: { uri },
       position: { line, character },
       newName,
-    })
+    }, options)
 
     return parseWorkspaceEdit(result)
   }
@@ -416,8 +453,9 @@ export class LspClient {
     filePath: string,
     startLine: number,
     endLine: number,
+    options?: RequestOptions,
   ): Promise<LspInlayHint[]> {
-    if (!this.alive) throw new Error("LSP client is not alive")
+    if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
     await this.ensureDocumentOpen(filePath, uri)
@@ -428,7 +466,7 @@ export class LspClient {
         start: { line: startLine, character: 0 },
         end: { line: endLine, character: 0 },
       },
-    })
+    }, options)
 
     if (!Array.isArray(result)) return []
 
@@ -472,8 +510,9 @@ export class LspClient {
     filePath: string,
     line: number,
     character: number,
+    options?: RequestOptions,
   ): Promise<LspLocation[]> {
-    if (!this.alive) throw new Error("LSP client is not alive")
+    if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
     await this.ensureDocumentOpen(filePath, uri)
@@ -482,38 +521,66 @@ export class LspClient {
       textDocument: { uri },
       position: { line, character },
       context: { includeDeclaration: true },
-    })
+    }, options)
 
     return parseLocations(result)
   }
 
-  /** Gracefully shut down the LSP server */
-  async shutdown(): Promise<void> {
-    if (!this.alive) return
-    this.alive = false
-
-    try {
-      await this.sendRequest("shutdown", null)
-      this.sendNotification("exit", undefined)
-    } catch {
-      // Process may already be dead
-    }
-
-    this.proc.kill()
+  /** Close only this owned child, including requests still initializing. */
+  shutdown(): Promise<void> {
+    if (this.shutdownPromise) return this.shutdownPromise
+    this.closing = true
+    this.removeAbortListener()
+    this.rejectPending(new Error("LSP client shut down"))
+    this.shutdownPromise = (async () => {
+      // Leave scheduling room to reap the child within the full 2 s deadline.
+      const deadline = setTimeout(() => { this.proc.kill("SIGKILL") }, Math.max(0, this.shutdownTimeoutMs - 50))
+      try {
+        if (this.alive) {
+          try {
+            await this.sendRequest("shutdown", null, { timeoutMs: Math.max(1, this.shutdownTimeoutMs - 100) })
+            await this.send({ jsonrpc: "2.0", method: "exit" })
+          } catch { /* Failed or unresponsive peer is killed at the deadline. */ }
+        }
+        if (!this.alive) this.proc.kill("SIGKILL")
+        await this.closed
+      } finally {
+        clearTimeout(deadline)
+        this.rejectPending(new Error("LSP client shut down"))
+        this.buffer = Buffer.alloc(0)
+        this.documents.clear()
+      }
+    })()
+    return this.shutdownPromise
   }
 
-  /** Initialize the LSP session. */
-  private async initialize(): Promise<void> {
-    await this.sendRequest("initialize", {
+  private async initialize(signal?: AbortSignal): Promise<void> {
+    const result = await this.sendRequest("initialize", {
       processId: process.pid,
       rootUri: this.rootUri,
       capabilities: {
-        textDocument: {
-          hover: { contentFormat: ["markdown", "plaintext"] },
-        },
+        general: { positionEncodings: ["utf-16"] },
+        textDocument: { hover: { contentFormat: ["markdown", "plaintext"] } },
       },
-    })
-    this.sendNotification("initialized", {})
+    }, { signal })
+    const encoding = z.object({ capabilities: z.object({ positionEncoding: z.string().optional() }) }).parse(result).capabilities.positionEncoding
+    if (encoding !== undefined && encoding !== "utf-16") throw new Error(`Unsupported LSP position encoding: ${encoding}`)
+    await this.send({ jsonrpc: "2.0", method: "initialized", params: {} })
+  }
+
+  private rejectPending(error: Error): void {
+    for (const request of this.pending.values()) {
+      request.dispose()
+      request.reject(error)
+    }
+    this.pending.clear()
+  }
+
+  private failTransport(error: Error): void {
+    this.alive = false
+    this.rejectPending(error)
+    this.proc.kill("SIGKILL")
+    void this.shutdown()
   }
 
   /**
@@ -584,83 +651,76 @@ export class LspClient {
    * @param method - LSP method name.
    * @param params - JSON-RPC request parameters.
    */
-  private sendRequest(method: string, params: unknown): Promise<unknown> {
+  private sendRequest(method: string, params: unknown, options: RequestOptions = {}): Promise<unknown> {
+    if (!this.alive || (this.closing && method !== "shutdown")) return Promise.reject(new Error("LSP client is closed"))
+    if (options.signal?.aborted) return Promise.reject(new Error(`Request "${method}" aborted`))
     return new Promise((resolve, reject) => {
       const id = this.nextId++
-      this.pending.set(id, {
-        resolve,
-        reject,
-        timer: setTimeout(() => {
-          this.pending.delete(id)
-          reject(
-            new Error(
-              `Request "${method}" timed out after ${REQUEST_TIMEOUT_MS}ms`,
-            ),
-          )
-        }, REQUEST_TIMEOUT_MS),
-      })
-      this.send({ jsonrpc: "2.0", id, method, params })
+      const timeoutMs = options.timeoutMs ?? this.requestTimeoutMs
+      const cancel = (error: Error) => {
+        const request = this.pending.get(id)
+        if (!request) return
+        this.pending.delete(id)
+        request.dispose()
+        reject(error)
+        this.sendNotification("$/cancelRequest", { id })
+      }
+      const abort = () => cancel(new Error(`Request "${method}" aborted`))
+      const timer = setTimeout(() => cancel(new Error(`Request "${method}" timed out after ${timeoutMs}ms`)), timeoutMs)
+      const dispose = () => { clearTimeout(timer); options.signal?.removeEventListener("abort", abort) }
+      this.pending.set(id, { resolve, reject, dispose })
+      options.signal?.addEventListener("abort", abort, { once: true })
+      void this.send({ jsonrpc: "2.0", id, method, params }, () => this.pending.has(id)).catch(error => this.failTransport(error))
     })
   }
 
-  /**
-   * Send an LSP notification.
-   *
-   * @param method - LSP method name.
-   * @param params - JSON-RPC notification parameters.
-   */
   private sendNotification(method: string, params: unknown): void {
-    this.send({ jsonrpc: "2.0", method, params })
+    void this.send({ jsonrpc: "2.0", method, params }).catch(error => this.failTransport(error))
   }
 
-  /**
-   * Respond to a server-initiated LSP request.
-   *
-   * @param id - Identifier of the server request.
-   * @param result - JSON-RPC response result.
-   */
   private sendResponse(id: number | string, result: unknown): void {
-    this.send({ jsonrpc: "2.0", id, result })
+    void this.send({ jsonrpc: "2.0", id, result }).catch(error => this.failTransport(error))
   }
 
-  /**
-   * Write a framed JSON-RPC message to the child process.
-   *
-   * @param message - JSON-RPC message to serialize and send.
-   */
-  private send(message: object): void {
+  /** Serial writes resolve after the stream has flushed, respecting backpressure. */
+  private send(message: object, shouldSend: () => boolean = () => true): Promise<void> {
     const body = JSON.stringify(message)
-    this.stdin.write(
-      `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`,
-    )
+    const frame = `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`
+    const write = this.writeQueue.then(() => {
+      if (!shouldSend()) return
+      if (!this.alive) throw new Error("LSP transport is closed")
+      return new Promise<void>((resolve, reject) => {
+        this.proc.stdin.write(frame, error => error ? reject(error) : resolve())
+      })
+    })
+    this.writeQueue = write.catch(() => {})
+    return write
   }
 
   /** Parse Content-Length framed messages from the buffer */
   private drainBuffer(): void {
     for (;;) {
       const headerEnd = this.buffer.indexOf("\r\n\r\n")
-      if (headerEnd === -1) return
-
-      const match = this.buffer
-        .subarray(0, headerEnd)
-        .toString("ascii")
-        .match(/Content-Length:\s*(\d+)/)
-      if (!match) {
-        this.buffer = this.buffer.subarray(headerEnd + 4)
-        continue
+      if (headerEnd === -1) {
+        if (this.buffer.length > 8192) throw new Error("LSP protocol header too large")
+        return
       }
-
+      if (headerEnd > 8192) throw new Error("LSP protocol header too large")
+      const header = this.buffer.subarray(0, headerEnd).toString("ascii")
+      const lengths = [...header.matchAll(/^Content-Length: *([0-9]+) *$/gim)]
+      if (lengths.length !== 1) throw new Error("Invalid LSP protocol Content-Length")
+      const length = Number(lengths[0]![1])
+      if (!Number.isSafeInteger(length) || length <= 0 || length > 16 * 1024 * 1024) throw new Error("Invalid LSP protocol body length")
       const bodyStart = headerEnd + 4
-      const bodyEnd = bodyStart + Number.parseInt(match[1] ?? "0", 10)
-
+      const bodyEnd = bodyStart + length
       if (this.buffer.length < bodyEnd) return
-
-      const parsed = jsonRpcMessageSchema.safeParse(
-        JSON.parse(this.buffer.subarray(bodyStart, bodyEnd).toString("utf-8")),
-      )
+      let message: unknown
+      try { message = JSON.parse(this.buffer.subarray(bodyStart, bodyEnd).toString("utf8")) }
+      catch { throw new Error("Malformed LSP JSON response") }
       this.buffer = this.buffer.subarray(bodyEnd)
-
-      if (parsed.success) this.handleMessage(parsed.data)
+      const parsed = jsonRpcMessageSchema.safeParse(message)
+      if (!parsed.success || (!parsed.data.method && (parsed.data.id === undefined || (!Object.hasOwn(message as object, "result") && !parsed.data.error)))) throw new Error("Invalid LSP protocol message")
+      this.handleMessage(parsed.data)
     }
   }
 
@@ -675,7 +735,7 @@ export class LspClient {
       const pending = this.pending.get(message.id)
       if (!pending) return
 
-      clearTimeout(pending.timer)
+      pending.dispose()
       this.pending.delete(message.id)
 
       if (message.error) {

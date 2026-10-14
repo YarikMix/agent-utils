@@ -7,6 +7,7 @@ export interface ResolveOptions {
   env?: NodeJS.ProcessEnv
   platform?: NodeJS.Platform
   arch?: string
+  signal?: AbortSignal
   versionTimeoutMs?: number
 }
 
@@ -14,8 +15,10 @@ const GUIDANCE = "Install TypeScript 7+ globally and add tsc to PATH, or set TSC
 
 /** Resolve only the global compiler, then verify its version in an owned process. */
 export async function resolveTscBinary(options: ResolveOptions = {}): Promise<string> {
+  options.signal?.throwIfAborted()
   const binary = await discoverTscBinary(options)
-  await probeVersion(binary, options.env ?? process.env, options.versionTimeoutMs ?? 5000)
+  options.signal?.throwIfAborted()
+  await probeVersion(binary, options.env ?? process.env, options.versionTimeoutMs ?? 5000, options.signal)
   return binary
 }
 
@@ -132,21 +135,28 @@ async function hasNativeHeader(path: string, platform: NodeJS.Platform): Promise
 }
 
 /** A bounded direct version probe. Timeout kills and reaps only this child. */
-async function probeVersion(binary: string, env: NodeJS.ProcessEnv, timeoutMs: number): Promise<void> {
+async function probeVersion(binary: string, env: NodeJS.ProcessEnv, timeoutMs: number, signal?: AbortSignal): Promise<void> {
+  signal?.throwIfAborted()
   await new Promise<void>((resolve, reject) => {
     const child = spawn(binary, ["--version"], { env, stdio: ["ignore", "pipe", "pipe"], shell: false })
     let stdout = ""
     let stderr = ""
     let timedOut = false
+    let aborted = false
+    const abort = () => { aborted = true; child.kill("SIGKILL") }
+    signal?.addEventListener("abort", abort, { once: true })
+    const cleanup = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort) }
     const timer = setTimeout(() => { timedOut = true; child.kill("SIGKILL") }, timeoutMs)
+    if (signal?.aborted) abort()
     child.stdout.on("data", (chunk: Buffer) => { stdout = (stdout + chunk.toString()).slice(0, 8192) })
     child.stderr.on("data", (chunk: Buffer) => { stderr = (stderr + chunk.toString()).slice(0, 8192) })
     child.once("error", error => {
-      clearTimeout(timer)
+      cleanup()
       reject(new Error(`TypeScript 7+ version probe failed: ${message(error)}. ${GUIDANCE}`, { cause: error }))
     })
     child.once("close", code => {
-      clearTimeout(timer)
+      cleanup()
+      if (aborted) { reject(new Error("TypeScript version probe aborted")); return }
       if (timedOut) { reject(new Error(`TypeScript version probe timed out after ${timeoutMs} ms. ${GUIDANCE}`)); return }
       const version = stdout.match(/^Version (\d+)\.\d+(?:\.\d+)?(?:[-+][\w.-]+)?\s*$/m)
       if (code !== 0 || !version || Number(version[1]) < 7) {

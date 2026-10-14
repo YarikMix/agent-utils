@@ -1,6 +1,8 @@
 import { existsSync } from "node:fs"
 import { dirname, join } from "node:path"
+import { pathToFileURL } from "node:url"
 import {
+  type ClientOptions,
   type LspCodeAction,
   type LspDiagnostic,
   type LspInlayHint,
@@ -12,218 +14,152 @@ import {
 
 const DEFAULT_IDLE_TIMEOUT_MS = 5 * 60 * 1000
 
-interface PoolEntry {
-  client: LspClient
-  idleTimer: ReturnType<typeof setTimeout>
+export interface PoolOptions {
+  idleTimeoutMs?: number
+  createClient?: (binaryPath: string, rootUri: string, options?: ClientOptions) => Promise<LspClient>
 }
 
-/**
- * Manages a pool of TypeScript LSP instances, one per project root.
- * Automatically discovers the project root from file paths by walking up to the
- * nearest tsconfig.json. Instances are kept warm and shut down after a
- * configurable idle timeout.
- */
+interface PoolEntry {
+  initialization: Promise<LspClient>
+  controller: AbortController
+  client?: LspClient
+  idleTimer?: ReturnType<typeof setTimeout>
+  leases: number
+  queue: Promise<void>
+}
+
+/** One memoized native session and serialized operation queue per project root. */
 export class TypeScriptPool {
   private entries = new Map<string, PoolEntry>()
+  private retiring = new Set<Promise<void>>()
+  private closed = false
+  private shutdownPromise?: Promise<void>
+  private idleTimeoutMs: number
+  private createClient: NonNullable<PoolOptions["createClient"]>
 
-  /**
-   * Create an LSP client pool.
-   *
-   * @param resolveBinary - Lazy resolver for the native tsc binary.
-   * @param idleTimeoutMs - Time before an inactive client is shut down.
-   */
-  constructor(
-    private resolveBinary: () => Promise<string>,
-    private idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS,
-  ) {}
-
-  /**
-   * Get hover info + definition location in one call
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param line - Zero-based source line.
-   * @param character - Zero-based character offset.
-   */
-  async hoverWithDefinition(
-    filePath: string,
-    line: number,
-    character: number,
-  ): Promise<{ hover: string | null; definition: LspLocation | null }> {
-    const client = await this.getClient(filePath)
-    const [hover, definitions] = await Promise.all([
-      client.hover(filePath, line, character),
-      client.definition(filePath, line, character),
-    ])
-    return { hover, definition: definitions[0] ?? null }
+  constructor(private resolveBinary: (signal?: AbortSignal) => Promise<string>, options: PoolOptions = {}) {
+    this.idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS
+    this.createClient = options.createClient ?? LspClient.create
   }
 
-  /**
-   * Get diagnostics for a file with available fixes for each error
-   *
-   * @param filePath - Absolute path to the source file.
-   */
-  async diagnosticsWithFixes(
-    filePath: string,
-  ): Promise<{ diagnostics: LspDiagnostic[]; actions: LspCodeAction[] }> {
-    const client = await this.getClient(filePath)
-    const diagnostics = await client.diagnostics(filePath)
-
-    return {
-      diagnostics,
-      actions: await client.codeActions(
-        filePath,
-        {
-          start: { line: 0, character: 0 },
-          end: { line: 1_000_000, character: 0 },
-        },
-        diagnostics,
-      ),
+  /** Keep a lease through initialization, queueing and the complete operation. */
+  withClient<T>(filePath: string, operation: (client: LspClient) => Promise<T>): Promise<T> {
+    if (this.closed) return Promise.reject(new Error("TypeScript pool is closed"))
+    const root = findProjectRoot(filePath)
+    let entry = this.entries.get(root)
+    if (entry?.client && !entry.client.isAlive) {
+      clearTimeout(entry.idleTimer)
+      this.entries.delete(root)
+      void this.retire(entry.client)
+      entry = undefined
     }
-  }
-
-  /**
-   * Find all references to a symbol
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param line - Zero-based source line.
-   * @param character - Zero-based character offset.
-   */
-  async references(
-    filePath: string,
-    line: number,
-    character: number,
-  ): Promise<LspLocation[]> {
-    return (await this.getClient(filePath)).references(
-      filePath,
-      line,
-      character,
-    )
-  }
-
-  /**
-   * Get a structured outline of all symbols in a file
-   *
-   * @param filePath - Absolute path to the source file.
-   */
-  async outline(filePath: string): Promise<LspSymbol[]> {
-    return (await this.getClient(filePath)).documentSymbols(filePath)
-  }
-
-  /**
-   * Rename a symbol across the project
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param line - Zero-based source line.
-   * @param character - Zero-based character offset.
-   * @param newName - Replacement symbol name.
-   */
-  async rename(
-    filePath: string,
-    line: number,
-    character: number,
-    newName: string,
-  ): Promise<LspTextEdit[]> {
-    return (await this.getClient(filePath)).rename(
-      filePath,
-      line,
-      character,
-      newName,
-    )
-  }
-
-  /**
-   * Get inferred type annotations for a line range
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param startLine - Zero-based inclusive start line.
-   * @param endLine - Zero-based exclusive end line.
-   */
-  async inlayHints(
-    filePath: string,
-    startLine: number,
-    endLine: number,
-  ): Promise<LspInlayHint[]> {
-    return (await this.getClient(filePath)).inlayHints(
-      filePath,
-      startLine,
-      endLine,
-    )
-  }
-
-  /** Shut down all active LSP instances */
-  async shutdown(): Promise<void> {
-    await Promise.all(
-      [...this.entries.values()].map(({ client, idleTimer }) => {
-        clearTimeout(idleTimer)
-        return client.shutdown()
-      }),
-    )
-    this.entries.clear()
-  }
-
-  /**
-   * Get or create the client for a file's project.
-   *
-   * @param filePath - Absolute path used to locate the project.
-   */
-  private async getClient(filePath: string): Promise<LspClient> {
-    const projectRoot = findProjectRoot(filePath)
-
-    const existing = this.entries.get(projectRoot)
-    if (existing?.client.isAlive) {
-      this.resetIdleTimer(projectRoot, existing)
-      return existing.client
-    }
-
-    if (existing) {
-      clearTimeout(existing.idleTimer)
-      this.entries.delete(projectRoot)
-    }
-
-    const client = await LspClient.create(
-      await this.resolveBinary(),
-      `file://${projectRoot}`,
-    )
-    const entry: PoolEntry = {
-      client,
-      idleTimer: this.startIdleTimer(projectRoot),
-    }
-    this.entries.set(projectRoot, entry)
-    return client
-  }
-
-  /**
-   * Schedule an idle client for shutdown.
-   *
-   * @param projectRoot - Absolute path to the client's project root.
-   */
-  private startIdleTimer(projectRoot: string): ReturnType<typeof setTimeout> {
-    return setTimeout(async () => {
-      const entry = this.entries.get(projectRoot)
-      if (entry) {
-        await entry.client.shutdown()
-        this.entries.delete(projectRoot)
+    if (!entry) {
+      const controller = new AbortController()
+      // Install before any async resolver/client factory runs.
+      const newEntry: PoolEntry = {
+        controller,
+        leases: 0,
+        queue: Promise.resolve(),
+        initialization: Promise.resolve().then(async () => {
+          const binary = await this.resolveBinary(controller.signal)
+          if (this.closed || controller.signal.aborted) throw new Error("TypeScript pool initialization aborted")
+          const client = await this.createClient(binary, pathToFileURL(root).href, { signal: controller.signal })
+          if (this.closed || controller.signal.aborted) {
+            await client.shutdown()
+            throw new Error("TypeScript pool initialization aborted")
+          }
+          newEntry.client = client
+          return client
+        }).catch(error => {
+          if (this.entries.get(root) === newEntry) this.entries.delete(root)
+          throw error
+        }),
       }
-    }, this.idleTimeoutMs)
+      entry = newEntry
+      this.entries.set(root, entry)
+    }
+    const lease = entry
+    lease.leases++
+    clearTimeout(lease.idleTimer)
+    // Attach a handler immediately: initialization may fail before queue entry.
+    const ready = lease.initialization.then(client => ({ client }), error => ({ error }))
+    const result = lease.queue.then(async () => {
+      const initialized = await ready
+      if (this.closed) throw new Error("TypeScript pool is closed")
+      if ("error" in initialized) throw initialized.error
+      if (!initialized.client.isAlive) throw new Error("LSP client is not alive")
+      return operation(initialized.client)
+    })
+    lease.queue = result.then(() => {}, () => {})
+    return result.finally(() => {
+      lease.leases--
+      if (!this.closed && lease.leases === 0 && this.entries.get(root) === lease) {
+        lease.idleTimer = setTimeout(() => {
+          if (lease.leases !== 0 || this.entries.get(root) !== lease) return
+          this.entries.delete(root)
+          if (lease.client) void this.retire(lease.client)
+        }, this.idleTimeoutMs)
+      }
+    })
   }
 
-  /**
-   * Restart a client's idle shutdown timer.
-   *
-   * @param projectRoot - Absolute path to the client's project root.
-   * @param entry - Pool entry whose timer should be restarted.
-   */
-  private resetIdleTimer(projectRoot: string, entry: PoolEntry): void {
-    clearTimeout(entry.idleTimer)
-    entry.idleTimer = this.startIdleTimer(projectRoot)
+  hoverWithDefinition(filePath: string, line: number, character: number): Promise<{ hover: string | null; definition: LspLocation | null }> {
+    return this.withClient(filePath, async client => {
+      const [hover, definitions] = await Promise.all([client.hover(filePath, line, character), client.definition(filePath, line, character)])
+      return { hover, definition: definitions[0] ?? null }
+    })
+  }
+
+  diagnosticsWithFixes(filePath: string): Promise<{ diagnostics: LspDiagnostic[]; actions: LspCodeAction[] }> {
+    return this.withClient(filePath, async client => {
+      const diagnostics = await client.diagnostics(filePath)
+      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: { line: 1_000_000, character: 0 } }, diagnostics)
+      return { diagnostics, actions }
+    })
+  }
+
+  references(filePath: string, line: number, character: number): Promise<LspLocation[]> {
+    return this.withClient(filePath, client => client.references(filePath, line, character))
+  }
+
+  outline(filePath: string): Promise<LspSymbol[]> {
+    return this.withClient(filePath, client => client.documentSymbols(filePath))
+  }
+
+  rename(filePath: string, line: number, character: number, newName: string): Promise<LspTextEdit[]> {
+    return this.withClient(filePath, client => client.rename(filePath, line, character, newName))
+  }
+
+  inlayHints(filePath: string, startLine: number, endLine: number): Promise<LspInlayHint[]> {
+    return this.withClient(filePath, client => client.inlayHints(filePath, startLine, endLine))
+  }
+
+  /** Keep idle/crashed sessions owned until their close promise settles. */
+  private retire(client: LspClient): Promise<void> {
+    const closing = client.shutdown().catch(() => {})
+    this.retiring.add(closing)
+    void closing.then(() => this.retiring.delete(closing))
+    return closing
+  }
+
+  /** Abort pending discovery/initialize and close all owned sessions in parallel. */
+  shutdown(): Promise<void> {
+    if (this.shutdownPromise) return this.shutdownPromise
+    this.closed = true
+    const entries = [...this.entries.values()]
+    this.entries.clear()
+    for (const entry of entries) {
+      clearTimeout(entry.idleTimer)
+      entry.controller.abort()
+    }
+    this.shutdownPromise = Promise.all([...this.retiring, ...entries.map(async entry => {
+      try { await (await entry.initialization).shutdown() } catch { /* Failed/aborted initialization already reaps its child. */ }
+    })]).then(() => {})
+    return this.shutdownPromise
   }
 }
 
-/**
- * Walk up from a file path to find the nearest tsconfig.json
- *
- * @param filePath - Absolute path used to start the search.
- */
+/** Nearest tsconfig wins; an unconfigured file uses its containing directory. */
 function findProjectRoot(filePath: string): string {
   let dir = dirname(filePath)
   for (;;) {

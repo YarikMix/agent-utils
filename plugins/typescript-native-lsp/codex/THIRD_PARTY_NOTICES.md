@@ -2,7 +2,7 @@
 
 The imported ts-mcp code is MIT, Copyright (c) Zach Sents. See [LICENSE](LICENSE) and [UPSTREAM.md](UPSTREAM.md) for pinned provenance and the absence of an upstream ts-mcp license file.
 
-Local adaptations replace compiler discovery with global native TypeScript resolution and defer it until a file tool creates an LSP client. Runtime bundle library versions and licenses are unchanged.
+Local adaptations replace compiler discovery with global native TypeScript resolution and defer it until a file tool creates an LSP client. They also bound owned LSP process lifetime, cancellation and shutdown, negotiate UTF-16, and serialize leased project operations. Runtime bundle library versions and licenses are unchanged.
 
 ## Runtime bundle libraries
 

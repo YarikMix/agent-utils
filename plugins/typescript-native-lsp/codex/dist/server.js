@@ -30496,11 +30496,13 @@ var StdioServerTransport = class {
 // src/pool.ts
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 // src/lsp-client.ts
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
+import { fileURLToPath } from "node:url";
 var REQUEST_TIMEOUT_MS = 3e4;
 var jsonRpcMessageSchema = external_exports3.object({
   jsonrpc: external_exports3.literal("2.0"),
@@ -30548,57 +30550,85 @@ var INLAY_HINT_KIND_LABELS = {
   2: "parameter"
 };
 var LspClient = class _LspClient {
-  /**
-   * Start a TypeScript LSP child process.
-   *
-   * @param binaryPath - Absolute path to the native tsc binary.
-   * @param rootUri - LSP root URI for the project.
-   * @throws When the child process does not expose piped stdio.
-   */
-  constructor(binaryPath, rootUri) {
+  constructor(binaryPath, rootUri, options) {
     this.rootUri = rootUri;
-    this.proc = spawn(binaryPath, ["--lsp", "--stdio"], {
-      stdio: ["pipe", "pipe", "pipe"]
+    this.requestTimeoutMs = options.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
+    this.shutdownTimeoutMs = options.shutdownTimeoutMs ?? 2e3;
+    const projectRoot = fileURLToPath(rootUri);
+    this.proc = options.spawnProcess ? options.spawnProcess(binaryPath, projectRoot) : spawn(binaryPath, ["--lsp", "--stdio"], { cwd: projectRoot, stdio: "pipe", shell: false });
+    this.closed = new Promise((resolve2) => {
+      this.proc.once("close", () => {
+        this.alive = false;
+        this.rejectPending(new Error("TypeScript process closed"));
+        this.removeAbortListener();
+        resolve2();
+      });
     });
-    if (!this.proc.stdin || !this.proc.stdout) {
-      throw new Error("Failed to create TypeScript process with piped stdio");
-    }
-    this.stdin = this.proc.stdin;
+    this.proc.once("error", (error48) => this.failTransport(error48));
+    this.proc.once("exit", (code) => {
+      this.alive = false;
+      this.rejectPending(new Error(`TypeScript exited with code ${code}`));
+    });
+    this.proc.stdin.on("error", (error48) => this.failTransport(error48));
+    this.proc.stdout.on("error", (error48) => this.failTransport(error48));
     this.proc.stdout.on("data", (chunk) => {
       this.buffer = Buffer.concat([this.buffer, chunk]);
-      this.drainBuffer();
-    });
-    this.proc.on("exit", (code) => {
-      this.alive = false;
-      for (const [, req] of this.pending) {
-        req.reject(new Error(`TypeScript exited with code ${code}`));
-        clearTimeout(req.timer);
+      try {
+        this.drainBuffer();
+      } catch (error48) {
+        this.failTransport(error48 instanceof Error ? error48 : new Error(String(error48)));
       }
-      this.pending.clear();
     });
+    this.proc.stdout.once("end", () => {
+      if (!this.closing) this.failTransport(new Error("TypeScript transport closed"));
+    });
+    let stderrBudget = 8192;
+    this.proc.stderr.on("data", (chunk) => {
+      if (stderrBudget <= 0) return;
+      const text = chunk.subarray(0, stderrBudget).toString("utf8");
+      stderrBudget -= chunk.length;
+      console.error(text);
+    });
+    this.proc.stderr.on("error", (error48) => this.failTransport(error48));
+    if (options.signal) {
+      const abort = () => {
+        this.rejectPending(new Error("LSP initialization aborted"));
+        this.failTransport(new Error("LSP session aborted"));
+      };
+      options.signal.addEventListener("abort", abort, { once: true });
+      this.removeAbortListener = () => options.signal?.removeEventListener("abort", abort);
+      if (options.signal.aborted) abort();
+    }
   }
   rootUri;
   proc;
-  stdin;
   nextId = 1;
   pending = /* @__PURE__ */ new Map();
   buffer = Buffer.alloc(0);
   documents = /* @__PURE__ */ new Map();
   alive = true;
-  /**
-   * Create and initialize a new LSP client for a project root
-   *
-   * @param binaryPath - Absolute path to the native tsc binary.
-   * @param rootUri - LSP root URI for the project.
-   */
-  static async create(binaryPath, rootUri) {
-    const client = new _LspClient(binaryPath, rootUri);
-    await client.initialize();
-    return client;
+  closing = false;
+  shutdownPromise;
+  writeQueue = Promise.resolve();
+  closed;
+  requestTimeoutMs;
+  shutdownTimeoutMs;
+  removeAbortListener = () => {
+  };
+  static async create(binaryPath, rootUri, options = {}) {
+    if (options.signal?.aborted) throw new Error("LSP initialization aborted");
+    const client = new _LspClient(binaryPath, rootUri, options);
+    try {
+      await client.initialize(options.signal);
+      client.removeAbortListener();
+      return client;
+    } catch (error48) {
+      await client.shutdown();
+      throw error48;
+    }
   }
-  /** Check whether the child process is available for requests. */
   get isAlive() {
-    return this.alive;
+    return this.alive && !this.closing;
   }
   /**
    * Get hover information at a position in a file
@@ -30607,14 +30637,14 @@ var LspClient = class _LspClient {
    * @param line - Zero-based source line.
    * @param character - Zero-based character offset.
    */
-  async hover(filePath, line, character) {
-    if (!this.alive) throw new Error("LSP client is not alive");
+  async hover(filePath, line, character, options) {
+    if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
     await this.ensureDocumentOpen(filePath, uri);
     const result = await this.sendRequest("textDocument/hover", {
       textDocument: { uri },
       position: { line, character }
-    });
+    }, options);
     const parsed = external_exports3.object({ contents: external_exports3.unknown() }).safeParse(result);
     if (!parsed.success) return null;
     return formatHoverContents(parsed.data.contents);
@@ -30626,14 +30656,14 @@ var LspClient = class _LspClient {
    * @param line - Zero-based source line.
    * @param character - Zero-based character offset.
    */
-  async definition(filePath, line, character) {
-    if (!this.alive) throw new Error("LSP client is not alive");
+  async definition(filePath, line, character, options) {
+    if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
     await this.ensureDocumentOpen(filePath, uri);
     const result = await this.sendRequest("textDocument/definition", {
       textDocument: { uri },
       position: { line, character }
-    });
+    }, options);
     return parseLocations(result);
   }
   /**
@@ -30641,13 +30671,13 @@ var LspClient = class _LspClient {
    *
    * @param filePath - Absolute path to the source file.
    */
-  async diagnostics(filePath) {
-    if (!this.alive) throw new Error("LSP client is not alive");
+  async diagnostics(filePath, options) {
+    if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
     await this.ensureDocumentOpen(filePath, uri);
     const result = await this.sendRequest("textDocument/diagnostic", {
       textDocument: { uri }
-    });
+    }, options);
     const parsed = external_exports3.object({
       kind: external_exports3.string(),
       items: external_exports3.array(diagnosticItemSchema)
@@ -30676,8 +30706,8 @@ var LspClient = class _LspClient {
    * @param range.end.character - Zero-based end character.
    * @param diagnostics - Diagnostics used to scope available actions.
    */
-  async codeActions(filePath, range, diagnostics = []) {
-    if (!this.alive) throw new Error("LSP client is not alive");
+  async codeActions(filePath, range, diagnostics = [], options) {
+    if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
     await this.ensureDocumentOpen(filePath, uri);
     const result = await this.sendRequest("textDocument/codeAction", {
@@ -30704,7 +30734,7 @@ var LspClient = class _LspClient {
           })
         )
       }
-    });
+    }, options);
     if (!Array.isArray(result)) return [];
     const actions = [];
     for (const item of result) {
@@ -30730,13 +30760,14 @@ var LspClient = class _LspClient {
    *
    * @param filePath - Absolute path to the source file.
    */
-  async documentSymbols(filePath) {
-    if (!this.alive) throw new Error("LSP client is not alive");
+  async documentSymbols(filePath, options) {
+    if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
     await this.ensureDocumentOpen(filePath, uri);
     const result = await this.sendRequest(
       "textDocument/documentSymbol",
-      { textDocument: { uri } }
+      { textDocument: { uri } },
+      options
     );
     if (!Array.isArray(result)) return [];
     return buildSymbolTree(result);
@@ -30749,15 +30780,15 @@ var LspClient = class _LspClient {
    * @param character - Zero-based character offset.
    * @param newName - Replacement symbol name.
    */
-  async rename(filePath, line, character, newName) {
-    if (!this.alive) throw new Error("LSP client is not alive");
+  async rename(filePath, line, character, newName, options) {
+    if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
     await this.ensureDocumentOpen(filePath, uri);
     const result = await this.sendRequest("textDocument/rename", {
       textDocument: { uri },
       position: { line, character },
       newName
-    });
+    }, options);
     return parseWorkspaceEdit(result);
   }
   /**
@@ -30767,8 +30798,8 @@ var LspClient = class _LspClient {
    * @param startLine - Zero-based inclusive start line.
    * @param endLine - Zero-based exclusive end line.
    */
-  async inlayHints(filePath, startLine, endLine) {
-    if (!this.alive) throw new Error("LSP client is not alive");
+  async inlayHints(filePath, startLine, endLine, options) {
+    if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
     await this.ensureDocumentOpen(filePath, uri);
     const result = await this.sendRequest("textDocument/inlayHint", {
@@ -30777,7 +30808,7 @@ var LspClient = class _LspClient {
         start: { line: startLine, character: 0 },
         end: { line: endLine, character: 0 }
       }
-    });
+    }, options);
     if (!Array.isArray(result)) return [];
     const hints = [];
     for (const item of result) {
@@ -30807,40 +30838,71 @@ var LspClient = class _LspClient {
    * @param line - Zero-based source line.
    * @param character - Zero-based character offset.
    */
-  async references(filePath, line, character) {
-    if (!this.alive) throw new Error("LSP client is not alive");
+  async references(filePath, line, character, options) {
+    if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
     await this.ensureDocumentOpen(filePath, uri);
     const result = await this.sendRequest("textDocument/references", {
       textDocument: { uri },
       position: { line, character },
       context: { includeDeclaration: true }
-    });
+    }, options);
     return parseLocations(result);
   }
-  /** Gracefully shut down the LSP server */
-  async shutdown() {
-    if (!this.alive) return;
-    this.alive = false;
-    try {
-      await this.sendRequest("shutdown", null);
-      this.sendNotification("exit", void 0);
-    } catch {
-    }
-    this.proc.kill();
+  /** Close only this owned child, including requests still initializing. */
+  shutdown() {
+    if (this.shutdownPromise) return this.shutdownPromise;
+    this.closing = true;
+    this.removeAbortListener();
+    this.rejectPending(new Error("LSP client shut down"));
+    this.shutdownPromise = (async () => {
+      const deadline = setTimeout(() => {
+        this.proc.kill("SIGKILL");
+      }, Math.max(0, this.shutdownTimeoutMs - 50));
+      try {
+        if (this.alive) {
+          try {
+            await this.sendRequest("shutdown", null, { timeoutMs: Math.max(1, this.shutdownTimeoutMs - 100) });
+            await this.send({ jsonrpc: "2.0", method: "exit" });
+          } catch {
+          }
+        }
+        if (!this.alive) this.proc.kill("SIGKILL");
+        await this.closed;
+      } finally {
+        clearTimeout(deadline);
+        this.rejectPending(new Error("LSP client shut down"));
+        this.buffer = Buffer.alloc(0);
+        this.documents.clear();
+      }
+    })();
+    return this.shutdownPromise;
   }
-  /** Initialize the LSP session. */
-  async initialize() {
-    await this.sendRequest("initialize", {
+  async initialize(signal) {
+    const result = await this.sendRequest("initialize", {
       processId: process.pid,
       rootUri: this.rootUri,
       capabilities: {
-        textDocument: {
-          hover: { contentFormat: ["markdown", "plaintext"] }
-        }
+        general: { positionEncodings: ["utf-16"] },
+        textDocument: { hover: { contentFormat: ["markdown", "plaintext"] } }
       }
-    });
-    this.sendNotification("initialized", {});
+    }, { signal });
+    const encoding = external_exports3.object({ capabilities: external_exports3.object({ positionEncoding: external_exports3.string().optional() }) }).parse(result).capabilities.positionEncoding;
+    if (encoding !== void 0 && encoding !== "utf-16") throw new Error(`Unsupported LSP position encoding: ${encoding}`);
+    await this.send({ jsonrpc: "2.0", method: "initialized", params: {} });
+  }
+  rejectPending(error48) {
+    for (const request of this.pending.values()) {
+      request.dispose();
+      request.reject(error48);
+    }
+    this.pending.clear();
+  }
+  failTransport(error48) {
+    this.alive = false;
+    this.rejectPending(error48);
+    this.proc.kill("SIGKILL");
+    void this.shutdown();
   }
   /**
    * Re-read all previously opened documents from disk and push changes to
@@ -30902,73 +30964,81 @@ var LspClient = class _LspClient {
    * @param method - LSP method name.
    * @param params - JSON-RPC request parameters.
    */
-  sendRequest(method, params) {
+  sendRequest(method, params, options = {}) {
+    if (!this.alive || this.closing && method !== "shutdown") return Promise.reject(new Error("LSP client is closed"));
+    if (options.signal?.aborted) return Promise.reject(new Error(`Request "${method}" aborted`));
     return new Promise((resolve2, reject) => {
       const id = this.nextId++;
-      this.pending.set(id, {
-        resolve: resolve2,
-        reject,
-        timer: setTimeout(() => {
-          this.pending.delete(id);
-          reject(
-            new Error(
-              `Request "${method}" timed out after ${REQUEST_TIMEOUT_MS}ms`
-            )
-          );
-        }, REQUEST_TIMEOUT_MS)
-      });
-      this.send({ jsonrpc: "2.0", id, method, params });
+      const timeoutMs = options.timeoutMs ?? this.requestTimeoutMs;
+      const cancel = (error48) => {
+        const request = this.pending.get(id);
+        if (!request) return;
+        this.pending.delete(id);
+        request.dispose();
+        reject(error48);
+        this.sendNotification("$/cancelRequest", { id });
+      };
+      const abort = () => cancel(new Error(`Request "${method}" aborted`));
+      const timer = setTimeout(() => cancel(new Error(`Request "${method}" timed out after ${timeoutMs}ms`)), timeoutMs);
+      const dispose = () => {
+        clearTimeout(timer);
+        options.signal?.removeEventListener("abort", abort);
+      };
+      this.pending.set(id, { resolve: resolve2, reject, dispose });
+      options.signal?.addEventListener("abort", abort, { once: true });
+      void this.send({ jsonrpc: "2.0", id, method, params }, () => this.pending.has(id)).catch((error48) => this.failTransport(error48));
     });
   }
-  /**
-   * Send an LSP notification.
-   *
-   * @param method - LSP method name.
-   * @param params - JSON-RPC notification parameters.
-   */
   sendNotification(method, params) {
-    this.send({ jsonrpc: "2.0", method, params });
+    void this.send({ jsonrpc: "2.0", method, params }).catch((error48) => this.failTransport(error48));
   }
-  /**
-   * Respond to a server-initiated LSP request.
-   *
-   * @param id - Identifier of the server request.
-   * @param result - JSON-RPC response result.
-   */
   sendResponse(id, result) {
-    this.send({ jsonrpc: "2.0", id, result });
+    void this.send({ jsonrpc: "2.0", id, result }).catch((error48) => this.failTransport(error48));
   }
-  /**
-   * Write a framed JSON-RPC message to the child process.
-   *
-   * @param message - JSON-RPC message to serialize and send.
-   */
-  send(message2) {
+  /** Serial writes resolve after the stream has flushed, respecting backpressure. */
+  send(message2, shouldSend = () => true) {
     const body = JSON.stringify(message2);
-    this.stdin.write(
-      `Content-Length: ${Buffer.byteLength(body)}\r
+    const frame = `Content-Length: ${Buffer.byteLength(body)}\r
 \r
-${body}`
-    );
+${body}`;
+    const write = this.writeQueue.then(() => {
+      if (!shouldSend()) return;
+      if (!this.alive) throw new Error("LSP transport is closed");
+      return new Promise((resolve2, reject) => {
+        this.proc.stdin.write(frame, (error48) => error48 ? reject(error48) : resolve2());
+      });
+    });
+    this.writeQueue = write.catch(() => {
+    });
+    return write;
   }
   /** Parse Content-Length framed messages from the buffer */
   drainBuffer() {
     for (; ; ) {
       const headerEnd = this.buffer.indexOf("\r\n\r\n");
-      if (headerEnd === -1) return;
-      const match = this.buffer.subarray(0, headerEnd).toString("ascii").match(/Content-Length:\s*(\d+)/);
-      if (!match) {
-        this.buffer = this.buffer.subarray(headerEnd + 4);
-        continue;
+      if (headerEnd === -1) {
+        if (this.buffer.length > 8192) throw new Error("LSP protocol header too large");
+        return;
       }
+      if (headerEnd > 8192) throw new Error("LSP protocol header too large");
+      const header = this.buffer.subarray(0, headerEnd).toString("ascii");
+      const lengths = [...header.matchAll(/^Content-Length: *([0-9]+) *$/gim)];
+      if (lengths.length !== 1) throw new Error("Invalid LSP protocol Content-Length");
+      const length = Number(lengths[0][1]);
+      if (!Number.isSafeInteger(length) || length <= 0 || length > 16 * 1024 * 1024) throw new Error("Invalid LSP protocol body length");
       const bodyStart = headerEnd + 4;
-      const bodyEnd = bodyStart + Number.parseInt(match[1] ?? "0", 10);
+      const bodyEnd = bodyStart + length;
       if (this.buffer.length < bodyEnd) return;
-      const parsed = jsonRpcMessageSchema.safeParse(
-        JSON.parse(this.buffer.subarray(bodyStart, bodyEnd).toString("utf-8"))
-      );
+      let message2;
+      try {
+        message2 = JSON.parse(this.buffer.subarray(bodyStart, bodyEnd).toString("utf8"));
+      } catch {
+        throw new Error("Malformed LSP JSON response");
+      }
       this.buffer = this.buffer.subarray(bodyEnd);
-      if (parsed.success) this.handleMessage(parsed.data);
+      const parsed = jsonRpcMessageSchema.safeParse(message2);
+      if (!parsed.success || !parsed.data.method && (parsed.data.id === void 0 || !Object.hasOwn(message2, "result") && !parsed.data.error)) throw new Error("Invalid LSP protocol message");
+      this.handleMessage(parsed.data);
     }
   }
   /**
@@ -30980,7 +31050,7 @@ ${body}`
     if (typeof message2.id === "number" && !message2.method) {
       const pending = this.pending.get(message2.id);
       if (!pending) return;
-      clearTimeout(pending.timer);
+      pending.dispose();
       this.pending.delete(message2.id);
       if (message2.error) {
         pending.reject(
@@ -31124,166 +31194,129 @@ function formatHoverContents(contents) {
 // src/pool.ts
 var DEFAULT_IDLE_TIMEOUT_MS = 5 * 60 * 1e3;
 var TypeScriptPool = class {
-  /**
-   * Create an LSP client pool.
-   *
-   * @param resolveBinary - Lazy resolver for the native tsc binary.
-   * @param idleTimeoutMs - Time before an inactive client is shut down.
-   */
-  constructor(resolveBinary, idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS) {
+  constructor(resolveBinary, options = {}) {
     this.resolveBinary = resolveBinary;
-    this.idleTimeoutMs = idleTimeoutMs;
+    this.idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
+    this.createClient = options.createClient ?? LspClient.create;
   }
   resolveBinary;
-  idleTimeoutMs;
   entries = /* @__PURE__ */ new Map();
-  /**
-   * Get hover info + definition location in one call
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param line - Zero-based source line.
-   * @param character - Zero-based character offset.
-   */
-  async hoverWithDefinition(filePath, line, character) {
-    const client = await this.getClient(filePath);
-    const [hover, definitions] = await Promise.all([
-      client.hover(filePath, line, character),
-      client.definition(filePath, line, character)
-    ]);
-    return { hover, definition: definitions[0] ?? null };
-  }
-  /**
-   * Get diagnostics for a file with available fixes for each error
-   *
-   * @param filePath - Absolute path to the source file.
-   */
-  async diagnosticsWithFixes(filePath) {
-    const client = await this.getClient(filePath);
-    const diagnostics = await client.diagnostics(filePath);
-    return {
-      diagnostics,
-      actions: await client.codeActions(
-        filePath,
-        {
-          start: { line: 0, character: 0 },
-          end: { line: 1e6, character: 0 }
-        },
-        diagnostics
-      )
-    };
-  }
-  /**
-   * Find all references to a symbol
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param line - Zero-based source line.
-   * @param character - Zero-based character offset.
-   */
-  async references(filePath, line, character) {
-    return (await this.getClient(filePath)).references(
-      filePath,
-      line,
-      character
-    );
-  }
-  /**
-   * Get a structured outline of all symbols in a file
-   *
-   * @param filePath - Absolute path to the source file.
-   */
-  async outline(filePath) {
-    return (await this.getClient(filePath)).documentSymbols(filePath);
-  }
-  /**
-   * Rename a symbol across the project
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param line - Zero-based source line.
-   * @param character - Zero-based character offset.
-   * @param newName - Replacement symbol name.
-   */
-  async rename(filePath, line, character, newName) {
-    return (await this.getClient(filePath)).rename(
-      filePath,
-      line,
-      character,
-      newName
-    );
-  }
-  /**
-   * Get inferred type annotations for a line range
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param startLine - Zero-based inclusive start line.
-   * @param endLine - Zero-based exclusive end line.
-   */
-  async inlayHints(filePath, startLine, endLine) {
-    return (await this.getClient(filePath)).inlayHints(
-      filePath,
-      startLine,
-      endLine
-    );
-  }
-  /** Shut down all active LSP instances */
-  async shutdown() {
-    await Promise.all(
-      [...this.entries.values()].map(({ client, idleTimer }) => {
-        clearTimeout(idleTimer);
-        return client.shutdown();
-      })
-    );
-    this.entries.clear();
-  }
-  /**
-   * Get or create the client for a file's project.
-   *
-   * @param filePath - Absolute path used to locate the project.
-   */
-  async getClient(filePath) {
-    const projectRoot = findProjectRoot(filePath);
-    const existing = this.entries.get(projectRoot);
-    if (existing?.client.isAlive) {
-      this.resetIdleTimer(projectRoot, existing);
-      return existing.client;
+  retiring = /* @__PURE__ */ new Set();
+  closed = false;
+  shutdownPromise;
+  idleTimeoutMs;
+  createClient;
+  /** Keep a lease through initialization, queueing and the complete operation. */
+  withClient(filePath, operation) {
+    if (this.closed) return Promise.reject(new Error("TypeScript pool is closed"));
+    const root = findProjectRoot(filePath);
+    let entry = this.entries.get(root);
+    if (entry?.client && !entry.client.isAlive) {
+      clearTimeout(entry.idleTimer);
+      this.entries.delete(root);
+      void this.retire(entry.client);
+      entry = void 0;
     }
-    if (existing) {
-      clearTimeout(existing.idleTimer);
-      this.entries.delete(projectRoot);
+    if (!entry) {
+      const controller = new AbortController();
+      const newEntry = {
+        controller,
+        leases: 0,
+        queue: Promise.resolve(),
+        initialization: Promise.resolve().then(async () => {
+          const binary = await this.resolveBinary(controller.signal);
+          if (this.closed || controller.signal.aborted) throw new Error("TypeScript pool initialization aborted");
+          const client = await this.createClient(binary, pathToFileURL(root).href, { signal: controller.signal });
+          if (this.closed || controller.signal.aborted) {
+            await client.shutdown();
+            throw new Error("TypeScript pool initialization aborted");
+          }
+          newEntry.client = client;
+          return client;
+        }).catch((error48) => {
+          if (this.entries.get(root) === newEntry) this.entries.delete(root);
+          throw error48;
+        })
+      };
+      entry = newEntry;
+      this.entries.set(root, entry);
     }
-    const client = await LspClient.create(
-      await this.resolveBinary(),
-      `file://${projectRoot}`
-    );
-    const entry = {
-      client,
-      idleTimer: this.startIdleTimer(projectRoot)
-    };
-    this.entries.set(projectRoot, entry);
-    return client;
-  }
-  /**
-   * Schedule an idle client for shutdown.
-   *
-   * @param projectRoot - Absolute path to the client's project root.
-   */
-  startIdleTimer(projectRoot) {
-    return setTimeout(async () => {
-      const entry = this.entries.get(projectRoot);
-      if (entry) {
-        await entry.client.shutdown();
-        this.entries.delete(projectRoot);
+    const lease = entry;
+    lease.leases++;
+    clearTimeout(lease.idleTimer);
+    const ready = lease.initialization.then((client) => ({ client }), (error48) => ({ error: error48 }));
+    const result = lease.queue.then(async () => {
+      const initialized = await ready;
+      if (this.closed) throw new Error("TypeScript pool is closed");
+      if ("error" in initialized) throw initialized.error;
+      if (!initialized.client.isAlive) throw new Error("LSP client is not alive");
+      return operation(initialized.client);
+    });
+    lease.queue = result.then(() => {
+    }, () => {
+    });
+    return result.finally(() => {
+      lease.leases--;
+      if (!this.closed && lease.leases === 0 && this.entries.get(root) === lease) {
+        lease.idleTimer = setTimeout(() => {
+          if (lease.leases !== 0 || this.entries.get(root) !== lease) return;
+          this.entries.delete(root);
+          if (lease.client) void this.retire(lease.client);
+        }, this.idleTimeoutMs);
       }
-    }, this.idleTimeoutMs);
+    });
   }
-  /**
-   * Restart a client's idle shutdown timer.
-   *
-   * @param projectRoot - Absolute path to the client's project root.
-   * @param entry - Pool entry whose timer should be restarted.
-   */
-  resetIdleTimer(projectRoot, entry) {
-    clearTimeout(entry.idleTimer);
-    entry.idleTimer = this.startIdleTimer(projectRoot);
+  hoverWithDefinition(filePath, line, character) {
+    return this.withClient(filePath, async (client) => {
+      const [hover, definitions] = await Promise.all([client.hover(filePath, line, character), client.definition(filePath, line, character)]);
+      return { hover, definition: definitions[0] ?? null };
+    });
+  }
+  diagnosticsWithFixes(filePath) {
+    return this.withClient(filePath, async (client) => {
+      const diagnostics = await client.diagnostics(filePath);
+      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: { line: 1e6, character: 0 } }, diagnostics);
+      return { diagnostics, actions };
+    });
+  }
+  references(filePath, line, character) {
+    return this.withClient(filePath, (client) => client.references(filePath, line, character));
+  }
+  outline(filePath) {
+    return this.withClient(filePath, (client) => client.documentSymbols(filePath));
+  }
+  rename(filePath, line, character, newName) {
+    return this.withClient(filePath, (client) => client.rename(filePath, line, character, newName));
+  }
+  inlayHints(filePath, startLine, endLine) {
+    return this.withClient(filePath, (client) => client.inlayHints(filePath, startLine, endLine));
+  }
+  /** Keep idle/crashed sessions owned until their close promise settles. */
+  retire(client) {
+    const closing = client.shutdown().catch(() => {
+    });
+    this.retiring.add(closing);
+    void closing.then(() => this.retiring.delete(closing));
+    return closing;
+  }
+  /** Abort pending discovery/initialize and close all owned sessions in parallel. */
+  shutdown() {
+    if (this.shutdownPromise) return this.shutdownPromise;
+    this.closed = true;
+    const entries = [...this.entries.values()];
+    this.entries.clear();
+    for (const entry of entries) {
+      clearTimeout(entry.idleTimer);
+      entry.controller.abort();
+    }
+    this.shutdownPromise = Promise.all([...this.retiring, ...entries.map(async (entry) => {
+      try {
+        await (await entry.initialization).shutdown();
+      } catch {
+      }
+    })]).then(() => {
+    });
+    return this.shutdownPromise;
   }
 };
 function findProjectRoot(filePath) {
@@ -31304,8 +31337,10 @@ import { access, open, realpath, stat } from "node:fs/promises";
 import { dirname as dirname2, isAbsolute, join as join2, normalize, relative, resolve, sep } from "node:path";
 var GUIDANCE = "Install TypeScript 7+ globally and add tsc to PATH, or set TSC_PATH to its absolute native binary path.";
 async function resolveTscBinary(options = {}) {
+  options.signal?.throwIfAborted();
   const binary = await discoverTscBinary(options);
-  await probeVersion(binary, options.env ?? process.env, options.versionTimeoutMs ?? 5e3);
+  options.signal?.throwIfAborted();
+  await probeVersion(binary, options.env ?? process.env, options.versionTimeoutMs ?? 5e3, options.signal);
   return binary;
 }
 async function discoverTscBinary(options = {}) {
@@ -31428,16 +31463,28 @@ async function hasNativeHeader(path, platform) {
     await file2.close();
   }
 }
-async function probeVersion(binary, env, timeoutMs) {
+async function probeVersion(binary, env, timeoutMs, signal) {
+  signal?.throwIfAborted();
   await new Promise((resolve2, reject) => {
     const child = spawn2(binary, ["--version"], { env, stdio: ["ignore", "pipe", "pipe"], shell: false });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let aborted2 = false;
+    const abort = () => {
+      aborted2 = true;
+      child.kill("SIGKILL");
+    };
+    signal?.addEventListener("abort", abort, { once: true });
+    const cleanup2 = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+    };
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill("SIGKILL");
     }, timeoutMs);
+    if (signal?.aborted) abort();
     child.stdout.on("data", (chunk) => {
       stdout = (stdout + chunk.toString()).slice(0, 8192);
     });
@@ -31445,11 +31492,15 @@ async function probeVersion(binary, env, timeoutMs) {
       stderr = (stderr + chunk.toString()).slice(0, 8192);
     });
     child.once("error", (error48) => {
-      clearTimeout(timer);
+      cleanup2();
       reject(new Error(`TypeScript 7+ version probe failed: ${message(error48)}. ${GUIDANCE}`, { cause: error48 }));
     });
     child.once("close", (code) => {
-      clearTimeout(timer);
+      cleanup2();
+      if (aborted2) {
+        reject(new Error("TypeScript version probe aborted"));
+        return;
+      }
       if (timedOut) {
         reject(new Error(`TypeScript version probe timed out after ${timeoutMs} ms. ${GUIDANCE}`));
         return;
@@ -31468,7 +31519,7 @@ function message(error48) {
 }
 
 // src/index.ts
-var pool = new TypeScriptPool(() => resolveTscBinary());
+var pool = new TypeScriptPool((signal) => resolveTscBinary({ signal }));
 var server = new McpServer({
   name: "ts-hover",
   version: "0.3.0"
@@ -31711,10 +31762,38 @@ async function applyEdits(filePath, edits) {
   }
   await writeFile(filePath, lines.join("\n"));
 }
-async function cleanup() {
-  await pool.shutdown();
-  process.exit(0);
+var cleanupPromise;
+function cleanup(exitCode = 0) {
+  return cleanupPromise ??= pool.shutdown().then(() => {
+    process.exit(exitCode);
+  });
 }
-process.on("SIGINT", cleanup);
-process.on("SIGTERM", cleanup);
-await server.connect(new StdioServerTransport());
+process.on("SIGINT", () => {
+  void cleanup();
+});
+process.on("SIGTERM", () => {
+  void cleanup();
+});
+process.stdin.on("end", () => {
+  void cleanup();
+});
+process.stdin.on("close", () => {
+  void cleanup();
+});
+process.stdin.on("error", () => {
+  void cleanup(1);
+});
+process.stdout.on("error", () => {
+  void cleanup(1);
+});
+server.server.onclose = () => {
+  void cleanup();
+};
+server.server.onerror = () => {
+  void cleanup(1);
+};
+try {
+  await server.connect(new StdioServerTransport());
+} catch {
+  await cleanup(1);
+}

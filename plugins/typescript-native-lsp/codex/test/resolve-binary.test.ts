@@ -265,3 +265,35 @@ test('hung version probe times out and kills only its own process', { skip: proc
     assert.equal(process.kill(unrelated.pid!, 0), true)
   } finally { t.mock.restoreAll(); syncBuiltinESMExports(); unrelated.kill('SIGKILL'); await unrelatedClosed; await fixture.dispose() }
 })
+
+
+test('aborting a pending version probe reaps the native PID before its five-second deadline', { skip: process.platform === 'win32' }, async t => {
+  const fixture = await temporaryProject({})
+  const controller = new AbortController()
+  let probe: ReturnType<typeof childProcess.spawn> | undefined
+  try {
+    const TSC_PATH = await nativeVersionProbe(fixture.root, '', true)
+    const spawn = childProcess.spawn
+    const spawned = new Promise<void>(resolve => {
+      t.mock.method(childProcess, 'spawn', (...args: Parameters<typeof spawn>) => {
+        probe = spawn(...args)
+        probe.stdout?.once('data', () => resolve())
+        return probe
+      })
+    })
+    syncBuiltinESMExports()
+    const pending = resolver.resolveTscBinary({ env: { TSC_PATH }, signal: controller.signal })
+    const rejected = assert.rejects(pending, /abort/i)
+    await spawned
+    const start = Date.now()
+    controller.abort()
+    await rejected
+    assert.ok(Date.now() - start <= 2250)
+    assert.ok(probe?.pid)
+    assert.throws(() => process.kill(probe!.pid!, 0), /ESRCH/)
+  } finally {
+    controller.abort()
+    t.mock.restoreAll(); syncBuiltinESMExports()
+    await fixture.dispose()
+  }
+})

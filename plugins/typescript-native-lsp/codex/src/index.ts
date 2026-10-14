@@ -7,7 +7,7 @@ import type { LspCodeAction, LspSymbol, LspTextEdit } from "./lsp-client.ts"
 import { TypeScriptPool } from "./pool.ts"
 import { resolveTscBinary } from "./resolve-binary.ts"
 
-const pool = new TypeScriptPool(() => resolveTscBinary())
+const pool = new TypeScriptPool(signal => resolveTscBinary({ signal }))
 
 const server = new McpServer({
   name: "ts-hover",
@@ -336,13 +336,23 @@ async function applyEdits(filePath: string, edits: LspTextEdit[]) {
   await writeFile(filePath, lines.join("\n"))
 }
 
-/** Shut down the client pool before exiting. */
-async function cleanup() {
-  await pool.shutdown()
-  process.exit(0)
+/** All EOF, signal and transport-error exits share one cleanup promise. */
+let cleanupPromise: Promise<void> | undefined
+function cleanup(exitCode = 0): Promise<void> {
+  return cleanupPromise ??= pool.shutdown().then(() => { process.exit(exitCode) })
 }
 
-process.on("SIGINT", cleanup)
-process.on("SIGTERM", cleanup)
+process.on("SIGINT", () => { void cleanup() })
+process.on("SIGTERM", () => { void cleanup() })
+process.stdin.on("end", () => { void cleanup() })
+process.stdin.on("close", () => { void cleanup() })
+process.stdin.on("error", () => { void cleanup(1) })
+process.stdout.on("error", () => { void cleanup(1) })
+server.server.onclose = () => { void cleanup() }
+server.server.onerror = () => { void cleanup(1) }
 
-await server.connect(new StdioServerTransport())
+try {
+  await server.connect(new StdioServerTransport())
+} catch {
+  await cleanup(1)
+}

@@ -1,8 +1,10 @@
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process'
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { setTimeout as delay } from 'node:timers/promises'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { ReadBuffer, serializeMessage } from '@modelcontextprotocol/sdk/shared/stdio.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
@@ -21,7 +23,7 @@ export async function openMcp(entryPath: string, env?: NodeJS.ProcessEnv): Promi
   process: ChildProcessWithoutNullStreams
   close(): Promise<void>
 }> {
-  const child = spawn(process.execPath, [entryPath], { env, stdio: 'pipe', shell: false })
+  const child = spawn(process.execPath, [...(entryPath.endsWith('.ts') ? ['--import', 'tsx'] : []), entryPath], { env, stdio: 'pipe', shell: false })
   const client = new Client({ name: 'typescript-native-lsp-test', version: '1.0.0' })
   const buffer = new ReadBuffer()
   let stderr = ''
@@ -54,8 +56,8 @@ export async function openMcp(entryPath: string, env?: NodeJS.ProcessEnv): Promi
         if (child.exitCode !== null || child.signalCode !== null) { resolve(); return }
         const timeout = setTimeout(() => { child.kill('SIGKILL') }, 5000)
         child.once('close', () => { clearTimeout(timeout); resolve() })
-        // EOF is not sufficient in the pinned upstream; SIGTERM runs its cleanup.
-        child.kill('SIGTERM')
+        // EOF runs the same bounded cleanup as SIGINT/SIGTERM.
+        child.stdin.end()
       })
     },
   }
@@ -98,6 +100,58 @@ export async function nativeVersionProbe(root: string, version: string, hang = f
     child.stderr.on('data', chunk => { stderr += chunk.toString() })
     child.on('error', reject)
     child.on('close', code => code === 0 ? resolve() : reject(new Error(`Native probe compilation failed: ${stderr}`)))
+  })
+  return binary
+}
+
+/** Real framed peer; injected only at the native process spawning boundary. */
+export function fakeLsp(options: Record<string, unknown> = {}) {
+  const spawnOwned = spawn
+  const processes: ChildProcessWithoutNullStreams[] = []
+  const roots: string[] = []
+  return {
+    processes, roots,
+    spawnProcess(_binary: string, projectRoot: string): ChildProcessWithoutNullStreams {
+      roots.push(projectRoot)
+      const child = spawnOwned(process.execPath, [fileURLToPath(new URL('./fixtures/fake-lsp.mjs', import.meta.url)), JSON.stringify(options)], { cwd: projectRoot, stdio: 'pipe', shell: false })
+      processes.push(child)
+      return child
+    },
+    async dispose() {
+      await Promise.all(processes.map(child => new Promise<void>(resolve => {
+        if (child.exitCode !== null || child.signalCode !== null) { resolve(); return }
+        child.once('close', () => resolve())
+        child.kill('SIGKILL')
+      })))
+    },
+  }
+}
+
+export async function waitFor(check: () => boolean | Promise<boolean>, timeoutMs = 2000): Promise<void> {
+  const start = Date.now()
+  while (!await check()) {
+    if (Date.now() - start > timeoutMs) throw new Error('Timed out waiting for test condition')
+    await delay(10)
+  }
+}
+
+export async function recordedMessages(log: string): Promise<Array<{ id?: number; method?: string; params?: any }>> {
+  try { return (await readFile(log, 'utf8')).trim().split('\n').filter(Boolean).map(line => JSON.parse(line)) }
+  catch { return [] }
+}
+
+/** Native owned PID fixture used to test EOF while discovery/initialize is pending. */
+export async function nativeLifetimeProbe(root: string, pidPath: string, stage: string): Promise<string> {
+  const source = join(root, 'lifetime.c')
+  const binary = join(root, 'native-lifetime')
+  const code = `#include <stdio.h>\n#include <string.h>\n#include <unistd.h>\nint main(int argc, char **argv) {\nif (argc > 1 && !strcmp(argv[1], "--version") && ${stage === 'initialize' ? '1' : '0'}) { puts("Version 7.0.0"); return 0; }\nFILE *file = fopen(${JSON.stringify(pidPath)}, "w"); fprintf(file, "%d", getpid()); fclose(file);\nfor (;;) pause();\n}\n`
+  await writeFile(source, code)
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn('cc', [source, '-o', binary], { stdio: 'pipe', shell: false })
+    let stderr = ''
+    child.stderr.on('data', chunk => { stderr += chunk.toString() })
+    child.once('error', reject)
+    child.once('close', code => code === 0 ? resolve() : reject(new Error(`Native lifetime probe compilation failed: ${stderr}`)))
   })
   return binary
 }
