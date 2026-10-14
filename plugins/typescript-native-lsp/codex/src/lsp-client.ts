@@ -4,7 +4,7 @@ import { HierarchyStore, callHierarchyItemSchema, parseHierarchyItem, type Hiera
 import { parseWorkspaceSymbol, workspaceSymbolSchema, rangeSchema, type WorkspaceSymbol } from "./protocol.ts"
 import { DocumentSession } from "./documents.ts"
 import { inlayRange, pathToUri, positionToOffset, uriToPath } from "./files.ts"
-import { configurationResults, diagnosticItemSchema, INLAY_HINT_KIND_LABELS, parseLocations, parseSymbols, parseWorkspaceEdit, positionSchema, requireCapability, SEVERITY_LABELS, textEditSchema, type LspCodeAction, type LspDiagnostic, type LspInlayHint, type LspLocation, type LspSymbol, type LspTextEdit } from "./protocol.ts"
+import { configurationResults, diagnosticItemSchema, INLAY_HINT_KIND_LABELS, parseLocations, parseSymbols, parseWorkspaceEdit, positionSchema, requireCapability, SEVERITY_LABELS, textEditSchema, type LspCodeAction, type LspDiagnostic, type LspInlayHint, type LspLocation, type LspSymbol } from "./protocol.ts"
 export type { LspCodeAction, LspDiagnostic, LspInlayHint, LspLocation, LspSymbol, LspTextEdit, Position, Range } from "./protocol.ts"
 
 const REQUEST_TIMEOUT_MS = 30_000
@@ -404,7 +404,8 @@ export class LspClient {
     character: number,
     newName: string,
     options?: RequestOptions,
-  ): Promise<LspTextEdit[]> {
+  ): Promise<unknown> {
+    if (newName.length === 0) throw new Error("Rename requires a non-empty newName")
     if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
@@ -417,7 +418,14 @@ export class LspClient {
       newName,
     }, options)
 
-    return parseWorkspaceEdit(result)
+    return result
+  }
+
+  /** Invalidate handles immediately, even if post-write synchronization fails. */
+  async synchronizeRename(files: string[]): Promise<void> {
+    this.hierarchy.clear()
+    for (const file of files) await this.documentSession.sync(file)
+    await this.documentSession.flushFileEvents()
   }
 
   /**

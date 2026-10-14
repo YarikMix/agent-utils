@@ -1,9 +1,8 @@
 #!/usr/bin/env node
-import { readFile, writeFile } from "node:fs/promises"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod"
-import type { LspCodeAction, LspSymbol, LspTextEdit } from "./lsp-client.ts"
+import type { LspCodeAction, LspSymbol } from "./lsp-client.ts"
 import { TypeScriptPool } from "./pool.ts"
 import { resolveTscBinary } from "./resolve-binary.ts"
 
@@ -198,36 +197,19 @@ server.registerTool(
         .describe("Absolute path to the TypeScript/JavaScript file"),
       line: z.number().describe("Line number (0-indexed)"),
       character: z.number().describe("Character position (0-indexed)"),
-      newName: z.string().describe("The new name for the symbol"),
+      newName: z.string().min(1).describe("The new name for the symbol"),
     },
   },
   async ({ file, line, character, newName }, { signal }) => {
-    const edits = await pool.rename(file, line, character, newName, { signal })
-
-    if (edits.length === 0) {
-      return {
-        content: [{ type: "text" as const, text: "No rename edits." }],
-      }
-    }
-
-    const byFile = new Map<string, LspTextEdit[]>()
-    for (const edit of edits) {
-      const group = byFile.get(edit.file) ?? []
-      group.push(edit)
-      byFile.set(edit.file, group)
-    }
-
-    const parts: string[] = []
-    for (const [filePath, fileEdits] of byFile) {
-      await applyEdits(filePath, fileEdits)
-      parts.push(`${filePath}: ${fileEdits.length} edit(s)`)
-    }
+    const result = await pool.rename(file, line, character, newName, { signal })
+    if (result.editCount === 0) return { content: [{ type: "text" as const, text: "No rename edits." }] }
+    const parts = result.files.map(({ file, editCount }) => `${file}: ${editCount} edit(s)`)
 
     return {
       content: [
         {
           type: "text" as const,
-          text: `Renamed to "${newName}" — ${edits.length} edit(s) across ${byFile.size} file(s):\n${parts.join("\n")}`,
+          text: `Renamed to "${newName}" — ${result.editCount} edit(s) across ${result.files.length} file(s):\n${parts.join("\n")}`,
         },
       ],
     }
@@ -347,34 +329,6 @@ function formatTextEdit(edit: LspCodeAction["edits"][number]): string {
     return `${loc} (insert: ${preview})`
   }
   return `${loc} (replace to ${edit.endLine}:${edit.endCharacter}: ${preview})`
-}
-
-/**
- * Apply LSP text edits to a file. Edits are sorted bottom-to-top so earlier
- * positions aren't shifted by later replacements.
- *
- * @param filePath - Absolute path to the file being edited.
- * @param edits - LSP edits to apply.
- */
-async function applyEdits(filePath: string, edits: LspTextEdit[]) {
-  const lines = (await readFile(filePath, "utf-8")).split("\n")
-
-  for (const edit of [...edits].toSorted((a, b) => {
-    if (a.startLine !== b.startLine) return b.startLine - a.startLine
-    return b.startCharacter - a.startCharacter
-  })) {
-    lines.splice(
-      edit.startLine,
-      edit.endLine - edit.startLine + 1,
-      ...(
-        (lines[edit.startLine] ?? "").slice(0, edit.startCharacter) +
-        edit.newText +
-        (lines[edit.endLine] ?? "").slice(edit.endCharacter)
-      ).split("\n"),
-    )
-  }
-
-  await writeFile(filePath, lines.join("\n"))
 }
 
 /** All EOF, signal and transport-error exits share one cleanup promise. */

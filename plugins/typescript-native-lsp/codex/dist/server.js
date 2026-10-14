@@ -411,11 +411,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants2);
+          this.rhs = optimizeExpr(this.rhs, names, constants3);
         return this;
       }
       get names() {
@@ -432,10 +432,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants2);
+        this.rhs = optimizeExpr(this.rhs, names, constants3);
         return this;
       }
       get names() {
@@ -496,8 +496,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants2) {
-        this.code = optimizeExpr(this.code, names, constants2);
+      optimizeNames(names, constants3) {
+        this.code = optimizeExpr(this.code, names, constants3);
         return this;
       }
       get names() {
@@ -526,12 +526,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
           const n = nodes[i];
-          if (n.optimizeNames(names, constants2))
+          if (n.optimizeNames(names, constants3))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i, 1);
@@ -584,12 +584,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         var _a2;
-        this.else = (_a2 = this.else) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants2);
-        if (!(super.optimizeNames(names, constants2) || this.else))
+        this.else = (_a2 = this.else) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants3);
+        if (!(super.optimizeNames(names, constants3) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants2);
+        this.condition = optimizeExpr(this.condition, names, constants3);
         return this;
       }
       get names() {
@@ -612,10 +612,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants2) {
-        if (!super.optimizeNames(names, constants2))
+      optimizeNames(names, constants3) {
+        if (!super.optimizeNames(names, constants3))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants2);
+        this.iteration = optimizeExpr(this.iteration, names, constants3);
         return this;
       }
       get names() {
@@ -651,10 +651,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants2) {
-        if (!super.optimizeNames(names, constants2))
+      optimizeNames(names, constants3) {
+        if (!super.optimizeNames(names, constants3))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants2);
+        this.iterable = optimizeExpr(this.iterable, names, constants3);
         return this;
       }
       get names() {
@@ -696,11 +696,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         var _a2, _b;
-        super.optimizeNames(names, constants2);
-        (_a2 = this.catch) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants2);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants2);
+        super.optimizeNames(names, constants3);
+        (_a2 = this.catch) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants3);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants3);
         return this;
       }
       get names() {
@@ -1001,7 +1001,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants2) {
+    function optimizeExpr(expr, names, constants3) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1016,14 +1016,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants2[n.str];
+        const c = constants3[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e) {
-        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants2[c.str] !== void 0);
+        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants3[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -7187,12 +7187,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs, exportName) {
+    function addFormats(ajv, list, fs2, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs[f]);
+        ajv.addFormat(f, fs2[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7808,7 +7808,7 @@ var require_scan = __commonJS({
 var require_parse = __commonJS({
   "node_modules/picomatch/lib/parse.js"(exports, module) {
     "use strict";
-    var constants2 = require_constants();
+    var constants3 = require_constants();
     var utils = require_utils2();
     var {
       MAX_LENGTH,
@@ -7816,7 +7816,7 @@ var require_parse = __commonJS({
       REGEX_NON_SPECIAL_CHARS,
       REGEX_SPECIAL_CHARS_BACKREF,
       REPLACEMENTS
-    } = constants2;
+    } = constants3;
     var expandRange = (args, options) => {
       if (typeof options.expandRange === "function") {
         return options.expandRange(...args, options);
@@ -8025,7 +8025,7 @@ var require_parse = __commonJS({
       if (options.maxExtglobRecursion === false) {
         return { risky: false };
       }
-      const max = typeof options.maxExtglobRecursion === "number" ? options.maxExtglobRecursion : constants2.DEFAULT_MAX_EXTGLOB_RECURSION;
+      const max = typeof options.maxExtglobRecursion === "number" ? options.maxExtglobRecursion : constants3.DEFAULT_MAX_EXTGLOB_RECURSION;
       const branches = splitTopLevel(body).map((branch) => branch.trim());
       if (branches.length > 1) {
         if (branches.some((branch) => branch === "") || branches.some((branch) => /^[*?]+$/.test(branch)) || hasRepeatedCharPrefixOverlap(branches)) {
@@ -8071,8 +8071,8 @@ var require_parse = __commonJS({
       const bos = { type: "bos", value: "", output: opts.prepend || "" };
       const tokens = [bos];
       const capture = opts.capture ? "" : "?:";
-      const PLATFORM_CHARS = constants2.globChars(opts.windows);
-      const EXTGLOB_CHARS = constants2.extglobChars(PLATFORM_CHARS);
+      const PLATFORM_CHARS = constants3.globChars(opts.windows);
+      const EXTGLOB_CHARS = constants3.extglobChars(PLATFORM_CHARS);
       const {
         DOT_LITERAL,
         PLUS_LITERAL,
@@ -8768,7 +8768,7 @@ var require_parse = __commonJS({
         NO_DOTS_SLASH,
         STAR,
         START_ANCHOR
-      } = constants2.globChars(opts.windows);
+      } = constants3.globChars(opts.windows);
       const nodot = opts.dot ? NO_DOTS : NO_DOT;
       const slashDot = opts.dot ? NO_DOTS_SLASH : NO_DOT;
       const capture = opts.capture ? "" : "?:";
@@ -8826,7 +8826,7 @@ var require_picomatch = __commonJS({
     var scan = require_scan();
     var parse4 = require_parse();
     var utils = require_utils2();
-    var constants2 = require_constants();
+    var constants3 = require_constants();
     var isObject2 = (val) => val && typeof val === "object" && !Array.isArray(val);
     var picomatch2 = (glob, options, returnState = false) => {
       if (Array.isArray(glob)) {
@@ -8954,7 +8954,7 @@ var require_picomatch = __commonJS({
         return /$^/;
       }
     };
-    picomatch2.constants = constants2;
+    picomatch2.constants = constants3;
     module.exports = picomatch2;
   }
 });
@@ -8975,9 +8975,6 @@ var require_picomatch2 = __commonJS({
     module.exports = picomatch2;
   }
 });
-
-// src/index.ts
-import { readFile as readFile2, writeFile } from "node:fs/promises";
 
 // node_modules/zod/v3/helpers/util.js
 var util;
@@ -32379,11 +32376,14 @@ var StdioServerTransport = class {
   }
 };
 
-// src/pool.ts
-import { existsSync as existsSync2 } from "node:fs";
-import { dirname as dirname4, join as join4 } from "node:path";
+// src/edits.ts
+import { constants } from "node:fs";
+import * as fs from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { dirname, join } from "node:path";
 
 // src/files.ts
+import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 function pathToUri(file2) {
@@ -32428,12 +32428,18 @@ function inlayRange(text, startLine, endLine) {
   positionToOffset(text, end);
   return { start, end };
 }
-
-// src/lsp-client.ts
-import { spawn } from "node:child_process";
-
-// src/hierarchy.ts
-import { randomUUID } from "node:crypto";
+async function assertProjectWritePath(root, file2, io = { realpath }) {
+  pathToUri(root);
+  pathToUri(file2);
+  const [canonicalRoot, canonicalFile] = await Promise.all([io.realpath(root), io.realpath(file2)]);
+  const canonical = relative(canonicalRoot, canonicalFile);
+  if (canonical === ".." || canonical.startsWith(`..${sep}`) || isAbsolute(canonical)) throw new Error("Write path is outside project boundary");
+  for (const candidate of [root, file2, canonicalRoot, canonicalFile]) {
+    const parts = candidate.split(sep).map((part) => ["darwin", "win32"].includes(process.platform) ? part.toLowerCase() : part);
+    if (parts.some((part) => part === "node_modules" || part === ".git")) throw new Error("Cannot write node_modules or .git");
+  }
+  return canonicalFile;
+}
 
 // src/protocol.ts
 var positionSchema = external_exports3.object({ line: external_exports3.number().int().nonnegative(), character: external_exports3.number().int().nonnegative() });
@@ -32542,6 +32548,11 @@ function configurationResults(params) {
     return { inlayHints: { parameterNames: { enabled: "all" }, variableTypes: { enabled: true }, functionLikeReturnTypes: { enabled: true } }, tsserver: { automaticTypeAcquisition: { enabled: false } }, disableAutomaticTypeAcquisition: true };
   });
 }
+var renameTextEdit = external_exports3.object({ range: rangeSchema, newText: external_exports3.string() }).strict();
+var renameWorkspaceEditSchema = external_exports3.object({
+  changes: external_exports3.record(external_exports3.string(), external_exports3.array(renameTextEdit)).optional(),
+  documentChanges: external_exports3.array(external_exports3.object({ textDocument: external_exports3.object({ uri: external_exports3.string(), version: external_exports3.number().int().nullable() }).strict(), edits: external_exports3.array(renameTextEdit) }).strict()).optional()
+}).strict().refine((value) => value.changes === void 0 || value.documentChanges === void 0, "Conflicting edit forms");
 function parseWorkspaceEdit(value) {
   if (value === null) return [];
   const parsed = external_exports3.object({ changes: external_exports3.record(external_exports3.string(), external_exports3.array(textEditSchema)).optional(), documentChanges: external_exports3.array(external_exports3.object({ textDocument: external_exports3.object({ uri: external_exports3.string(), version: external_exports3.number().nullable().optional() }), edits: external_exports3.array(textEditSchema) })).optional() }).safeParse(value);
@@ -32557,7 +32568,133 @@ function parseWorkspaceSymbol(value) {
   return { name, kind: SYMBOL_KIND_LABELS[kind] ?? `kind(${kind})`, file: uriToPath(location.uri), ...location.range.start };
 }
 
+// src/edits.ts
+async function prepareWorkspaceEdit(root, value, documents, io = fs) {
+  const parsed = renameWorkspaceEditSchema.safeParse(value === null ? {} : value);
+  if (!parsed.success) throw new Error(`Invalid workspace edit: ${parsed.error.message}`);
+  const groups = parsed.data.changes !== void 0 ? Object.entries(parsed.data.changes).map(([uri, edits]) => ({ uri, edits, version: null })) : (parsed.data.documentChanges ?? []).map(({ textDocument, edits }) => ({ ...textDocument, edits }));
+  const files = [];
+  const seen = /* @__PURE__ */ new Set();
+  const canonicalRoot = await io.realpath(root);
+  for (const { uri, edits, version: version2 } of groups) {
+    const source = uriToPath(uri);
+    const file2 = await assertProjectWritePath(root, source, io);
+    if (seen.has(file2)) throw new Error(`Duplicate workspace edit file: ${file2}`);
+    seen.add(file2);
+    const openedVersion = documents.getVersion(uri);
+    if (version2 !== null && version2 !== openedVersion) throw new Error(`Workspace edit version mismatch: ${file2}`);
+    const stat5 = await io.stat(file2);
+    if (!stat5.isFile()) throw new Error(`Workspace edit requires a regular file: ${file2}`);
+    await io.access(file2, constants.R_OK | constants.W_OK);
+    await io.access(dirname(file2), constants.W_OK);
+    const before = await io.readFile(file2);
+    const text = before.toString("utf8");
+    if (!Buffer.from(text).equals(before)) throw new Error(`Workspace edit requires valid UTF-8: ${file2}`);
+    for (const candidate of /* @__PURE__ */ new Set([uri, pathToUri(file2)])) {
+      const opened = documents.getText(candidate);
+      if (opened !== void 0 && opened !== text) throw new Error(`Workspace edit snapshot changed: ${file2}`);
+    }
+    const offsets = edits.map((edit) => ({ start: positionToOffset(text, edit.range.start), end: positionToOffset(text, edit.range.end), newText: edit.newText })).sort((a, b) => a.start - b.start || a.end - b.end);
+    for (let i = 0; i < offsets.length; i++) {
+      const current = offsets[i];
+      const previous = offsets[i - 1];
+      if (previous && (previous.start === current.start || previous.end > current.start)) throw new Error(`Overlapping or ambiguous workspace edits: ${file2}`);
+      for (const offset of [current.start, current.end]) {
+        if (offset > 0 && /[\uD800-\uDBFF]/.test(text[offset - 1]) && /[\uDC00-\uDFFF]/.test(text[offset] ?? "")) throw new Error(`Invalid position inside UTF-16 surrogate pair: ${file2}`);
+      }
+      if (Buffer.from(current.newText).toString("utf8") !== current.newText) throw new Error(`Invalid workspace edit Unicode: ${file2}`);
+    }
+    let after = text;
+    for (const edit of offsets.toReversed()) after = after.slice(0, edit.start) + edit.newText + after.slice(edit.end);
+    if (edits.length) files.push({ source, file: file2, before, after: Buffer.from(after), mode: stat5.mode & 4095, editCount: edits.length });
+  }
+  return { root: canonicalRoot, files };
+}
+async function unchanged(prepared, file2, expected, io) {
+  if (await assertProjectWritePath(prepared.root, file2.source, io) !== file2.file || await io.realpath(file2.file) !== file2.file) throw new Error(`Rename path changed: ${file2.file}`);
+  const stat5 = await io.stat(file2.file);
+  if (!stat5.isFile() || (stat5.mode & 4095) !== file2.mode || !(await io.readFile(file2.file)).equals(expected)) throw new Error(`Rename snapshot changed: ${file2.file}`);
+}
+async function applyWorkspaceEdit(prepared, io = fs) {
+  const artifacts = /* @__PURE__ */ new Set();
+  const staged = /* @__PURE__ */ new Map();
+  const replaced = [];
+  const restored = [];
+  const changed = [];
+  const issues = [];
+  let failure;
+  const stage = async (file2, bytes) => {
+    const temp = join(dirname(file2.file), `.ts-rename-${randomUUID()}.tmp`);
+    artifacts.add(temp);
+    try {
+      await io.writeFile(temp, bytes, { flag: "wx", mode: file2.mode, flush: true });
+    } catch (error48) {
+      if (error48.code === "EEXIST") artifacts.delete(temp);
+      throw error48;
+    }
+    await io.chmod(temp, file2.mode);
+    return temp;
+  };
+  try {
+    for (const file2 of prepared.files) await unchanged(prepared, file2, file2.before, io);
+    for (const file2 of prepared.files) staged.set(file2, await stage(file2, file2.after));
+    for (const file2 of prepared.files) await unchanged(prepared, file2, file2.before, io);
+    for (const file2 of prepared.files) {
+      await unchanged(prepared, file2, file2.before, io);
+      const temp = staged.get(file2);
+      await io.rename(temp, file2.file);
+      artifacts.delete(temp);
+      replaced.push(file2);
+    }
+  } catch (error48) {
+    failure = error48;
+    for (const file2 of replaced.toReversed()) {
+      try {
+        await unchanged(prepared, file2, file2.after, io);
+        const temp = await stage(file2, file2.before);
+        await unchanged(prepared, file2, file2.after, io);
+        await io.rename(temp, file2.file);
+        artifacts.delete(temp);
+        restored.push(file2.file);
+      } catch (rollbackError) {
+        changed.push(file2.file);
+        issues.push(String(rollbackError));
+      }
+    }
+  } finally {
+    for (const temp of artifacts) {
+      try {
+        await io.rm(temp, { force: true });
+      } catch (error48) {
+        issues.push(`Temporary artifact remains ${temp}: ${String(error48)}`);
+        failure ??= error48;
+      }
+    }
+  }
+  if (failure !== void 0) {
+    const untouched = prepared.files.filter((file2) => !replaced.includes(file2)).map((file2) => file2.file);
+    const states = await Promise.all(prepared.files.map(async (file2) => {
+      try {
+        const bytes = await io.readFile(file2.file);
+        return { file: file2.file, state: bytes.equals(file2.before) ? "original" : bytes.equals(file2.after) ? "applied" : "external change" };
+      } catch {
+        return { file: file2.file, state: "unreadable/unknown" };
+      }
+    }));
+    throw new Error(`Rename write failed: ${String(failure)}; changed/unrestored: ${JSON.stringify(changed)}; restored: ${JSON.stringify(restored)}; not replaced: ${JSON.stringify(untouched)}; observed states: ${JSON.stringify(states)}${issues.length ? `; ${issues.join("; ")}` : ""}`);
+  }
+  return { editCount: prepared.files.reduce((count, file2) => count + file2.editCount, 0), files: prepared.files.map(({ source, editCount }) => ({ file: source, editCount })) };
+}
+
+// src/pool.ts
+import { existsSync as existsSync2 } from "node:fs";
+import { dirname as dirname5, join as join5 } from "node:path";
+
+// src/lsp-client.ts
+import { spawn } from "node:child_process";
+
 // src/hierarchy.ts
+import { randomUUID as randomUUID2 } from "node:crypto";
 var callHierarchyItemSchema = external_exports3.object({ name: external_exports3.string(), kind: external_exports3.number().int().min(1).max(26), uri: external_exports3.string(), range: rangeSchema, selectionRange: rangeSchema, detail: external_exports3.string().optional(), tags: external_exports3.array(external_exports3.number().int()).optional(), data: external_exports3.unknown().optional() }).passthrough();
 function parseHierarchyItem(value) {
   const parsed = callHierarchyItemSchema.safeParse(value);
@@ -32577,7 +32714,7 @@ var HierarchyStore = class {
   put(item, generation) {
     this.refresh(generation);
     const original = structuredClone(parseHierarchyItem(item));
-    const item_id = randomUUID();
+    const item_id = randomUUID2();
     this.items.set(item_id, original);
     return { item_id, name: original.name, kind: original.kind, file: uriToPath(original.uri), range: structuredClone(original.range), selectionRange: structuredClone(original.selectionRange), ...original.detail === void 0 ? {} : { detail: original.detail } };
   }
@@ -32604,7 +32741,7 @@ import { EventEmitter } from "events";
 import * as sysPath2 from "path";
 
 // node_modules/readdirp/esm/index.js
-import { stat, lstat, readdir, realpath } from "node:fs/promises";
+import { stat, lstat, readdir, realpath as realpath2 } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { resolve as presolve, relative as prelative, join as pjoin, sep as psep } from "node:path";
 var EntryTypes = {
@@ -32780,7 +32917,7 @@ var ReaddirpStream = class extends Readable {
     if (stats && stats.isSymbolicLink()) {
       const full = entry.fullPath;
       try {
-        const entryRealPath = await realpath(full);
+        const entryRealPath = await realpath2(full);
         const entryRealPathStats = await lstat(entryRealPath);
         if (entryRealPathStats.isFile()) {
           return "file";
@@ -33326,9 +33463,9 @@ var NodeFsHandler = class {
     if (this.fsw.closed) {
       return;
     }
-    const dirname6 = sysPath.dirname(file2);
+    const dirname7 = sysPath.dirname(file2);
     const basename3 = sysPath.basename(file2);
-    const parent = this.fsw._getWatchedDir(dirname6);
+    const parent = this.fsw._getWatchedDir(dirname7);
     let prevStats = stats;
     if (parent.has(basename3))
       return;
@@ -33355,7 +33492,7 @@ var NodeFsHandler = class {
             prevStats = newStats2;
           }
         } catch (error48) {
-          this.fsw._remove(dirname6, basename3);
+          this.fsw._remove(dirname7, basename3);
         }
       } else if (parent.has(basename3)) {
         const at = newStats.atimeMs;
@@ -33483,7 +33620,7 @@ var NodeFsHandler = class {
    * @param realpath
    * @returns closer for the watcher instance.
    */
-  async _handleDir(dir, stats, initialAdd, depth, target, wh, realpath3) {
+  async _handleDir(dir, stats, initialAdd, depth, target, wh, realpath4) {
     const parentDir = this.fsw._getWatchedDir(sysPath.dirname(dir));
     const tracked = parentDir.has(sysPath.basename(dir));
     if (!(initialAdd && this.fsw.options.ignoreInitial) && !target && !tracked) {
@@ -33494,7 +33631,7 @@ var NodeFsHandler = class {
     let throttler;
     let closer;
     const oDepth = this.fsw.options.depth;
-    if ((oDepth == null || depth <= oDepth) && !this.fsw._symlinkPaths.has(realpath3)) {
+    if ((oDepth == null || depth <= oDepth) && !this.fsw._symlinkPaths.has(realpath4)) {
       if (!target) {
         await this._handleRead(dir, initialAdd, wh, target, dir, depth, throttler);
         if (this.fsw.closed)
@@ -34291,7 +34428,7 @@ var esm_default = { watch, FSWatcher };
 // src/watchers.ts
 import { existsSync, readdirSync, realpathSync, statSync, watch as watch2 } from "node:fs";
 import { lstat as lstat3, readdir as readdir3 } from "node:fs/promises";
-import { dirname as dirname3, isAbsolute as isAbsolute3, join as join3, parse as parse3, relative as relative4, resolve as resolve3, sep as sep2 } from "node:path";
+import { dirname as dirname4, isAbsolute as isAbsolute3, join as join4, parse as parse3, relative as relative4, resolve as resolve3, sep as sep2 } from "node:path";
 var import_picomatch = __toESM(require_picomatch2(), 1);
 var slash = (file2) => file2.split(sep2).join("/");
 var caseInsensitive = process.platform === "darwin" || process.platform === "win32";
@@ -34311,7 +34448,7 @@ function actualCase(file2) {
     } catch (error48) {
       if (error48.code !== "ENOENT" && !permissionError(error48)) throw error48;
     }
-    current = join3(current, spelling);
+    current = join4(current, spelling);
   }
   return current;
 }
@@ -34326,15 +34463,15 @@ function compileWatchPattern(root, raw) {
   }
   const normalized = slash(absolute);
   const scan = import_picomatch.default.scan(normalized);
-  const staticRoot = actualCase(scan.isGlob ? scan.base : dirname3(absolute));
+  const staticRoot = actualCase(scan.isGlob ? scan.base : dirname4(absolute));
   let watchRoot = staticRoot;
   if (!watchRoot || !isAbsolute3(watchRoot)) throw new Error("Invalid watcher pattern root");
   while (!existsSync(watchRoot)) {
-    const parent = dirname3(watchRoot);
+    const parent = dirname4(watchRoot);
     if (parent === watchRoot) break;
     watchRoot = parent;
   }
-  if (existsSync(watchRoot) && !statSync(watchRoot).isDirectory()) watchRoot = dirname3(watchRoot);
+  if (existsSync(watchRoot) && !statSync(watchRoot).isDirectory()) watchRoot = dirname4(watchRoot);
   const semanticRoot = scan.isGlob ? staticRoot : actualCase(absolute);
   let ancestorWide = scan.isGlob && semanticRoot !== actualCase(root) && containedBy(actualCase(root), semanticRoot);
   try {
@@ -34420,7 +34557,7 @@ function createRegisteredWatcher(pattern, emit, fail) {
       }
       for (const entry of entries) {
         if (closed) break;
-        await inspect(join3(file2, entry.name), event);
+        await inspect(join4(file2, entry.name), event);
       }
       return;
     }
@@ -34439,7 +34576,7 @@ function createRegisteredWatcher(pattern, emit, fail) {
       fail(new Error("Native file watcher did not identify the changed path"));
       return;
     }
-    const file2 = join3(pattern.root, String(filename));
+    const file2 = join4(pattern.root, String(filename));
     work = work.then(() => inspect(file2, event)).catch((error48) => {
       if (!closed && !permissionError(error48)) fail(error48 instanceof Error ? error48 : new Error(String(error48)));
     });
@@ -35004,6 +35141,7 @@ var LspClient = class _LspClient {
    * @param newName - Replacement symbol name.
    */
   async rename(filePath, line, character, newName, options) {
+    if (newName.length === 0) throw new Error("Rename requires a non-empty newName");
     if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
     const content = await this.prepareDocument(filePath);
@@ -35013,7 +35151,13 @@ var LspClient = class _LspClient {
       position: { line, character },
       newName
     }, options);
-    return parseWorkspaceEdit(result);
+    return result;
+  }
+  /** Invalidate handles immediately, even if post-write synchronization fails. */
+  async synchronizeRename(files) {
+    this.hierarchy.clear();
+    for (const file2 of files) await this.documentSession.sync(file2);
+    await this.documentSession.flushFileEvents();
   }
   /**
    * Get inferred type annotations for a line range
@@ -35398,7 +35542,30 @@ var TypeScriptPool = class {
     return this.withClient(filePath, (client) => client.documentSymbols(filePath, options));
   }
   rename(filePath, line, character, newName, options) {
-    return this.withClient(filePath, (client) => client.rename(filePath, line, character, newName, options));
+    if (newName.length === 0) return Promise.reject(new Error("Rename requires a non-empty newName"));
+    return this.withClient(filePath, async (client) => {
+      const value = await client.rename(filePath, line, character, newName, options);
+      const prepared = await prepareWorkspaceEdit(client.projectRoot, value, client.documentSession).catch((error48) => {
+        throw new Error(`Rename validation failed; no files written: ${String(error48)}`);
+      });
+      if (options?.signal?.aborted) throw new Error("Rename aborted before writing; all files unchanged");
+      let result;
+      let failure;
+      try {
+        result = await applyWorkspaceEdit(prepared);
+      } catch (error48) {
+        failure = error48;
+      }
+      if (prepared.files.length) {
+        try {
+          await client.synchronizeRename(prepared.files.map((file2) => file2.source));
+        } catch (error48) {
+          throw new Error(`${failure ? String(failure) : `Rename files written: ${JSON.stringify(result?.files)}`}; document synchronization failed: ${String(error48)}`);
+        }
+      }
+      if (failure) throw failure;
+      return result;
+    });
   }
   inlayHints(filePath, startLine, endLine, options) {
     return this.withClient(filePath, (client) => client.inlayHints(filePath, startLine, endLine, options));
@@ -35450,21 +35617,21 @@ var TypeScriptPool = class {
   }
 };
 function findProjectRoot(filePath) {
-  let dir = dirname4(filePath);
+  let dir = dirname5(filePath);
   for (; ; ) {
-    if (existsSync2(join4(dir, "tsconfig.json"))) return dir;
-    const parent = dirname4(dir);
+    if (existsSync2(join5(dir, "tsconfig.json"))) return dir;
+    const parent = dirname5(dir);
     if (parent === dir) break;
     dir = parent;
   }
-  return dirname4(filePath);
+  return dirname5(filePath);
 }
 
 // src/resolve-binary.ts
 import { spawn as spawn2 } from "node:child_process";
-import { constants } from "node:fs";
-import { access, open as open2, realpath as realpath2, stat as stat4 } from "node:fs/promises";
-import { dirname as dirname5, isAbsolute as isAbsolute4, join as join5, normalize as normalize2, relative as relative6, resolve as resolve4, sep as sep4 } from "node:path";
+import { constants as constants2 } from "node:fs";
+import { access, open as open2, realpath as realpath3, stat as stat4 } from "node:fs/promises";
+import { dirname as dirname6, isAbsolute as isAbsolute4, join as join6, normalize as normalize2, relative as relative6, resolve as resolve4, sep as sep4 } from "node:path";
 var GUIDANCE = "Install TypeScript 7+ globally and add tsc to PATH, or set TSC_PATH to its absolute native binary path.";
 async function resolveTscBinary(options = {}) {
   options.signal?.throwIfAborted();
@@ -35493,14 +35660,14 @@ async function discoverTscBinary(options = {}) {
     const normalizedDirectory = normalize2(rawDirectory);
     let directory;
     try {
-      directory = await realpath2(normalizedDirectory);
+      directory = await realpath3(normalizedDirectory);
     } catch {
       continue;
     }
     const localBin = /(?:^|[\\/])node_modules[\\/]\.bin[\\/]?$/i;
     if (localBin.test(normalizedDirectory) || localBin.test(directory)) continue;
     for (const name of names) {
-      const launcher = join5(directory, name);
+      const launcher = join6(directory, name);
       try {
         await stat4(launcher);
       } catch {
@@ -35516,7 +35683,7 @@ async function discoverTscBinary(options = {}) {
   throw new Error(`Could not find TypeScript 7+ on PATH. ${GUIDANCE}`);
 }
 async function nativeFromLauncher(launcher, platform, arch) {
-  const target = await realpath2(launcher);
+  const target = await realpath3(launcher);
   if (await hasNativeHeader(target, platform)) return nativeBinary(target, platform);
   let script = target;
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) {
@@ -35531,21 +35698,21 @@ async function nativeFromLauncher(launcher, platform, arch) {
     }
     const reference = text.match(/["'](?:%dp0%|%~dp0|\$basedir|\$\{basedir\}|\$PSScriptRoot)[\\/]((?:\.\.[\\/])?(?:lib[\\/])?node_modules[\\/]typescript[\\/]bin[\\/]tsc)["']/i)?.[1];
     if (!reference) throw new Error("tsc is not a standard TypeScript npm launcher or native executable");
-    script = await realpath2(resolve4(dirname5(target), reference.replaceAll("\\", "/")));
+    script = await realpath3(resolve4(dirname6(target), reference.replaceAll("\\", "/")));
   }
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) throw new Error("npm launcher does not target typescript/bin/tsc");
-  const packageRoot = dirname5(dirname5(script));
-  const installationRoot = await realpath2(dirname5(packageRoot));
+  const packageRoot = dirname6(dirname6(script));
+  const installationRoot = await realpath3(dirname6(packageRoot));
   const nativePackage = `@typescript/typescript-${platform}-${arch}`;
-  for (const nativeRoot of [join5(packageRoot, "node_modules", nativePackage), join5(dirname5(packageRoot), nativePackage)]) {
+  for (const nativeRoot of [join6(packageRoot, "node_modules", nativePackage), join6(dirname6(packageRoot), nativePackage)]) {
     try {
-      await stat4(join5(nativeRoot, "package.json"));
+      await stat4(join6(nativeRoot, "package.json"));
     } catch {
       continue;
     }
-    const canonicalRoot = await realpath2(nativeRoot);
+    const canonicalRoot = await realpath3(nativeRoot);
     requireInInstallation(installationRoot, canonicalRoot);
-    const binary = await realpath2(join5(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"));
+    const binary = await realpath3(join6(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"));
     requireInInstallation(installationRoot, binary);
     return nativeBinary(binary, platform);
   }
@@ -35560,14 +35727,14 @@ function requireInInstallation(installationRoot, target) {
 async function nativeBinary(path, platform) {
   let binary;
   try {
-    binary = await realpath2(path);
+    binary = await realpath3(path);
   } catch {
     throw new Error(`binary "${path}" does not exist`);
   }
   if (!(await stat4(binary)).isFile()) throw new Error("binary must be a file");
   if (platform !== "win32") {
     try {
-      await access(binary, constants.X_OK);
+      await access(binary, constants2.X_OK);
     } catch {
       throw new Error("binary is not executable");
     }
@@ -35803,32 +35970,18 @@ server.registerTool(
       file: external_exports3.string().describe("Absolute path to the TypeScript/JavaScript file"),
       line: external_exports3.number().describe("Line number (0-indexed)"),
       character: external_exports3.number().describe("Character position (0-indexed)"),
-      newName: external_exports3.string().describe("The new name for the symbol")
+      newName: external_exports3.string().min(1).describe("The new name for the symbol")
     }
   },
   async ({ file: file2, line, character, newName }, { signal }) => {
-    const edits = await pool.rename(file2, line, character, newName, { signal });
-    if (edits.length === 0) {
-      return {
-        content: [{ type: "text", text: "No rename edits." }]
-      };
-    }
-    const byFile = /* @__PURE__ */ new Map();
-    for (const edit of edits) {
-      const group = byFile.get(edit.file) ?? [];
-      group.push(edit);
-      byFile.set(edit.file, group);
-    }
-    const parts = [];
-    for (const [filePath, fileEdits] of byFile) {
-      await applyEdits(filePath, fileEdits);
-      parts.push(`${filePath}: ${fileEdits.length} edit(s)`);
-    }
+    const result = await pool.rename(file2, line, character, newName, { signal });
+    if (result.editCount === 0) return { content: [{ type: "text", text: "No rename edits." }] };
+    const parts = result.files.map(({ file: file3, editCount }) => `${file3}: ${editCount} edit(s)`);
     return {
       content: [
         {
           type: "text",
-          text: `Renamed to "${newName}" \u2014 ${edits.length} edit(s) across ${byFile.size} file(s):
+          text: `Renamed to "${newName}" \u2014 ${result.editCount} edit(s) across ${result.files.length} file(s):
 ${parts.join("\n")}`
         }
       ]
@@ -35928,20 +36081,6 @@ function formatTextEdit(edit) {
     return `${loc} (insert: ${preview})`;
   }
   return `${loc} (replace to ${edit.endLine}:${edit.endCharacter}: ${preview})`;
-}
-async function applyEdits(filePath, edits) {
-  const lines = (await readFile2(filePath, "utf-8")).split("\n");
-  for (const edit of [...edits].toSorted((a, b) => {
-    if (a.startLine !== b.startLine) return b.startLine - a.startLine;
-    return b.startCharacter - a.startCharacter;
-  })) {
-    lines.splice(
-      edit.startLine,
-      edit.endLine - edit.startLine + 1,
-      ...((lines[edit.startLine] ?? "").slice(0, edit.startCharacter) + edit.newText + (lines[edit.endLine] ?? "").slice(edit.endCharacter)).split("\n")
-    );
-  }
-  await writeFile(filePath, lines.join("\n"));
 }
 var cleanupPromise;
 function cleanup(exitCode = 0) {

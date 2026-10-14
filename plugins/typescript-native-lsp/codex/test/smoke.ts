@@ -1,7 +1,8 @@
 /** Imported pool smoke test with assertions. Run: npm run smoke */
 import assert from "node:assert/strict"
-import { fileURLToPath } from "node:url"
-import { devNativeBinary } from "./support.ts"
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
+import { devNativeBinary, temporaryProject } from "./support.ts"
 import { TypeScriptPool } from "../src/pool.ts"
 import { resolveTscBinary } from "../src/resolve-binary.ts"
 
@@ -10,7 +11,9 @@ const binary = await resolveTscBinary()
 console.error(`Using TypeScript binary: ${binary}`)
 
 const pool = new TypeScriptPool(async () => binary)
-const testFile = fileURLToPath(new URL("sample.ts", import.meta.url))
+const original = await readFile(new URL("sample.ts", import.meta.url), "utf8")
+const project = await temporaryProject({ "sample.ts": original })
+const testFile = join(project.root, "sample.ts")
 
 try {
   // 1. Hover + definition
@@ -56,20 +59,17 @@ try {
     }
   }
 
-  // 5. Rename (dry run — just see what edits would be produced)
-  console.error(
-    `\n--- rename (createWorkflow -> buildWorkflow, line 37 char 9) ---`,
-  )
-  const renameEdits = await pool.rename(testFile, 37, 9, "buildWorkflow")
-  assert.ok(renameEdits.length >= 2)
-  assert.ok(renameEdits.some(edit => edit.newText === "buildWorkflow"))
-  assert.ok(renameEdits.every(edit => edit.newText.startsWith("buildWorkflow")))
-  console.log(`Rename edits: ${renameEdits.length}`)
-  for (const e of renameEdits) {
-    console.log(
-      `  ${e.file}:${e.startLine}:${e.startCharacter} -> ${e.endLine}:${e.endCharacter}`,
-    )
-  }
+  // 5. Rename writes only the disposable project copy.
+  console.error(`\n--- rename (createWorkflow -> buildWorkflow, line 37 char 9) ---`)
+  const result = await pool.rename(testFile, 37, 9, "buildWorkflow")
+  assert.ok(result.editCount >= 2)
+  assert.deepEqual(result.files.map(item => item.file), [testFile])
+  const renamed = await readFile(testFile, "utf8")
+  assert.match(renamed, /function buildWorkflow\(/)
+  assert.match(renamed, /const workflow = buildWorkflow\(/)
+  assert.match(renamed, /buildWorkflow as createWorkflow/)
+  assert.equal(await readFile(new URL("sample.ts", import.meta.url), "utf8"), original)
+  console.log(`Rename edits applied to temporary copy: ${result.editCount}`)
 
   // 6. Inlay hints (lines 49-64 — example usage section with inferred types)
   console.error(`\n--- inlay hints (lines 49-64) ---`)
@@ -80,6 +80,6 @@ try {
   }
 
 } finally {
-  await pool.shutdown()
+  try { await pool.shutdown() } finally { await project.dispose() }
 }
 console.error("\nDone.")

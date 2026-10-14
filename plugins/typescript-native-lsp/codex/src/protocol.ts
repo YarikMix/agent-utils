@@ -156,6 +156,13 @@ export function configurationResults(params: unknown): unknown[] {
   })
 }
 
+/** Complete write contract; read-only code-action flattening remains separate. */
+const renameTextEdit = z.object({ range: rangeSchema, newText: z.string() }).strict()
+export const renameWorkspaceEditSchema = z.object({
+  changes: z.record(z.string(), z.array(renameTextEdit)).optional(),
+  documentChanges: z.array(z.object({ textDocument: z.object({ uri: z.string(), version: z.number().int().nullable() }).strict(), edits: z.array(renameTextEdit) }).strict()).optional(),
+}).strict().refine(value => value.changes === undefined || value.documentChanges === undefined, 'Conflicting edit forms')
+
 export function parseWorkspaceEdit(value: unknown): LspTextEdit[] {
   if (value === null) return []
   const parsed = z.object({ changes: z.record(z.string(), z.array(textEditSchema)).optional(), documentChanges: z.array(z.object({ textDocument: z.object({ uri: z.string(), version: z.number().nullable().optional() }), edits: z.array(textEditSchema) })).optional() }).safeParse(value)

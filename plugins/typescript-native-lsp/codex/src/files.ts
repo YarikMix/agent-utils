@@ -52,9 +52,9 @@ export function inlayRange(text: string, startLine: number, endLine: number): Ra
   return { start, end }
 }
 
-export async function assertProjectWritePath(root: string, file: string): Promise<string> {
+export async function assertProjectWritePath(root: string, file: string, io: { realpath: typeof realpath } = { realpath }): Promise<string> {
   pathToUri(root); pathToUri(file)
-  const [canonicalRoot, canonicalFile] = await Promise.all([realpath(root), realpath(file)])
+  const [canonicalRoot, canonicalFile] = await Promise.all([io.realpath(root), io.realpath(file)])
   const canonical = relative(canonicalRoot, canonicalFile)
   if (canonical === '..' || canonical.startsWith(`..${sep}`) || isAbsolute(canonical)) throw new Error('Write path is outside project boundary')
   // Protect directories even when the chosen project root is itself inside one.

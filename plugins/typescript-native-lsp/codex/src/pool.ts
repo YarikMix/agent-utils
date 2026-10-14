@@ -1,3 +1,4 @@
+import { applyWorkspaceEdit, prepareWorkspaceEdit, type RenameResult } from "./edits.ts"
 import type { WorkspaceSymbol } from "./protocol.ts"
 import type { HierarchyNode, CallEdge } from "./hierarchy.ts"
 import { existsSync } from "node:fs"
@@ -11,7 +12,6 @@ import {
   type LspInlayHint,
   type LspLocation,
   type LspSymbol,
-  type LspTextEdit,
   LspClient,
 } from "./lsp-client.ts"
 
@@ -141,8 +141,26 @@ export class TypeScriptPool {
     return this.withClient(filePath, client => client.documentSymbols(filePath, options))
   }
 
-  rename(filePath: string, line: number, character: number, newName: string, options?: RequestOptions): Promise<LspTextEdit[]> {
-    return this.withClient(filePath, client => client.rename(filePath, line, character, newName, options))
+  rename(filePath: string, line: number, character: number, newName: string, options?: RequestOptions): Promise<RenameResult> {
+    if (newName.length === 0) return Promise.reject(new Error("Rename requires a non-empty newName"))
+    return this.withClient(filePath, async client => {
+      const value = await client.rename(filePath, line, character, newName, options)
+      const prepared = await prepareWorkspaceEdit(client.projectRoot, value, client.documentSession).catch(error => {
+        throw new Error(`Rename validation failed; no files written: ${String(error)}`)
+      })
+      if (options?.signal?.aborted) throw new Error("Rename aborted before writing; all files unchanged")
+      let result: RenameResult | undefined
+      let failure: unknown
+      try { result = await applyWorkspaceEdit(prepared) } catch (error) { failure = error }
+      if (prepared.files.length) {
+        try { await client.synchronizeRename(prepared.files.map(file => file.source)) }
+        catch (error) {
+          throw new Error(`${failure ? String(failure) : `Rename files written: ${JSON.stringify(result?.files)}`}; document synchronization failed: ${String(error)}`)
+        }
+      }
+      if (failure) throw failure
+      return result!
+    })
   }
 
   inlayHints(filePath: string, startLine: number, endLine: number, options?: RequestOptions): Promise<LspInlayHint[]> {

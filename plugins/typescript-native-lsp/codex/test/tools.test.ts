@@ -51,3 +51,39 @@ test('MCP AbortSignal reaches pending native request', { skip: process.platform 
     await waitFor(async () => (await recordedMessages(log)).some(m => m.method === '$/cancelRequest'))
   } finally { await session.close(); await project.dispose() }
 })
+
+test('MCP rename validates all files before writes and preserves upstream success text', { skip: process.platform === 'win32' }, async () => {
+  const { readFile } = await import('node:fs/promises')
+  const project = await temporaryProject({ 'проект #100% с пробелом/a.ts': 'foo', 'проект #100% с пробелом/b.ts': 'foo' })
+  const file = join(project.root, 'проект #100% с пробелом/a.ts'); const second = join(project.root, 'проект #100% с пробелом/b.ts')
+  const change = { range: { start: { line: 0, character: 0 }, end: { line: 0, character: 3 } }, newText: 'renamed' }
+  try {
+    for (const invalid of [true, false]) {
+      const target = invalid ? join(project.root, 'missing.ts') : second
+      const binary = await nativeProtocolPeer(project.root, { results: { 'textDocument/rename': { changes: { [pathToUri(file)]: [change], [pathToUri(target)]: [change] } } } })
+      const session = await openMcp(join(process.cwd(), 'src/index.ts'), { ...process.env, TSC_PATH: binary })
+      try {
+        const response = await session.client.callTool({ name: 'rename', arguments: { file, line: 0, character: 0, newName: 'renamed' } })
+        if (invalid) {
+          assert.equal(response.isError, true)
+          assert.match((response.content as Array<{ text: string }>)[0]!.text, /no files written/)
+          assert.equal(await readFile(file, 'utf8'), 'foo')
+        }
+        else {
+          assert.notEqual(response.isError, true)
+          assert.match((response.content as Array<{ text: string }>)[0]!.text, /Renamed to "renamed" — 2 edit\(s\) across 2 file\(s\)/)
+          assert.equal(await readFile(file, 'utf8'), 'renamed'); assert.equal(await readFile(second, 'utf8'), 'renamed')
+        }
+      } finally { await session.close() }
+    }
+  } finally { await project.dispose() }
+})
+
+test('MCP rename rejects an empty name before compiler discovery', async () => {
+  const session = await openMcp(join(process.cwd(), 'src/index.ts'), { PATH: '', TSC_PATH: '' })
+  try {
+    const response = await session.client.callTool({ name: 'rename', arguments: { file: '/some/file.ts', line: 0, character: 0, newName: '' } })
+    assert.equal(response.isError, true)
+    assert.match((response.content as Array<{ text: string }>)[0]!.text, /newName|name|small/)
+  } finally { await session.close() }
+})
