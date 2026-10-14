@@ -2,6 +2,8 @@
 
 The imported ts-mcp code is MIT, Copyright (c) Zach Sents. See [LICENSE](LICENSE) and [UPSTREAM.md](UPSTREAM.md) for pinned provenance and the absence of an upstream ts-mcp license file.
 
+Local adaptations replace compiler discovery with global native TypeScript resolution and defer it until a file tool creates an LSP client. Runtime bundle library versions and licenses are unchanged.
+
 ## Runtime bundle libraries
 
 `dist/server.js` includes code from the packages below, identified from esbuild input metadata. Node built-ins are provided by the host runtime. License texts are retained below in addition to legal comments emitted in the bundle.

@@ -86,3 +86,18 @@ export async function temporaryProject(files: Record<string, string>): Promise<{
   }
   return { root, dispose: () => rm(root, { recursive: true, force: true }) }
 }
+
+/** POSIX native executable for real version/timeout probes; never a shell launcher. */
+export async function nativeVersionProbe(root: string, version: string, hang = false): Promise<string> {
+  const source = join(root, 'version.c')
+  const binary = join(root, 'native tsc')
+  await writeFile(source, `#include <stdio.h>\n#include <string.h>\n#include <unistd.h>\nint main(int argc, char **argv) {\nif (argc != 2 || strcmp(argv[1], "--version")) return 2;\n${hang ? 'printf("PID %d\\n", getpid()); fflush(stdout); for (;;) pause();' : `puts(${JSON.stringify(version)});`}\nreturn 0;\n}\n`)
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn('cc', [source, '-o', binary], { stdio: 'pipe', shell: false })
+    let stderr = ''
+    child.stderr.on('data', chunk => { stderr += chunk.toString() })
+    child.on('error', reject)
+    child.on('close', code => code === 0 ? resolve() : reject(new Error(`Native probe compilation failed: ${stderr}`)))
+  })
+  return binary
+}

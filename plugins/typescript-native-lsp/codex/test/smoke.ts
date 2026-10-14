@@ -6,10 +6,10 @@ import { TypeScriptPool } from "../src/pool.ts"
 import { resolveTscBinary } from "../src/resolve-binary.ts"
 
 process.env.TSC_PATH = devNativeBinary()
-const binary = resolveTscBinary()
+const binary = await resolveTscBinary()
 console.error(`Using TypeScript binary: ${binary}`)
 
-const pool = new TypeScriptPool(binary)
+const pool = new TypeScriptPool(async () => binary)
 const testFile = fileURLToPath(new URL("sample.ts", import.meta.url))
 
 try {

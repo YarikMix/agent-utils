@@ -14,22 +14,22 @@ The upstream package and repository root contain no ts-mcp LICENSE file at this 
 
 | Upstream path relative to packages/ts-mcp | Local destination | Transformation |
 | --- | --- | --- |
-| src/index.ts | src/index.ts | Unmodified import; six tool schemas/handlers and metadata retained. |
+| src/index.ts | src/index.ts | Six tool schemas/handlers and metadata retained; pass a lazy compiler resolver to the pool. |
 | src/lsp-client.ts | src/lsp-client.ts | Bun Timer type → ReturnType<typeof setTimeout>; otherwise unmodified. |
-| src/pool.ts | src/pool.ts | Bun Timer types → ReturnType<typeof setTimeout>; otherwise unmodified. |
-| src/resolve-binary.ts | src/resolve-binary.ts | Unmodified; global-only resolver belongs to the next task. |
+| src/pool.ts | src/pool.ts | Bun Timer types → ReturnType<typeof setTimeout>; resolve the native compiler asynchronously on first client creation. |
+| src/resolve-binary.ts | src/resolve-binary.ts | Replace checkout-package resolution with global PATH/npm launcher discovery or absolute native TSC_PATH; reject wrappers; probe TypeScript 7+ directly with shell=false, bounded output and a 5 s timeout. |
 | test/sample.ts | test/sample.ts | Unmodified fixture. |
-| test/smoke.ts | test/smoke.ts | Run with Node/tsx; explicit development native TSC_PATH; URL-based fixture path for Node 20; add assertions and finally shutdown. |
+| test/smoke.ts | test/smoke.ts | Run with Node/tsx; explicit development native TSC_PATH; URL-based fixture path for Node 20; assertions/finally shutdown; await asynchronous resolution and pass a lazy callback. |
 | package.json | package.json | Private local name/version, Node >=20; runtime SDK 1.27.1/Zod 4.3.6; TypeScript 7.0.2 moved to dev; esbuild 0.28.2, tsx 4.23.15, @types/node 20.19.43 exact; independent build/test scripts; remove Bun/oxlint/eslint/workspace/shx/publishing scripts. |
 | README.md | README.md and snapshot below | Local README describes this imported stage; verbatim original retained as historical source below. |
 | tsconfig.json, tsconfig.build.json | tsconfig.json and snapshots below | Consolidated NodeNext strict noEmit config, ES2022 target, Node types; include src/test harness, exclude sample/fixtures; esbuild handles emit. |
 | .gitignore | .gitignore | Only local node_modules ignored; bundled dist tracked. |
 
-New local files: `.npmrc`, public `package-lock.json`, `scripts/{build-options,build,verify-build,test}.mjs`, `test/{support.ts,import.test.mjs}`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `dist/server.js`.
+New local files: `.npmrc`, public `package-lock.json`, `scripts/{build-options,build,verify-build,test}.mjs`, `test/{support.ts,import.test.mjs,resolve-binary.test.ts,startup.test.ts}`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `dist/server.js`.
 
 The build uses one ESM Node 20 bundle from src/index.ts; CJS dependencies use a createRequire(import.meta.url) shim, legal comments are retained at EOF. verify-build compares both file composition and exact bytes. No pretest rebuild hides stale artifacts. Tests use the MCP SDK and an owned stdio process, and terminate it with SIGTERM until EOF handling is addressed later.
 
-TypeScript is only a development dependency for typechecking and explicit native integration tests. The bundled server is verified in a temporary directory without node_modules, with TSC_PATH set to that native binary. Global-only resolution, process lifetime, URI safety and further tools remain later tasks; this snapshot does not claim those fixes.
+TypeScript is only a development dependency for typechecking and explicit native integration tests. The bundled server is verified in a temporary directory without node_modules, with TSC_PATH set to that native binary. Runtime discovery never resolves TypeScript relative to this checkout: it follows a standard global tsc launcher on PATH or the explicit native TSC_PATH. MCP initialize/list works without a compiler; the first file tool reports an actionable PATH/TSC_PATH error. POSIX C probes exercise native version failures/timeouts; foreign launcher fixtures exercise discovery only. Process lifetime, URI safety and further tools remain later tasks.
 
 ## Original source SHA-256
 

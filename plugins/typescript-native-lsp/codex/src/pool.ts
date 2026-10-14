@@ -29,11 +29,11 @@ export class TypeScriptPool {
   /**
    * Create an LSP client pool.
    *
-   * @param binaryPath - Absolute path to the native tsc binary.
+   * @param resolveBinary - Lazy resolver for the native tsc binary.
    * @param idleTimeoutMs - Time before an inactive client is shut down.
    */
   constructor(
-    private binaryPath: string,
+    private resolveBinary: () => Promise<string>,
     private idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS,
   ) {}
 
@@ -181,7 +181,7 @@ export class TypeScriptPool {
     }
 
     const client = await LspClient.create(
-      this.binaryPath,
+      await this.resolveBinary(),
       `file://${projectRoot}`,
     )
     const entry: PoolEntry = {

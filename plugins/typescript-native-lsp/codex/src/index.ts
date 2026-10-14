@@ -7,7 +7,7 @@ import type { LspCodeAction, LspSymbol, LspTextEdit } from "./lsp-client.ts"
 import { TypeScriptPool } from "./pool.ts"
 import { resolveTscBinary } from "./resolve-binary.ts"
 
-const pool = new TypeScriptPool(resolveTscBinary())
+const pool = new TypeScriptPool(() => resolveTscBinary())
 
 const server = new McpServer({
   name: "ts-hover",
