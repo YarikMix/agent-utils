@@ -22,6 +22,11 @@ export interface RegisteredWatcher {
 const slash = (file: string) => file.split(sep).join('/')
 const caseInsensitive = process.platform === 'darwin' || process.platform === 'win32'
 const permissionError = (error: unknown) => ['EACCES', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '')
+function containedBy(file: string, root: string): boolean {
+  const candidate = caseInsensitive ? slash(file).toLowerCase() : slash(file)
+  const prefix = caseInsensitive ? slash(root).toLowerCase() : slash(root)
+  return candidate === prefix || candidate.startsWith(prefix.endsWith('/') ? prefix : prefix + '/')
+}
 
 /** TS case-folds paths on macOS/Windows; retain their actual disk spelling. */
 function actualCase(file: string): string {
@@ -62,11 +67,9 @@ export function compileWatchPattern(root: string, raw: WatchInput): WatchPattern
     } catch (error) { if (!permissionError(error)) throw error }
   }
   const matches = picomatch(normalized, { dot: true, nocase: caseInsensitive })
-  const prefix = caseInsensitive ? slash(staticRoot).toLowerCase() : slash(staticRoot)
   return { root: watchRoot, nativeRecursive, kind: raw.kind ?? 7, matches: file => matches(slash(file)), ignored(file, stats) {
     if (stats && !stats.isFile() && !stats.isDirectory() && !stats.isSymbolicLink()) return true
-    const candidate = caseInsensitive ? slash(file).toLowerCase() : slash(file)
-    return candidate !== prefix && !candidate.startsWith(prefix + '/') && !prefix.startsWith(candidate + '/')
+    return !containedBy(file, staticRoot) && !containedBy(staticRoot, file)
   } }
 }
 
@@ -89,14 +92,18 @@ export function createRegisteredWatcher(pattern: WatchPattern, emit: (file: stri
   let work: Promise<void> = Promise.resolve()
   let closing: Promise<void> | undefined
   const inspect = async (file: string, event: string): Promise<void> => {
-    if (closed || pattern.ignored(file)) return
+    if (closed || !containedBy(file, pattern.root) || pattern.ignored(file)) return
     let stats: Stats
     try { stats = await lstat(file) }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         const descendants = [...known].filter(knownFile => knownFile === file || knownFile.startsWith(file + sep))
-        if (!descendants.length) output(file, 3)
-        for (const descendant of descendants) { known.delete(descendant); output(descendant, 3) }
+        // A missing coarse callback cannot distinguish a file from a directory.
+        // TS7 expands directory deletions using its own cached descendants, including
+        // unopened files unknown here. Keep the root boundary and Delete mask but
+        // conservatively bypass the suffix matcher for this possible subtree.
+        if (pattern.kind & 4) emit(file, 3)
+        for (const descendant of descendants) { known.delete(descendant); if (descendant !== file) output(descendant, 3) }
         return
       }
       if (permissionError(error)) return

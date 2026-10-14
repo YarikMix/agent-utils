@@ -34135,6 +34135,11 @@ var import_picomatch = __toESM(require_picomatch2(), 1);
 var slash = (file2) => file2.split(sep2).join("/");
 var caseInsensitive = process.platform === "darwin" || process.platform === "win32";
 var permissionError = (error48) => ["EACCES", "EPERM"].includes(error48.code ?? "");
+function containedBy(file2, root) {
+  const candidate = caseInsensitive ? slash(file2).toLowerCase() : slash(file2);
+  const prefix = caseInsensitive ? slash(root).toLowerCase() : slash(root);
+  return candidate === prefix || candidate.startsWith(prefix.endsWith("/") ? prefix : prefix + "/");
+}
 function actualCase(file2) {
   if (!caseInsensitive) return file2;
   let current = parse3(file2).root;
@@ -34181,11 +34186,9 @@ function compileWatchPattern(root, raw) {
     }
   }
   const matches = (0, import_picomatch.default)(normalized, { dot: true, nocase: caseInsensitive });
-  const prefix = caseInsensitive ? slash(staticRoot).toLowerCase() : slash(staticRoot);
   return { root: watchRoot, nativeRecursive, kind: raw.kind ?? 7, matches: (file2) => matches(slash(file2)), ignored(file2, stats) {
     if (stats && !stats.isFile() && !stats.isDirectory() && !stats.isSymbolicLink()) return true;
-    const candidate = caseInsensitive ? slash(file2).toLowerCase() : slash(file2);
-    return candidate !== prefix && !candidate.startsWith(prefix + "/") && !prefix.startsWith(candidate + "/");
+    return !containedBy(file2, staticRoot) && !containedBy(staticRoot, file2);
   } };
 }
 function createRegisteredWatcher(pattern, emit, fail) {
@@ -34218,17 +34221,17 @@ function createRegisteredWatcher(pattern, emit, fail) {
   let work = Promise.resolve();
   let closing;
   const inspect = async (file2, event) => {
-    if (closed || pattern.ignored(file2)) return;
+    if (closed || !containedBy(file2, pattern.root) || pattern.ignored(file2)) return;
     let stats;
     try {
       stats = await lstat3(file2);
     } catch (error48) {
       if (error48.code === "ENOENT") {
         const descendants = [...known].filter((knownFile) => knownFile === file2 || knownFile.startsWith(file2 + sep2));
-        if (!descendants.length) output(file2, 3);
+        if (pattern.kind & 4) emit(file2, 3);
         for (const descendant of descendants) {
           known.delete(descendant);
-          output(descendant, 3);
+          if (descendant !== file2) output(descendant, 3);
         }
         return;
       }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, parse } from 'node:path'
 import test from 'node:test'
 import fs from 'node:fs'
 import { EventEmitter } from 'node:events'
@@ -124,3 +124,48 @@ test('backend choice reserves native recursive watching for existing strict proj
     if (fast) assert.equal(compileWatchPattern(child, { globPattern: join(child, '**/*.ts').toLowerCase() }).nativeRecursive, false)
   } finally { await Promise.all([project.dispose(), outside.dispose()]) }
 })
+
+test('filesystem-root patterns retain matching descendants without watching the whole disk', async () => {
+  const project = await temporaryProject({ 'source.d.ts': 'x' })
+  try {
+    const root = parse(project.root).root
+    for (const globPattern of [join(root, '**/*.d.ts'), { baseUri: pathToUri(root), pattern: '**/*.d.ts' }]) {
+      const pattern = compileWatchPattern(project.root, { globPattern })
+      const file = join(project.root, 'source.d.ts')
+      assert.equal(pattern.matches(file), true)
+      assert.equal(pattern.ignored(file), false)
+      assert.equal(pattern.ignored(project.root), false)
+    }
+    // On Windows the platform root above exercises its real drive separator.
+  } finally { await project.dispose() }
+})
+
+for (const known of [false, true]) {
+  for (const kind of [1, 4, 7]) {
+    test(`native coarse subtree deletion covers unopened descendants known=${known} kind=${kind}`, { skip: !['darwin', 'win32'].includes(process.platform) }, async t => {
+      const project = await temporaryProject({ 'project/source.ts': 'x', 'dependency/known.d.ts': 'x', 'dependency/unopened.d.ts': 'x' })
+      let callback!: (event: string, filename: string) => void
+      const handle = new EventEmitter() as EventEmitter & { close(): void }; handle.close = () => {}
+      t.mock.method(fs, 'watch', ((...args: any[]) => { callback = args[args.length - 1]; return handle }) as typeof fs.watch)
+      syncBuiltinESMExports()
+      const changes: Array<{ file: string; type: number }> = []; const errors: Error[] = []
+      const pattern = compileWatchPattern(join(project.root, 'project'), { globPattern: join(project.root, '**/*.d.ts'), kind })
+      assert.equal(pattern.nativeRecursive, true)
+      const watcher = createRegisteredWatcher(pattern, (file, type) => changes.push({ file, type }), error => errors.push(error))
+      const directory = join(project.root, 'dependency'); const noted = join(directory, 'known.d.ts')
+      try {
+        await watcher.ready
+        if (known) watcher.noteFile(noted)
+        await rm(directory, { recursive: true })
+        callback('rename', 'dependency'); await watcher.flush()
+        assert.deepEqual(changes, kind & 4 ? [{ file: directory, type: 3 }, ...(known ? [{ file: noted, type: 3 }] : [])] : [])
+        changes.length = 0
+        callback('rename', '../outside'); callback('rename', '..'); await watcher.flush()
+        assert.deepEqual(changes, [], 'Conservative invalidation must stay inside the registered static root')
+        callback('rename', 'unmatched.txt'); await watcher.flush()
+        assert.deepEqual(changes, kind & 4 ? [{ file: join(project.root, 'unmatched.txt'), type: 3 }] : [], 'Missing callbacks conservatively include possible directories even without a matching suffix')
+        assert.deepEqual(errors, [])
+      } finally { await watcher.close(); t.mock.restoreAll(); syncBuiltinESMExports(); await project.dispose() }
+    })
+  }
+}
