@@ -13,7 +13,7 @@ MCP-сервер Apple Notes для Claude Code, который работает
 ## Установка
 
 ```text
-/plugin marketplace add YarikMix/claude-plugins
+/plugin marketplace add YarikMix/agent-plugins
 /plugin install apple-notes-folder@yarikmix-plugins
 ```
 

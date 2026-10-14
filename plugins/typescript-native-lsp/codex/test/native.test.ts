@@ -9,6 +9,7 @@ import { LspClient } from '../src/lsp-client.ts'
 import { pathToUri } from '../src/files.ts'
 import { resolveTscBinary } from '../src/resolve-binary.ts'
 import { nativeSpawnRecorder, nativeTestEnv, openMcp, temporaryProject } from './support.ts'
+import { pollMcpFreshness } from './native-poll.ts'
 import type { CallEdge, HierarchyNode } from '../src/hierarchy.ts'
 import type { LspLocation, WorkspaceSymbol } from '../src/protocol.ts'
 
@@ -178,16 +179,20 @@ test('unopened source and package declaration, new source and tsconfig refresh w
   const [prepared] = await s.json<HierarchyNode[]>('prepare_call_hierarchy', { ...main, line: 4, character: 17 })
   assert.deepEqual(await s.json<CallEdge[]>('incoming_calls', { ...main, item_id: prepared!.item_id }), [])
   await writeFile(join(p.root, 'node_modules/fixture-dep/index.d.ts'), 'export declare const value: string;\n')
-  t.diagnostic(`unopened node_modules declaration ${await poll(async () => /^3:\d+ .*TS2322/m.test(await s.call('diagnostics', main)), 'unopened declaration')}ms`)
+  const declaration = await pollMcpFreshness(() => s.raw('diagnostics', main), text => /^3:\d+ .*TS2322/m.test(text), 'unopened declaration')
+  t.diagnostic(`unopened node_modules declaration ${declaration.ms}ms; transient retries ${declaration.transientRetries}`)
   assert.equal((await s.raw('incoming_calls', { ...main, item_id: prepared!.item_id })).isError, true)
   assert.match(await s.call('hover', { ...main, line: 1, character: 10 }), /value: string/)
   await writeFile(join(p.root, 'dependency.ts'), 'export const local = "changed";\n')
-  t.diagnostic(`unopened source ${await poll(async () => /^2:\d+ .*TS2322/m.test(await s.call('diagnostics', main)), 'unopened source')}ms`)
+  const source = await pollMcpFreshness(() => s.raw('diagnostics', main), text => /^2:\d+ .*TS2322/m.test(text), 'unopened source')
+  t.diagnostic(`unopened source ${source.ms}ms; transient retries ${source.transientRetries}`)
   await writeFile(join(p.root, 'added.ts'), 'export function FreshlyAdded() { return 1; }\n')
-  await poll(async () => (await s.json<WorkspaceSymbol[]>('workspace_symbols', { ...main, query: 'FreshlyAdded' })).some(symbol => symbol.file === join(p.root, 'added.ts')), 'new source')
+  const newSource = await pollMcpFreshness(() => s.raw('workspace_symbols', { ...main, query: 'FreshlyAdded' }), text => (JSON.parse(text) as WorkspaceSymbol[]).some(symbol => symbol.file === join(p.root, 'added.ts')), 'new source')
+  t.diagnostic(`new source ${newSource.ms}ms; transient retries ${newSource.transientRetries}`)
   assert.match(await s.call('diagnostics', { file: join(p.root, 'config.ts') }), /TS7006/)
   await writeFile(join(p.root, 'tsconfig.json'), '{"compilerOptions":{"strict":true,"noImplicitAny":false,"target":"ES2022"}}')
-  await poll(async () => !/TS7006/.test(await s.call('diagnostics', { file: join(p.root, 'config.ts') })), 'tsconfig')
+  const config = await pollMcpFreshness(() => s.raw('diagnostics', { file: join(p.root, 'config.ts') }), text => !/TS7006/.test(text), 'tsconfig')
+  t.diagnostic(`tsconfig ${config.ms}ms; transient retries ${config.transientRetries}`)
   await s.close()
 })
 

@@ -1,0 +1,12 @@
+{
+  "name": "yarikmix-plugins",
+  "owner": { "name": "Yaroslav Mihalev" },
+  "plugins": [
+    {
+      "name": "typescript-native-lsp",
+      "source": { "source": "local", "path": "./plugins/typescript-native-lsp/codex" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Developer Tools"
+    }
+  ]
+}

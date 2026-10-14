@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node scripts/test.mjs",
     "test:live": "node scripts/test-native.mjs",
-    "smoke": "node --import tsx test/smoke.ts"
+    "smoke": "node --import tsx test/smoke.ts",
+    "test:codex": "node scripts/codex-check.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",

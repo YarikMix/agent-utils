@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "typescript-native-lsp",
+  "version": "1.1.0",
+  "description": "TypeScript 7 native navigation, diagnostics and explicit rename for Codex",
+  "author": { "name": "Yaroslav Mihalev" },
+  "license": "MIT",
+  "repository": "https://github.com/YarikMix/agent-plugins"
+}

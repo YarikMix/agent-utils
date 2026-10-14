@@ -4,6 +4,8 @@ The imported ts-mcp code is MIT, Copyright (c) Zach Sents. See [LICENSE](LICENSE
 
 Local adaptations replace compiler discovery with global native TypeScript resolution and defer it until a file tool creates an LSP client. They also bound owned LSP process lifetime, cancellation and shutdown, negotiate UTF-16, and serialize leased project operations. Task 4 extracts URI/document/protocol helpers, implements readonly client-side file registrations and nested native settings, and updates the SDK from 1.27.1 to patched 1.32.1 after GHSA-6qxp-vccf-f47h. Chokidar 4.0.3, readdirp 4.1.2 and patched picomatch 4.0.7 are bundled for filesystem events and actual glob matching (Chokidar 4 does not expand globs).
 
+Navigation, call hierarchy and validated multi-file rename are local adaptations described in UPSTREAM.md. Task 8 adds local portable packaging, skill and acceptance harness; it introduces no additional bundled runtime dependency. The final esbuild input inventory contains all 11 libraries listed below, including transitive dependencies.
+
 ## Runtime bundle libraries
 
 `dist/server.js` includes code from the packages below, identified from esbuild input metadata. Node built-ins are provided by the host runtime. License texts are retained below in addition to legal comments emitted in the bundle.
