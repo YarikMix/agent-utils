@@ -2,6 +2,8 @@ import { appendFileSync } from 'node:fs'
 
 const options = JSON.parse(process.argv[2] || '{}')
 let buffer = Buffer.alloc(0)
+let hoverId
+let definitionId
 const frame = message => {
   const body = JSON.stringify(message)
   return Buffer.from(`Content-Length: ${Buffer.byteLength(body)}\r\n${options.contentType ? "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n" : ""}\r\n${body}`)
@@ -15,6 +17,21 @@ function send(message) {
 }
 function handle(message) {
   if (options.log) appendFileSync(options.log, JSON.stringify(message) + '\n')
+  if (options.siblingFailure && ['textDocument/hover', 'textDocument/definition'].includes(message.method)) {
+    if (message.method === 'textDocument/hover') hoverId = message.id
+    else definitionId = message.id
+    if (hoverId !== undefined && definitionId !== undefined) {
+      send({ jsonrpc: '2.0', id: hoverId, error: { code: -32001, message: 'fixture hover failed' } })
+      const id = definitionId
+      hoverId = undefined
+      definitionId = undefined
+      setTimeout(() => {
+        if (options.log) appendFileSync(options.log, JSON.stringify({ method: 'fixture/definitionEnd' }) + '\n')
+        send({ jsonrpc: '2.0', id, result: [] })
+      }, 150)
+    }
+    return
+  }
   if (message.method === 'initialize') {
     if (options.noise) process.stderr.write('native compiler warning\n'.repeat(10000))
     if (options.hangInitialize) return

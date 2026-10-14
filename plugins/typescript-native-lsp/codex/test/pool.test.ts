@@ -4,7 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import test from 'node:test'
 import { LspClient } from '../src/lsp-client.ts'
 import { TypeScriptPool } from '../src/pool.ts'
-import { fakeLsp, temporaryProject, waitFor } from './support.ts'
+import { fakeLsp, recordedMessages, temporaryProject, waitFor } from './support.ts'
 
 async function fixturePool(options: Record<string, unknown> = {}, idleTimeoutMs?: number) {
   const fake = fakeLsp(options)
@@ -96,7 +96,6 @@ test('pool shutdown also awaits a session already retiring after its idle deadli
   const project = await temporaryProject({ 'source.ts': '' })
   const log = join(project.root, 'messages.jsonl')
   const fixture = await fixturePool({ hangShutdown: true, ignoreTerm: true, log }, 10)
-  const { recordedMessages } = await import('./support.ts')
   try {
     await fixture.pool.withClient(join(project.root, 'source.ts'), async () => {})
     await waitFor(async () => (await recordedMessages(log)).some(m => m.method === 'shutdown'))
@@ -104,3 +103,35 @@ test('pool shutdown also awaits a session already retiring after its idle deadli
     assert.ok(fixture.fake.processes.every(p => p.exitCode !== null || p.signalCode !== null))
   } finally { await fixture.dispose(); await project.dispose() }
 })
+
+for (const following of ['queued operation', 'idle shutdown']) {
+  test(`failed hover wrapper settles its definition before ${following}`, async () => {
+    const project = await temporaryProject({ 'source.ts': 'const x = 1' })
+    const log = join(project.root, 'messages.jsonl')
+    const fixture = await fixturePool({ siblingFailure: true, log }, following === 'queued operation' ? 1000 : 10)
+    const file = join(project.root, 'source.ts')
+    const relevant = new Set(['textDocument/definition', 'fixture/definitionEnd', 'textDocument/documentSymbol', 'shutdown'])
+    let definitionSettledAtRejection = false
+    try {
+      const hover = fixture.pool.hoverWithDefinition(file, 0, 0).catch(async error => {
+        definitionSettledAtRejection = (await recordedMessages(log)).some(message => message.method === 'fixture/definitionEnd')
+        throw error
+      })
+      const rejected = assert.rejects(hover, /fixture hover failed/)
+      if (following === 'queued operation') {
+        await Promise.all([rejected, fixture.pool.outline(file)])
+        // Let a wrongly released sibling reach its natural deadline in RED.
+        await delay(180)
+        const events = (await recordedMessages(log)).filter(message => relevant.has(message.method!)).map(message => message.method)
+        assert.deepEqual(events.slice(0, 3), ['textDocument/definition', 'fixture/definitionEnd', 'textDocument/documentSymbol'])
+      } else {
+        await rejected
+        await waitFor(() => fixture.fake.processes[0]!.exitCode !== null)
+        const events = (await recordedMessages(log)).filter(message => relevant.has(message.method!)).map(message => message.method)
+        assert.deepEqual(events, ['textDocument/definition', 'fixture/definitionEnd', 'shutdown'])
+      }
+      assert.equal(definitionSettledAtRejection, true)
+      assert.equal(fixture.fake.processes.length, 1)
+    } finally { await fixture.dispose(); await project.dispose() }
+  })
+}

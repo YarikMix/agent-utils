@@ -105,8 +105,19 @@ export class TypeScriptPool {
 
   hoverWithDefinition(filePath: string, line: number, character: number): Promise<{ hover: string | null; definition: LspLocation | null }> {
     return this.withClient(filePath, async client => {
-      const [hover, definitions] = await Promise.all([client.hover(filePath, line, character), client.definition(filePath, line, character)])
-      return { hover, definition: definitions[0] ?? null }
+      let failed = false
+      let firstError: unknown
+      const captureFailure = (error: unknown): never => {
+        if (!failed) { failed = true; firstError = error }
+        throw error
+      }
+      // Keep the lease until both requests settle, including after one fails.
+      const [hover, definitions] = await Promise.allSettled([
+        client.hover(filePath, line, character).catch(captureFailure),
+        client.definition(filePath, line, character).catch(captureFailure),
+      ])
+      if (hover.status === "rejected" || definitions.status === "rejected") throw firstError
+      return { hover: hover.value, definition: definitions.value[0] ?? null }
     })
   }
 
