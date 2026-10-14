@@ -4,7 +4,9 @@
   "private": true,
   "description": "Pinned TypeScript native MCP import for Codex",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "license": "MIT",
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -14,11 +16,14 @@
     "smoke": "node --import tsx test/smoke.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.27.1",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "chokidar": "4.0.3",
+    "picomatch": "4.0.7",
     "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/node": "20.19.43",
+    "@types/picomatch": "4.0.2",
     "esbuild": "0.28.2",
     "tsx": "4.23.15",
     "typescript": "7.0.2"

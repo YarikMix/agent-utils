@@ -99,7 +99,7 @@ test('pool shutdown aborts its pending native version resolver', { skip: process
 })
 
 test('client shutdown closes active requests without waiting for their 30-second deadline', async () => {
-  const project = await temporaryProject({ 'source.ts': '' })
+  const project = await temporaryProject({ 'source.ts': 'x' })
   const log = join(project.root, 'messages.jsonl')
   await writeFile(log, '')
   const fake = fakeLsp({ delayFirst: 5000, log })

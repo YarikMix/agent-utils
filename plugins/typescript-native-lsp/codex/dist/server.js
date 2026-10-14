@@ -2236,8 +2236,8 @@ var require_resolve = __commonJS({
       }
       return count;
     }
-    function getFullPath(resolver, id = "", normalize2) {
-      if (normalize2 !== false)
+    function getFullPath(resolver, id = "", normalize3) {
+      if (normalize3 !== false)
         id = normalizeId(id);
       const p = resolver.parse(id);
       return _getFullPath(resolver, p);
@@ -2985,7 +2985,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve2.call(this, root, ref);
+      let _sch = resolve5.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
         const { schemaId } = this.opts;
@@ -3012,7 +3012,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve2(root, ref) {
+    function resolve5(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3832,17 +3832,17 @@ var require_fast_uri = __commonJS({
       }
       return decodedScheme;
     }
-    function normalize2(uri, options) {
+    function normalize3(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
         normalizeString(uri, options);
       } else if (typeof uri === "object") {
         uri = /** @type {T} */
-        parse3(serialize(uri, options), options);
+        parse4(serialize(uri, options), options);
       }
       return uri;
     }
-    function resolve2(baseURI, relativeURI, options) {
+    function resolve5(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const {
         parsed: baseParsed,
@@ -3875,49 +3875,49 @@ var require_fast_uri = __commonJS({
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative2, options, skipNormalization) {
+    function resolveComponent(base, relative7, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
-        base = parse3(serialize(base, options), options);
-        relative2 = parse3(serialize(relative2, options), options);
+        base = parse4(serialize(base, options), options);
+        relative7 = parse4(serialize(relative7, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative2.scheme) {
-        target.scheme = relative2.scheme;
-        target.userinfo = relative2.userinfo;
-        target.host = relative2.host;
-        target.port = relative2.port;
-        target.path = removeDotSegments(relative2.path || "");
-        target.query = relative2.query;
+      if (!options.tolerant && relative7.scheme) {
+        target.scheme = relative7.scheme;
+        target.userinfo = relative7.userinfo;
+        target.host = relative7.host;
+        target.port = relative7.port;
+        target.path = removeDotSegments(relative7.path || "");
+        target.query = relative7.query;
       } else {
-        if (relative2.userinfo !== void 0 || relative2.host !== void 0 || relative2.port !== void 0) {
-          target.userinfo = relative2.userinfo;
-          target.host = relative2.host;
-          target.port = relative2.port;
-          target.path = removeDotSegments(relative2.path || "");
-          target.query = relative2.query;
+        if (relative7.userinfo !== void 0 || relative7.host !== void 0 || relative7.port !== void 0) {
+          target.userinfo = relative7.userinfo;
+          target.host = relative7.host;
+          target.port = relative7.port;
+          target.path = removeDotSegments(relative7.path || "");
+          target.query = relative7.query;
         } else {
-          if (!relative2.path) {
+          if (!relative7.path) {
             target.path = base.path;
-            if (relative2.query !== void 0) {
-              target.query = relative2.query;
+            if (relative7.query !== void 0) {
+              target.query = relative7.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative2.path[0] === "/") {
-              target.path = removeDotSegments(relative2.path);
+            if (relative7.path[0] === "/") {
+              target.path = removeDotSegments(relative7.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative2.path;
+                target.path = "/" + relative7.path;
               } else if (!base.path) {
-                target.path = relative2.path;
+                target.path = relative7.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative2.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative7.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative2.query;
+            target.query = relative7.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -3925,7 +3925,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative2.fragment;
+      target.fragment = relative7.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -4178,7 +4178,7 @@ var require_fast_uri = __commonJS({
       }
       return { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme };
     }
-    function parse3(uri, opts) {
+    function parse4(uri, opts) {
       return parseWithStatus(uri, opts).parsed;
     }
     function normalizeString(uri, opts) {
@@ -4210,12 +4210,12 @@ var require_fast_uri = __commonJS({
     }
     var fastUri = {
       SCHEMES,
-      normalize: normalize2,
-      resolve: resolve2,
+      normalize: normalize3,
+      resolve: resolve5,
       resolveComponent,
       equal,
       serialize,
-      parse: parse3
+      parse: parse4
     };
     module.exports = fastUri;
     module.exports.default = fastUri;
@@ -7197,6 +7197,1782 @@ var require_dist = __commonJS({
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = formatsPlugin;
+  }
+});
+
+// node_modules/picomatch/lib/constants.js
+var require_constants = __commonJS({
+  "node_modules/picomatch/lib/constants.js"(exports, module) {
+    "use strict";
+    var WIN_SLASH = "\\\\/";
+    var WIN_NO_SLASH = `[^${WIN_SLASH}]`;
+    var DEFAULT_MAX_EXTGLOB_RECURSION = 0;
+    var DOT_LITERAL = "\\.";
+    var PLUS_LITERAL = "\\+";
+    var QMARK_LITERAL = "\\?";
+    var SLASH_LITERAL = "\\/";
+    var ONE_CHAR = "(?=.)";
+    var QMARK = "[^/]";
+    var END_ANCHOR = `(?:${SLASH_LITERAL}|$)`;
+    var START_ANCHOR = `(?:^|${SLASH_LITERAL})`;
+    var DOTS_SLASH = `${DOT_LITERAL}{1,2}${END_ANCHOR}`;
+    var NO_DOT = `(?!${DOT_LITERAL})`;
+    var NO_DOTS = `(?!${START_ANCHOR}${DOTS_SLASH})`;
+    var NO_DOT_SLASH = `(?!${DOT_LITERAL}{0,1}${END_ANCHOR})`;
+    var NO_DOTS_SLASH = `(?!${DOTS_SLASH})`;
+    var QMARK_NO_DOT = `[^.${SLASH_LITERAL}]`;
+    var STAR = `${QMARK}*?`;
+    var SEP = "/";
+    var POSIX_CHARS = {
+      DOT_LITERAL,
+      PLUS_LITERAL,
+      QMARK_LITERAL,
+      SLASH_LITERAL,
+      ONE_CHAR,
+      QMARK,
+      END_ANCHOR,
+      DOTS_SLASH,
+      NO_DOT,
+      NO_DOTS,
+      NO_DOT_SLASH,
+      NO_DOTS_SLASH,
+      QMARK_NO_DOT,
+      STAR,
+      START_ANCHOR,
+      SEP
+    };
+    var WINDOWS_CHARS = {
+      ...POSIX_CHARS,
+      SLASH_LITERAL: `[${WIN_SLASH}]`,
+      QMARK: WIN_NO_SLASH,
+      STAR: `${WIN_NO_SLASH}*?`,
+      DOTS_SLASH: `${DOT_LITERAL}{1,2}(?:[${WIN_SLASH}]|$)`,
+      NO_DOT: `(?!${DOT_LITERAL})`,
+      NO_DOTS: `(?!(?:^|[${WIN_SLASH}])${DOT_LITERAL}{1,2}(?:[${WIN_SLASH}]|$))`,
+      NO_DOT_SLASH: `(?!${DOT_LITERAL}{0,1}(?:[${WIN_SLASH}]|$))`,
+      NO_DOTS_SLASH: `(?!${DOT_LITERAL}{1,2}(?:[${WIN_SLASH}]|$))`,
+      QMARK_NO_DOT: `[^.${WIN_SLASH}]`,
+      START_ANCHOR: `(?:^|[${WIN_SLASH}])`,
+      END_ANCHOR: `(?:[${WIN_SLASH}]|$)`,
+      SEP: "\\"
+    };
+    var POSIX_REGEX_SOURCE = {
+      __proto__: null,
+      alnum: "a-zA-Z0-9",
+      alpha: "a-zA-Z",
+      ascii: "\\x00-\\x7F",
+      blank: " \\t",
+      cntrl: "\\x00-\\x1F\\x7F",
+      digit: "0-9",
+      graph: "\\x21-\\x7E",
+      lower: "a-z",
+      print: "\\x20-\\x7E ",
+      punct: "\\-!\"#$%&'()\\*+,./:;<=>?@[\\]^_`{|}~",
+      space: " \\t\\r\\n\\v\\f",
+      upper: "A-Z",
+      word: "A-Za-z0-9_",
+      xdigit: "A-Fa-f0-9"
+    };
+    module.exports = {
+      DEFAULT_MAX_EXTGLOB_RECURSION,
+      MAX_LENGTH: 1024 * 64,
+      POSIX_REGEX_SOURCE,
+      // regular expressions
+      REGEX_BACKSLASH: /\\(?![*+?^${}(|)[\]])/g,
+      REGEX_NON_SPECIAL_CHARS: /^[^@![\].,$*+?^{}()|\\/]+/,
+      REGEX_SPECIAL_CHARS: /[-*+?.^${}(|)[\]]/,
+      REGEX_SPECIAL_CHARS_BACKREF: /(\\?)((\W)(\3*))/g,
+      REGEX_SPECIAL_CHARS_GLOBAL: /([-*+?.^${}(|)[\]])/g,
+      REGEX_REMOVE_BACKSLASH: /(?:\[.*?[^\\]\]|\\(?=.))/g,
+      // Replace globs with equivalent patterns to reduce parsing time.
+      REPLACEMENTS: {
+        __proto__: null,
+        "***": "*",
+        "**/**": "**",
+        "**/**/**": "**"
+      },
+      // Digits
+      CHAR_0: 48,
+      /* 0 */
+      CHAR_9: 57,
+      /* 9 */
+      // Alphabet chars.
+      CHAR_UPPERCASE_A: 65,
+      /* A */
+      CHAR_LOWERCASE_A: 97,
+      /* a */
+      CHAR_UPPERCASE_Z: 90,
+      /* Z */
+      CHAR_LOWERCASE_Z: 122,
+      /* z */
+      CHAR_LEFT_PARENTHESES: 40,
+      /* ( */
+      CHAR_RIGHT_PARENTHESES: 41,
+      /* ) */
+      CHAR_ASTERISK: 42,
+      /* * */
+      // Non-alphabetic chars.
+      CHAR_AMPERSAND: 38,
+      /* & */
+      CHAR_AT: 64,
+      /* @ */
+      CHAR_BACKWARD_SLASH: 92,
+      /* \ */
+      CHAR_CARRIAGE_RETURN: 13,
+      /* \r */
+      CHAR_CIRCUMFLEX_ACCENT: 94,
+      /* ^ */
+      CHAR_COLON: 58,
+      /* : */
+      CHAR_COMMA: 44,
+      /* , */
+      CHAR_DOT: 46,
+      /* . */
+      CHAR_DOUBLE_QUOTE: 34,
+      /* " */
+      CHAR_EQUAL: 61,
+      /* = */
+      CHAR_EXCLAMATION_MARK: 33,
+      /* ! */
+      CHAR_FORM_FEED: 12,
+      /* \f */
+      CHAR_FORWARD_SLASH: 47,
+      /* / */
+      CHAR_GRAVE_ACCENT: 96,
+      /* ` */
+      CHAR_HASH: 35,
+      /* # */
+      CHAR_HYPHEN_MINUS: 45,
+      /* - */
+      CHAR_LEFT_ANGLE_BRACKET: 60,
+      /* < */
+      CHAR_LEFT_CURLY_BRACE: 123,
+      /* { */
+      CHAR_LEFT_SQUARE_BRACKET: 91,
+      /* [ */
+      CHAR_LINE_FEED: 10,
+      /* \n */
+      CHAR_NO_BREAK_SPACE: 160,
+      /* \u00A0 */
+      CHAR_PERCENT: 37,
+      /* % */
+      CHAR_PLUS: 43,
+      /* + */
+      CHAR_QUESTION_MARK: 63,
+      /* ? */
+      CHAR_RIGHT_ANGLE_BRACKET: 62,
+      /* > */
+      CHAR_RIGHT_CURLY_BRACE: 125,
+      /* } */
+      CHAR_RIGHT_SQUARE_BRACKET: 93,
+      /* ] */
+      CHAR_SEMICOLON: 59,
+      /* ; */
+      CHAR_SINGLE_QUOTE: 39,
+      /* ' */
+      CHAR_SPACE: 32,
+      /*   */
+      CHAR_TAB: 9,
+      /* \t */
+      CHAR_UNDERSCORE: 95,
+      /* _ */
+      CHAR_VERTICAL_LINE: 124,
+      /* | */
+      CHAR_ZERO_WIDTH_NOBREAK_SPACE: 65279,
+      /* \uFEFF */
+      /**
+       * Create EXTGLOB_CHARS
+       */
+      extglobChars(chars) {
+        return {
+          "!": { type: "negate", open: "(?:(?!(?:", close: `))${chars.STAR})` },
+          "?": { type: "qmark", open: "(?:", close: ")?" },
+          "+": { type: "plus", open: "(?:", close: ")+" },
+          "*": { type: "star", open: "(?:", close: ")*" },
+          "@": { type: "at", open: "(?:", close: ")" }
+        };
+      },
+      /**
+       * Create GLOB_CHARS
+       */
+      globChars(win32) {
+        return win32 === true ? WINDOWS_CHARS : POSIX_CHARS;
+      }
+    };
+  }
+});
+
+// node_modules/picomatch/lib/utils.js
+var require_utils2 = __commonJS({
+  "node_modules/picomatch/lib/utils.js"(exports) {
+    "use strict";
+    var {
+      REGEX_BACKSLASH,
+      REGEX_REMOVE_BACKSLASH,
+      REGEX_SPECIAL_CHARS,
+      REGEX_SPECIAL_CHARS_GLOBAL
+    } = require_constants();
+    exports.isObject = (val) => val !== null && typeof val === "object" && !Array.isArray(val);
+    exports.hasRegexChars = (str) => REGEX_SPECIAL_CHARS.test(str);
+    exports.isRegexChar = (str) => str.length === 1 && exports.hasRegexChars(str);
+    exports.escapeRegex = (str) => str.replace(REGEX_SPECIAL_CHARS_GLOBAL, "\\$1");
+    exports.toPosixSlashes = (str) => str.replace(REGEX_BACKSLASH, "/");
+    exports.isWindows = () => {
+      if (typeof navigator !== "undefined" && navigator.platform) {
+        const platform = navigator.platform.toLowerCase();
+        return platform === "win32" || platform === "windows";
+      }
+      if (typeof process !== "undefined" && process.platform) {
+        return process.platform === "win32";
+      }
+      return false;
+    };
+    exports.removeBackslashes = (str) => {
+      return str.replace(REGEX_REMOVE_BACKSLASH, (match) => {
+        return match === "\\" ? "" : match;
+      });
+    };
+    exports.escapeLast = (input, char, lastIdx) => {
+      const idx = input.lastIndexOf(char, lastIdx);
+      if (idx === -1) return input;
+      if (input[idx - 1] === "\\") return exports.escapeLast(input, char, idx - 1);
+      return `${input.slice(0, idx)}\\${input.slice(idx)}`;
+    };
+    exports.removePrefix = (input, state = {}) => {
+      let output = input;
+      if (output.startsWith("./")) {
+        output = output.slice(2);
+        state.prefix = "./";
+      }
+      return output;
+    };
+    exports.wrapOutput = (input, state = {}, options = {}) => {
+      const prepend = options.contains ? "" : "^";
+      const append = options.contains ? "" : "$";
+      let output = `${prepend}(?:${input})${append}`;
+      if (state.negated === true) {
+        output = `(?:^(?!${output}).*$)`;
+      }
+      return output;
+    };
+    exports.basename = (path, { windows } = {}) => {
+      const segs = path.split(windows ? /[\\/]/ : "/");
+      const last = segs[segs.length - 1];
+      if (last === "") {
+        return segs[segs.length - 2];
+      }
+      return last;
+    };
+  }
+});
+
+// node_modules/picomatch/lib/scan.js
+var require_scan = __commonJS({
+  "node_modules/picomatch/lib/scan.js"(exports, module) {
+    "use strict";
+    var utils = require_utils2();
+    var {
+      CHAR_ASTERISK,
+      /* * */
+      CHAR_AT,
+      /* @ */
+      CHAR_BACKWARD_SLASH,
+      /* \ */
+      CHAR_COMMA,
+      /* , */
+      CHAR_DOT,
+      /* . */
+      CHAR_EXCLAMATION_MARK,
+      /* ! */
+      CHAR_FORWARD_SLASH,
+      /* / */
+      CHAR_LEFT_CURLY_BRACE,
+      /* { */
+      CHAR_LEFT_PARENTHESES,
+      /* ( */
+      CHAR_LEFT_SQUARE_BRACKET,
+      /* [ */
+      CHAR_PLUS,
+      /* + */
+      CHAR_QUESTION_MARK,
+      /* ? */
+      CHAR_RIGHT_CURLY_BRACE,
+      /* } */
+      CHAR_RIGHT_PARENTHESES,
+      /* ) */
+      CHAR_RIGHT_SQUARE_BRACKET
+      /* ] */
+    } = require_constants();
+    var isPathSeparator = (code) => {
+      return code === CHAR_FORWARD_SLASH || code === CHAR_BACKWARD_SLASH;
+    };
+    var depth = (token) => {
+      if (token.isPrefix !== true) {
+        token.depth = token.isGlobstar ? Infinity : 1;
+      }
+    };
+    var scan = (input, options) => {
+      const opts = options || {};
+      const length = input.length - 1;
+      const scanToEnd = opts.parts === true || opts.tokens === true || opts.scanToEnd === true;
+      const slashes = [];
+      const tokens = [];
+      const parts = [];
+      let str = input;
+      let index = -1;
+      let start = 0;
+      let lastIndex = 0;
+      let isBrace = false;
+      let isBracket = false;
+      let isGlob = false;
+      let isExtglob = false;
+      let isGlobstar = false;
+      let braceEscaped = false;
+      let backslashes = false;
+      let negated = false;
+      let negatedExtglob = false;
+      let finished = false;
+      let braces = 0;
+      let prev;
+      let code;
+      let token = { value: "", depth: 0, isGlob: false };
+      const eos = () => index >= length;
+      const peek = () => str.charCodeAt(index + 1);
+      const advance = () => {
+        prev = code;
+        return str.charCodeAt(++index);
+      };
+      while (index < length) {
+        code = advance();
+        let next;
+        if (code === CHAR_BACKWARD_SLASH) {
+          backslashes = token.backslashes = true;
+          code = advance();
+          if (code === CHAR_LEFT_CURLY_BRACE) {
+            braceEscaped = true;
+          }
+          continue;
+        }
+        if (braceEscaped === true || code === CHAR_LEFT_CURLY_BRACE) {
+          braces++;
+          while (eos() !== true && (code = advance())) {
+            if (code === CHAR_BACKWARD_SLASH) {
+              backslashes = token.backslashes = true;
+              advance();
+              continue;
+            }
+            if (code === CHAR_LEFT_CURLY_BRACE) {
+              braces++;
+              continue;
+            }
+            if (braceEscaped !== true && code === CHAR_DOT && (code = advance()) === CHAR_DOT) {
+              isBrace = token.isBrace = true;
+              isGlob = token.isGlob = true;
+              finished = true;
+              if (scanToEnd === true) {
+                continue;
+              }
+              break;
+            }
+            if (braceEscaped !== true && code === CHAR_COMMA) {
+              isBrace = token.isBrace = true;
+              isGlob = token.isGlob = true;
+              finished = true;
+              if (scanToEnd === true) {
+                continue;
+              }
+              break;
+            }
+            if (code === CHAR_RIGHT_CURLY_BRACE) {
+              braces--;
+              if (braces === 0) {
+                braceEscaped = false;
+                isBrace = token.isBrace = true;
+                finished = true;
+                break;
+              }
+            }
+          }
+          if (scanToEnd === true) {
+            continue;
+          }
+          break;
+        }
+        if (code === CHAR_FORWARD_SLASH) {
+          slashes.push(index);
+          tokens.push(token);
+          token = { value: "", depth: 0, isGlob: false };
+          if (finished === true) continue;
+          if (prev === CHAR_DOT && index === start + 1) {
+            start += 2;
+            continue;
+          }
+          lastIndex = index + 1;
+          continue;
+        }
+        if (opts.noext !== true) {
+          const isExtglobChar = code === CHAR_PLUS || code === CHAR_AT || code === CHAR_ASTERISK || code === CHAR_QUESTION_MARK || code === CHAR_EXCLAMATION_MARK;
+          if (isExtglobChar === true && peek() === CHAR_LEFT_PARENTHESES) {
+            isGlob = token.isGlob = true;
+            isExtglob = token.isExtglob = true;
+            finished = true;
+            if (code === CHAR_EXCLAMATION_MARK && index === start) {
+              negatedExtglob = true;
+            }
+            if (scanToEnd === true) {
+              let parens = 0;
+              while (eos() !== true && (code = advance())) {
+                if (code === CHAR_BACKWARD_SLASH) {
+                  backslashes = token.backslashes = true;
+                  advance();
+                  continue;
+                }
+                if (code === CHAR_LEFT_PARENTHESES) {
+                  parens++;
+                  continue;
+                }
+                if (code === CHAR_RIGHT_PARENTHESES && --parens === 0) {
+                  finished = true;
+                  break;
+                }
+              }
+              continue;
+            }
+            break;
+          }
+        }
+        if (code === CHAR_ASTERISK) {
+          if (prev === CHAR_ASTERISK) isGlobstar = token.isGlobstar = true;
+          isGlob = token.isGlob = true;
+          finished = true;
+          if (scanToEnd === true) {
+            continue;
+          }
+          break;
+        }
+        if (code === CHAR_QUESTION_MARK) {
+          isGlob = token.isGlob = true;
+          finished = true;
+          if (scanToEnd === true) {
+            continue;
+          }
+          break;
+        }
+        if (code === CHAR_LEFT_SQUARE_BRACKET) {
+          while (eos() !== true && (next = advance())) {
+            if (next === CHAR_BACKWARD_SLASH) {
+              backslashes = token.backslashes = true;
+              advance();
+              continue;
+            }
+            if (next === CHAR_RIGHT_SQUARE_BRACKET) {
+              isBracket = token.isBracket = true;
+              isGlob = token.isGlob = true;
+              finished = true;
+              break;
+            }
+          }
+          if (scanToEnd === true) {
+            continue;
+          }
+          break;
+        }
+        if (opts.nonegate !== true && code === CHAR_EXCLAMATION_MARK && index === start) {
+          negated = token.negated = true;
+          start++;
+          continue;
+        }
+        if (opts.noparen !== true && code === CHAR_LEFT_PARENTHESES) {
+          isGlob = token.isGlob = true;
+          if (scanToEnd === true) {
+            let parens = 1;
+            while (eos() !== true && (code = advance())) {
+              if (code === CHAR_BACKWARD_SLASH) {
+                backslashes = token.backslashes = true;
+                advance();
+                continue;
+              }
+              if (code === CHAR_LEFT_PARENTHESES) {
+                parens++;
+                continue;
+              }
+              if (code === CHAR_RIGHT_PARENTHESES && --parens === 0) {
+                finished = true;
+                break;
+              }
+            }
+            continue;
+          }
+          break;
+        }
+        if (isGlob === true) {
+          finished = true;
+          if (scanToEnd === true) {
+            continue;
+          }
+          break;
+        }
+      }
+      if (opts.noext === true) {
+        isExtglob = false;
+        isGlob = false;
+      }
+      let base = str;
+      let prefix = "";
+      let glob = "";
+      if (start > 0) {
+        prefix = str.slice(0, start);
+        str = str.slice(start);
+        lastIndex -= start;
+      }
+      if (base && isGlob === true && lastIndex > 0) {
+        base = str.slice(0, lastIndex);
+        glob = str.slice(lastIndex);
+      } else if (isGlob === true) {
+        base = "";
+        glob = str;
+      } else {
+        base = str;
+      }
+      if (base && base !== "" && base !== "/" && base !== str) {
+        if (isPathSeparator(base.charCodeAt(base.length - 1))) {
+          base = base.slice(0, -1);
+        }
+      }
+      if (opts.unescape === true) {
+        if (glob) glob = utils.removeBackslashes(glob);
+        if (base && backslashes === true) {
+          base = utils.removeBackslashes(base);
+        }
+      }
+      const state = {
+        prefix,
+        input,
+        start,
+        base,
+        glob,
+        isBrace,
+        isBracket,
+        isGlob,
+        isExtglob,
+        isGlobstar,
+        negated,
+        negatedExtglob
+      };
+      if (opts.tokens === true) {
+        state.maxDepth = 0;
+        if (!isPathSeparator(code)) {
+          tokens.push(token);
+        }
+        state.tokens = tokens;
+      }
+      if (opts.parts === true || opts.tokens === true) {
+        let prevIndex;
+        for (let idx = 0; idx < slashes.length; idx++) {
+          const n2 = prevIndex !== void 0 ? prevIndex + 1 : start;
+          const i = slashes[idx];
+          const value2 = input.slice(n2, i);
+          if (opts.tokens) {
+            if (idx === 0 && start !== 0) {
+              tokens[idx].isPrefix = true;
+              tokens[idx].value = prefix;
+            } else {
+              tokens[idx].value = value2;
+            }
+            depth(tokens[idx]);
+            state.maxDepth += tokens[idx].depth;
+          }
+          if (i >= start) {
+            parts.push(value2);
+            prevIndex = i;
+          }
+        }
+        const n = prevIndex !== void 0 ? prevIndex + 1 : start;
+        const value = input.slice(n);
+        parts.push(value);
+        if (opts.tokens && prevIndex && prevIndex + 1 < input.length) {
+          tokens[tokens.length - 1].value = value;
+          depth(tokens[tokens.length - 1]);
+          state.maxDepth += tokens[tokens.length - 1].depth;
+        }
+        state.slashes = slashes;
+        state.parts = parts;
+      }
+      return state;
+    };
+    module.exports = scan;
+  }
+});
+
+// node_modules/picomatch/lib/parse.js
+var require_parse = __commonJS({
+  "node_modules/picomatch/lib/parse.js"(exports, module) {
+    "use strict";
+    var constants2 = require_constants();
+    var utils = require_utils2();
+    var {
+      MAX_LENGTH,
+      POSIX_REGEX_SOURCE,
+      REGEX_NON_SPECIAL_CHARS,
+      REGEX_SPECIAL_CHARS_BACKREF,
+      REPLACEMENTS
+    } = constants2;
+    var expandRange = (args, options) => {
+      if (typeof options.expandRange === "function") {
+        return options.expandRange(...args, options);
+      }
+      args.sort();
+      const value = `[${args.join("-")}]`;
+      try {
+        new RegExp(value);
+      } catch (ex) {
+        return args.map((v) => utils.escapeRegex(v)).join("..");
+      }
+      return value;
+    };
+    var syntaxError = (type, char) => {
+      return `Missing ${type}: "${char}" - use "\\\\${char}" to match literal characters`;
+    };
+    var splitTopLevel = (input) => {
+      const parts = [];
+      let bracket = 0;
+      let paren = 0;
+      let quote = 0;
+      let value = "";
+      let escaped = false;
+      for (const ch of input) {
+        if (escaped === true) {
+          value += ch;
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          value += ch;
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          quote = quote === 1 ? 0 : 1;
+          value += ch;
+          continue;
+        }
+        if (quote === 0) {
+          if (ch === "[") {
+            bracket++;
+          } else if (ch === "]" && bracket > 0) {
+            bracket--;
+          } else if (bracket === 0) {
+            if (ch === "(") {
+              paren++;
+            } else if (ch === ")" && paren > 0) {
+              paren--;
+            } else if (ch === "|" && paren === 0) {
+              parts.push(value);
+              value = "";
+              continue;
+            }
+          }
+        }
+        value += ch;
+      }
+      parts.push(value);
+      return parts;
+    };
+    var isPlainBranch = (branch) => {
+      let escaped = false;
+      for (const ch of branch) {
+        if (escaped === true) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (/[?*+@!()[\]{}]/.test(ch)) {
+          return false;
+        }
+      }
+      return true;
+    };
+    var normalizeSimpleBranch = (branch) => {
+      let value = branch.trim();
+      let changed = true;
+      while (changed === true) {
+        changed = false;
+        if (/^@\([^\\()[\]{}|]+\)$/.test(value)) {
+          value = value.slice(2, -1);
+          changed = true;
+        }
+      }
+      if (!isPlainBranch(value)) {
+        return;
+      }
+      return value.replace(/\\(.)/g, "$1");
+    };
+    var hasRepeatedCharPrefixOverlap = (branches) => {
+      const values = branches.map(normalizeSimpleBranch).filter(Boolean);
+      for (let i = 0; i < values.length; i++) {
+        for (let j = i + 1; j < values.length; j++) {
+          const a = values[i];
+          const b = values[j];
+          const char = a[0];
+          if (!char || a !== char.repeat(a.length) || b !== char.repeat(b.length)) {
+            continue;
+          }
+          if (a === b || a.startsWith(b) || b.startsWith(a)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+    var parseRepeatedExtglob = (pattern, requireEnd = true) => {
+      if (pattern[0] !== "+" && pattern[0] !== "*" || pattern[1] !== "(") {
+        return;
+      }
+      let bracket = 0;
+      let paren = 0;
+      let quote = 0;
+      let escaped = false;
+      for (let i = 1; i < pattern.length; i++) {
+        const ch = pattern[i];
+        if (escaped === true) {
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          quote = quote === 1 ? 0 : 1;
+          continue;
+        }
+        if (quote === 1) {
+          continue;
+        }
+        if (ch === "[") {
+          bracket++;
+          continue;
+        }
+        if (ch === "]" && bracket > 0) {
+          bracket--;
+          continue;
+        }
+        if (bracket > 0) {
+          continue;
+        }
+        if (ch === "(") {
+          paren++;
+          continue;
+        }
+        if (ch === ")") {
+          paren--;
+          if (paren === 0) {
+            if (requireEnd === true && i !== pattern.length - 1) {
+              return;
+            }
+            return {
+              type: pattern[0],
+              body: pattern.slice(2, i),
+              end: i
+            };
+          }
+        }
+      }
+    };
+    var buildCharClassStar = (chars) => {
+      const source = chars.length === 1 ? utils.escapeRegex(chars[0]) : `[${chars.map((ch) => utils.escapeRegex(ch)).join("")}]`;
+      return `${source}*`;
+    };
+    var getStarExtglobSequenceChars = (pattern) => {
+      let index = 0;
+      const chars = [];
+      while (index < pattern.length) {
+        const match = parseRepeatedExtglob(pattern.slice(index), false);
+        if (!match || match.type !== "*") {
+          return;
+        }
+        const branches = splitTopLevel(match.body).map((branch2) => branch2.trim());
+        if (branches.length !== 1) {
+          return;
+        }
+        const branch = normalizeSimpleBranch(branches[0]);
+        if (!branch || branch.length !== 1) {
+          return;
+        }
+        chars.push(branch);
+        index += match.end + 1;
+      }
+      if (chars.length < 1) {
+        return;
+      }
+      return chars;
+    };
+    var repeatedExtglobRecursion = (pattern) => {
+      let depth = 0;
+      let value = pattern.trim();
+      let match = parseRepeatedExtglob(value);
+      while (match) {
+        depth++;
+        value = match.body.trim();
+        match = parseRepeatedExtglob(value);
+      }
+      return depth;
+    };
+    var analyzeRepeatedExtglob = (body, options) => {
+      if (options.maxExtglobRecursion === false) {
+        return { risky: false };
+      }
+      const max = typeof options.maxExtglobRecursion === "number" ? options.maxExtglobRecursion : constants2.DEFAULT_MAX_EXTGLOB_RECURSION;
+      const branches = splitTopLevel(body).map((branch) => branch.trim());
+      if (branches.length > 1) {
+        if (branches.some((branch) => branch === "") || branches.some((branch) => /^[*?]+$/.test(branch)) || hasRepeatedCharPrefixOverlap(branches)) {
+          return { risky: true };
+        }
+      }
+      const safeChars = [];
+      let sawStarSequence = false;
+      let combinable = true;
+      for (const branch of branches) {
+        const chars = getStarExtglobSequenceChars(branch);
+        if (chars) {
+          sawStarSequence = true;
+          safeChars.push(...chars);
+          continue;
+        }
+        const literal2 = normalizeSimpleBranch(branch);
+        if (literal2 && literal2.length === 1) {
+          safeChars.push(literal2);
+          continue;
+        }
+        combinable = false;
+        if (repeatedExtglobRecursion(branch) > max) {
+          return { risky: true };
+        }
+      }
+      if (sawStarSequence) {
+        return combinable ? { risky: true, safeOutput: buildCharClassStar([...new Set(safeChars)]) } : { risky: true };
+      }
+      return { risky: false };
+    };
+    var parse4 = (input, options) => {
+      if (typeof input !== "string") {
+        throw new TypeError("Expected a string");
+      }
+      input = REPLACEMENTS[input] || input;
+      const opts = { ...options };
+      const max = typeof opts.maxLength === "number" ? Math.min(MAX_LENGTH, opts.maxLength) : MAX_LENGTH;
+      let len = input.length;
+      if (len > max) {
+        throw new SyntaxError(`Input length: ${len}, exceeds maximum allowed length: ${max}`);
+      }
+      const bos = { type: "bos", value: "", output: opts.prepend || "" };
+      const tokens = [bos];
+      const capture = opts.capture ? "" : "?:";
+      const PLATFORM_CHARS = constants2.globChars(opts.windows);
+      const EXTGLOB_CHARS = constants2.extglobChars(PLATFORM_CHARS);
+      const {
+        DOT_LITERAL,
+        PLUS_LITERAL,
+        SLASH_LITERAL,
+        ONE_CHAR,
+        DOTS_SLASH,
+        NO_DOT,
+        NO_DOT_SLASH,
+        NO_DOTS_SLASH,
+        QMARK,
+        QMARK_NO_DOT,
+        STAR,
+        START_ANCHOR
+      } = PLATFORM_CHARS;
+      const globstar = (opts2) => {
+        return `(${capture}(?:(?!${START_ANCHOR}${opts2.dot ? DOTS_SLASH : DOT_LITERAL}).)*?)`;
+      };
+      const nodot = opts.dot ? "" : NO_DOT;
+      const qmarkNoDot = opts.dot ? QMARK : QMARK_NO_DOT;
+      let star = opts.bash === true ? globstar(opts) : STAR;
+      if (opts.capture) {
+        star = `(${star})`;
+      }
+      if (typeof opts.noext === "boolean") {
+        opts.noextglob = opts.noext;
+      }
+      const state = {
+        input,
+        index: -1,
+        start: 0,
+        dot: opts.dot === true,
+        consumed: "",
+        output: "",
+        prefix: "",
+        backtrack: false,
+        negated: false,
+        brackets: 0,
+        braces: 0,
+        parens: 0,
+        quotes: 0,
+        globstar: false,
+        tokens
+      };
+      input = utils.removePrefix(input, state);
+      len = input.length;
+      const extglobs = [];
+      const braces = [];
+      const stack = [];
+      let prev = bos;
+      let value;
+      const eos = () => state.index === len - 1;
+      const peek = state.peek = (n = 1) => input[state.index + n];
+      const advance = state.advance = () => input[++state.index] || "";
+      const remaining = () => input.slice(state.index + 1);
+      const consume = (value2 = "", num = 0) => {
+        state.consumed += value2;
+        state.index += num;
+      };
+      const append = (token) => {
+        state.output += token.output != null ? token.output : token.value;
+        consume(token.value);
+      };
+      const negate = () => {
+        let count = 1;
+        while (peek() === "!" && (peek(2) !== "(" || peek(3) === "?")) {
+          advance();
+          state.start++;
+          count++;
+        }
+        if (count % 2 === 0) {
+          return false;
+        }
+        state.negated = true;
+        state.start++;
+        return true;
+      };
+      const increment = (type) => {
+        state[type]++;
+        stack.push(type);
+      };
+      const decrement = (type) => {
+        state[type]--;
+        stack.pop();
+      };
+      const push = (tok) => {
+        if (prev.type === "globstar") {
+          const isBrace = state.braces > 0 && (tok.type === "comma" || tok.type === "brace");
+          const isExtglob = tok.extglob === true || extglobs.length && (tok.type === "pipe" || tok.type === "paren");
+          if (tok.type !== "slash" && tok.type !== "paren" && !isBrace && !isExtglob) {
+            state.output = state.output.slice(0, -prev.output.length);
+            prev.type = "star";
+            prev.value = "*";
+            prev.output = star;
+            state.output += prev.output;
+          }
+        }
+        if (extglobs.length && tok.type !== "paren") {
+          extglobs[extglobs.length - 1].inner += tok.value;
+        }
+        if (tok.value || tok.output) append(tok);
+        if (prev && prev.type === "text" && tok.type === "text") {
+          prev.output = (prev.output || prev.value) + tok.value;
+          prev.value += tok.value;
+          return;
+        }
+        tok.prev = prev;
+        tokens.push(tok);
+        prev = tok;
+      };
+      const extglobOpen = (type, value2) => {
+        const token = { ...EXTGLOB_CHARS[value2], conditions: 1, inner: "" };
+        token.prev = prev;
+        token.parens = state.parens;
+        token.output = state.output;
+        token.startIndex = state.index;
+        token.tokensIndex = tokens.length;
+        const output = (opts.capture ? "(" : "") + token.open;
+        increment("parens");
+        push({ type, value: value2, output: state.output ? "" : ONE_CHAR });
+        push({ type: "paren", extglob: true, value: advance(), output });
+        extglobs.push(token);
+      };
+      const extglobClose = (token) => {
+        const literal2 = input.slice(token.startIndex, state.index + 1);
+        const body = input.slice(token.startIndex + 2, state.index);
+        const analysis = analyzeRepeatedExtglob(body, opts);
+        if ((token.type === "plus" || token.type === "star") && analysis.risky) {
+          const safeOutput = analysis.safeOutput ? (token.output ? "" : ONE_CHAR) + (opts.capture ? `(${analysis.safeOutput})` : analysis.safeOutput) : void 0;
+          const open3 = tokens[token.tokensIndex];
+          open3.type = "text";
+          open3.value = literal2;
+          open3.output = safeOutput || utils.escapeRegex(literal2);
+          for (let i = token.tokensIndex + 1; i < tokens.length; i++) {
+            tokens[i].value = "";
+            tokens[i].output = "";
+            delete tokens[i].suffix;
+          }
+          state.output = token.output + open3.output;
+          state.backtrack = true;
+          push({ type: "paren", extglob: true, value, output: "" });
+          decrement("parens");
+          return;
+        }
+        let output = token.close + (opts.capture ? ")" : "");
+        let rest;
+        if (token.type === "negate") {
+          let extglobStar = star;
+          if (token.inner && token.inner.length > 1 && token.inner.includes("/")) {
+            extglobStar = globstar(opts);
+          }
+          if (extglobStar !== star || eos() || /^\)+$/.test(remaining())) {
+            output = token.close = `)$))${extglobStar}`;
+          }
+          if (token.inner.includes("*") && (rest = remaining()) && /^\.[^\\/.]+$/.test(rest)) {
+            const expression = parse4(rest, { ...options, fastpaths: false }).output;
+            output = token.close = `)${expression})${extglobStar})`;
+          }
+          if (token.prev.type === "bos") {
+            state.negatedExtglob = true;
+          }
+        }
+        push({ type: "paren", extglob: true, value, output });
+        decrement("parens");
+      };
+      if (opts.fastpaths !== false && !/(^[*!]|[/()[\]{}"])/.test(input)) {
+        let backslashes = false;
+        let output = input.replace(REGEX_SPECIAL_CHARS_BACKREF, (m, esc2, chars, first, rest, index) => {
+          if (first === "\\") {
+            backslashes = true;
+            return m;
+          }
+          if (first === "?") {
+            if (esc2) {
+              return esc2 + first + (rest ? QMARK.repeat(rest.length) : "");
+            }
+            if (index === 0) {
+              return qmarkNoDot + (rest ? QMARK.repeat(rest.length) : "");
+            }
+            return QMARK.repeat(chars.length);
+          }
+          if (first === ".") {
+            return DOT_LITERAL.repeat(chars.length);
+          }
+          if (first === "*") {
+            if (esc2) {
+              return esc2 + first + (rest ? star : "");
+            }
+            return star;
+          }
+          return esc2 ? m : `\\${m}`;
+        });
+        if (backslashes === true) {
+          if (opts.unescape === true) {
+            output = output.replace(/\\/g, "");
+          } else {
+            output = output.replace(/\\+/g, (m) => {
+              return m.length % 2 === 0 ? "\\\\" : m ? "\\" : "";
+            });
+          }
+        }
+        if (output === input && opts.contains === true) {
+          state.output = input;
+          return state;
+        }
+        state.output = utils.wrapOutput(output, state, options);
+        return state;
+      }
+      while (!eos()) {
+        value = advance();
+        if (value === "\0") {
+          continue;
+        }
+        if (value === "\\") {
+          const next = peek();
+          if (next === "/" && opts.bash !== true) {
+            continue;
+          }
+          if (next === "." || next === ";") {
+            continue;
+          }
+          if (!next) {
+            value += "\\";
+            push({ type: "text", value });
+            continue;
+          }
+          const match = /^\\+/.exec(remaining());
+          let slashes = 0;
+          if (match && match[0].length > 2) {
+            slashes = match[0].length;
+            state.index += slashes;
+            if (slashes % 2 !== 0) {
+              value += "\\";
+            }
+          }
+          if (opts.unescape === true) {
+            value = advance();
+          } else {
+            value += advance();
+          }
+          if (state.brackets === 0) {
+            push({ type: "text", value });
+            continue;
+          }
+        }
+        if (state.brackets > 0 && (value !== "]" || prev.value === "[" || prev.value === "[^")) {
+          if (opts.posix !== false && value === ":") {
+            const inner = prev.value.slice(1);
+            if (inner.includes("[")) {
+              prev.posix = true;
+              if (inner.includes(":")) {
+                const idx = prev.value.lastIndexOf("[");
+                const pre = prev.value.slice(0, idx);
+                const rest2 = prev.value.slice(idx + 2);
+                const posix = POSIX_REGEX_SOURCE[rest2];
+                if (posix) {
+                  prev.value = pre + posix;
+                  state.backtrack = true;
+                  advance();
+                  if (!bos.output && tokens.indexOf(prev) === 1) {
+                    bos.output = ONE_CHAR;
+                  }
+                  continue;
+                }
+              }
+            }
+          }
+          if (value === "[" && peek() !== ":" || value === "-" && peek() === "]") {
+            value = `\\${value}`;
+          }
+          if (value === "]" && (prev.value === "[" || prev.value === "[^")) {
+            value = `\\${value}`;
+          }
+          if (opts.posix === true && value === "!" && prev.value === "[") {
+            value = "^";
+          }
+          prev.value += value;
+          append({ value });
+          continue;
+        }
+        if (state.quotes === 1 && value !== '"') {
+          value = utils.escapeRegex(value);
+          prev.value += value;
+          append({ value });
+          continue;
+        }
+        if (value === '"') {
+          state.quotes = state.quotes === 1 ? 0 : 1;
+          if (opts.keepQuotes === true) {
+            push({ type: "text", value });
+          }
+          continue;
+        }
+        if (value === "(") {
+          increment("parens");
+          push({ type: "paren", value });
+          continue;
+        }
+        if (value === ")") {
+          if (state.parens === 0 && opts.strictBrackets === true) {
+            throw new SyntaxError(syntaxError("opening", "("));
+          }
+          const extglob = extglobs[extglobs.length - 1];
+          if (extglob && state.parens === extglob.parens + 1) {
+            extglobClose(extglobs.pop());
+            continue;
+          }
+          push({ type: "paren", value, output: state.parens ? ")" : "\\)" });
+          decrement("parens");
+          continue;
+        }
+        if (value === "[") {
+          if (opts.nobracket === true || !remaining().includes("]")) {
+            if (opts.nobracket !== true && opts.strictBrackets === true) {
+              throw new SyntaxError(syntaxError("closing", "]"));
+            }
+            value = `\\${value}`;
+          } else {
+            increment("brackets");
+          }
+          push({ type: "bracket", value });
+          continue;
+        }
+        if (value === "]") {
+          if (opts.nobracket === true || prev && prev.type === "bracket" && prev.value.length === 1) {
+            push({ type: "text", value, output: `\\${value}` });
+            continue;
+          }
+          if (state.brackets === 0) {
+            if (opts.strictBrackets === true) {
+              throw new SyntaxError(syntaxError("opening", "["));
+            }
+            push({ type: "text", value, output: `\\${value}` });
+            continue;
+          }
+          decrement("brackets");
+          const prevValue = prev.value.slice(1);
+          if (prev.posix !== true && prevValue[0] === "^" && !prevValue.includes("/")) {
+            value = `/${value}`;
+          }
+          prev.value += value;
+          append({ value });
+          if (opts.literalBrackets === false || utils.hasRegexChars(prevValue)) {
+            continue;
+          }
+          const escaped = utils.escapeRegex(prev.value);
+          state.output = state.output.slice(0, -prev.value.length);
+          if (opts.literalBrackets === true) {
+            state.output += escaped;
+            prev.value = escaped;
+            continue;
+          }
+          prev.value = `(${capture}${escaped}|${prev.value})`;
+          state.output += prev.value;
+          continue;
+        }
+        if (value === "{" && opts.nobrace !== true) {
+          increment("braces");
+          const open3 = {
+            type: "brace",
+            value,
+            output: "(",
+            outputIndex: state.output.length,
+            tokensIndex: state.tokens.length
+          };
+          braces.push(open3);
+          push(open3);
+          continue;
+        }
+        if (value === "}") {
+          const brace = braces[braces.length - 1];
+          if (opts.nobrace === true || !brace) {
+            push({ type: "text", value, output: value });
+            continue;
+          }
+          let output = ")";
+          if (brace.dots === true) {
+            const arr = tokens.slice();
+            const range = [];
+            for (let i = arr.length - 1; i >= 0; i--) {
+              tokens.pop();
+              if (arr[i].type === "brace") {
+                break;
+              }
+              if (arr[i].type !== "dots") {
+                range.unshift(arr[i].value);
+              }
+            }
+            output = expandRange(range, opts);
+            state.backtrack = true;
+          }
+          if (brace.comma !== true && brace.dots !== true) {
+            const out = state.output.slice(0, brace.outputIndex);
+            const toks = state.tokens.slice(brace.tokensIndex);
+            brace.value = brace.output = "\\{";
+            value = output = "\\}";
+            state.output = out;
+            for (const t of toks) {
+              state.output += t.output || t.value;
+            }
+          }
+          push({ type: "brace", value, output });
+          decrement("braces");
+          braces.pop();
+          continue;
+        }
+        if (value === "|") {
+          if (extglobs.length > 0) {
+            extglobs[extglobs.length - 1].conditions++;
+          }
+          push({ type: "text", value });
+          continue;
+        }
+        if (value === ",") {
+          let output = value;
+          const brace = braces[braces.length - 1];
+          if (brace && stack[stack.length - 1] === "braces") {
+            brace.comma = true;
+            output = "|";
+          }
+          push({ type: "comma", value, output });
+          continue;
+        }
+        if (value === "/") {
+          if (prev.type === "dot" && state.index === state.start + 1) {
+            state.start = state.index + 1;
+            state.consumed = "";
+            state.output = "";
+            tokens.pop();
+            prev = bos;
+            continue;
+          }
+          push({ type: "slash", value, output: SLASH_LITERAL });
+          continue;
+        }
+        if (value === ".") {
+          if (state.braces > 0 && prev.type === "dot") {
+            if (prev.value === ".") prev.output = DOT_LITERAL;
+            const brace = braces[braces.length - 1];
+            prev.type = "dots";
+            prev.output += value;
+            prev.value += value;
+            brace.dots = true;
+            continue;
+          }
+          if (state.braces + state.parens === 0 && prev.type !== "bos" && prev.type !== "slash") {
+            push({ type: "text", value, output: DOT_LITERAL });
+            continue;
+          }
+          push({ type: "dot", value, output: DOT_LITERAL });
+          continue;
+        }
+        if (value === "?") {
+          const isGroup = prev && prev.value === "(";
+          if (!isGroup && opts.noextglob !== true && peek() === "(" && peek(2) !== "?") {
+            extglobOpen("qmark", value);
+            continue;
+          }
+          if (prev && prev.type === "paren") {
+            const next = peek();
+            let output = value;
+            if (prev.value === "(" && !/[!=<:]/.test(next) || next === "<" && !/<([!=]|\w+>)/.test(remaining())) {
+              output = `\\${value}`;
+            }
+            push({ type: "text", value, output });
+            continue;
+          }
+          if (opts.dot !== true && (prev.type === "slash" || prev.type === "bos")) {
+            push({ type: "qmark", value, output: QMARK_NO_DOT });
+            continue;
+          }
+          push({ type: "qmark", value, output: QMARK });
+          continue;
+        }
+        if (value === "!") {
+          if (opts.noextglob !== true && peek() === "(") {
+            if (peek(2) !== "?" || !/[!=<:]/.test(peek(3))) {
+              extglobOpen("negate", value);
+              continue;
+            }
+          }
+          if (opts.nonegate !== true && state.index === 0) {
+            negate();
+            continue;
+          }
+        }
+        if (value === "+") {
+          if (opts.noextglob !== true && peek() === "(" && peek(2) !== "?") {
+            extglobOpen("plus", value);
+            continue;
+          }
+          if (prev && prev.value === "(" || opts.regex === false) {
+            push({ type: "plus", value, output: PLUS_LITERAL });
+            continue;
+          }
+          if (prev && (prev.type === "bracket" || prev.type === "paren" || prev.type === "brace") || state.parens > 0) {
+            push({ type: "plus", value });
+            continue;
+          }
+          push({ type: "plus", value: PLUS_LITERAL });
+          continue;
+        }
+        if (value === "@") {
+          if (opts.noextglob !== true && peek() === "(" && peek(2) !== "?") {
+            push({ type: "at", extglob: true, value, output: "" });
+            continue;
+          }
+          push({ type: "text", value });
+          continue;
+        }
+        if (value !== "*") {
+          if (value === "$" || value === "^") {
+            value = `\\${value}`;
+          }
+          const match = REGEX_NON_SPECIAL_CHARS.exec(remaining());
+          if (match) {
+            value += match[0];
+            state.index += match[0].length;
+          }
+          push({ type: "text", value });
+          continue;
+        }
+        if (prev && (prev.type === "globstar" || prev.star === true)) {
+          prev.type = "star";
+          prev.star = true;
+          prev.value += value;
+          prev.output = star;
+          state.backtrack = true;
+          state.globstar = true;
+          consume(value);
+          continue;
+        }
+        let rest = remaining();
+        if (opts.noextglob !== true && /^\([^?]/.test(rest)) {
+          extglobOpen("star", value);
+          continue;
+        }
+        if (prev.type === "star") {
+          if (opts.noglobstar === true) {
+            consume(value);
+            continue;
+          }
+          const prior = prev.prev;
+          const before = prior.prev;
+          const isStart = prior.type === "slash" || prior.type === "bos";
+          const afterStar = before && (before.type === "star" || before.type === "globstar");
+          if (opts.bash === true && (!isStart || rest[0] && rest[0] !== "/")) {
+            push({ type: "star", value, output: "" });
+            continue;
+          }
+          const isBrace = state.braces > 0 && (prior.type === "comma" || prior.type === "brace");
+          const isExtglob = extglobs.length && (prior.type === "pipe" || prior.type === "paren");
+          if (!isStart && prior.type !== "paren" && !isBrace && !isExtglob) {
+            push({ type: "star", value, output: "" });
+            continue;
+          }
+          while (rest.slice(0, 3) === "/**") {
+            const after = input[state.index + 4];
+            if (after && after !== "/") {
+              break;
+            }
+            rest = rest.slice(3);
+            consume("/**", 3);
+          }
+          const isEnd = eos() || state.parens > 0 && rest === ")".repeat(state.parens) && !extglobs.some((extglob) => extglob.type === "negate");
+          if (prior.type === "bos" && eos()) {
+            prev.type = "globstar";
+            prev.value += value;
+            prev.output = globstar(opts);
+            state.output = prev.output;
+            state.globstar = true;
+            consume(value);
+            continue;
+          }
+          if (prior.type === "slash" && prior.prev.type !== "bos" && !afterStar && isEnd) {
+            state.output = state.output.slice(0, -(prior.output + prev.output).length);
+            prior.output = `(?:${prior.output}`;
+            prev.type = "globstar";
+            prev.output = globstar(opts) + (opts.strictSlashes ? ")" : "|$)");
+            prev.value += value;
+            state.globstar = true;
+            state.output += prior.output + prev.output;
+            consume(value);
+            continue;
+          }
+          if (prior.type === "slash" && prior.prev.type !== "bos" && rest[0] === "/") {
+            const end = rest[1] !== void 0 ? "|$" : "";
+            state.output = state.output.slice(0, -(prior.output + prev.output).length);
+            prior.output = `(?:${prior.output}`;
+            prev.type = "globstar";
+            prev.output = `${globstar(opts)}${SLASH_LITERAL}|${SLASH_LITERAL}${end})`;
+            prev.value += value;
+            state.output += prior.output + prev.output;
+            state.globstar = true;
+            consume(value + advance());
+            push({ type: "slash", value: "/", output: "" });
+            continue;
+          }
+          if (prior.type === "bos" && rest[0] === "/") {
+            prev.type = "globstar";
+            prev.value += value;
+            prev.output = `(?:^|${SLASH_LITERAL}|${globstar(opts)}${SLASH_LITERAL})`;
+            state.output = prev.output;
+            state.globstar = true;
+            consume(value + advance());
+            push({ type: "slash", value: "/", output: "" });
+            continue;
+          }
+          state.output = state.output.slice(0, -prev.output.length);
+          prev.type = "globstar";
+          prev.output = globstar(opts);
+          prev.value += value;
+          state.output += prev.output;
+          state.globstar = true;
+          consume(value);
+          continue;
+        }
+        const token = { type: "star", value, output: star };
+        if (opts.bash === true) {
+          token.output = ".*?";
+          if (prev.type === "bos" || prev.type === "slash") {
+            token.output = nodot + token.output;
+          }
+          push(token);
+          continue;
+        }
+        if (prev && (prev.type === "bracket" || prev.type === "paren") && opts.regex === true) {
+          token.output = value;
+          push(token);
+          continue;
+        }
+        if (state.index === state.start || prev.type === "slash" || prev.type === "dot") {
+          if (prev.type === "dot") {
+            state.output += NO_DOT_SLASH;
+            prev.output += NO_DOT_SLASH;
+          } else if (opts.dot === true) {
+            state.output += NO_DOTS_SLASH;
+            prev.output += NO_DOTS_SLASH;
+          } else {
+            state.output += nodot;
+            prev.output += nodot;
+          }
+          if (peek() !== "*") {
+            state.output += ONE_CHAR;
+            prev.output += ONE_CHAR;
+          }
+        }
+        push(token);
+      }
+      while (state.brackets > 0) {
+        if (opts.strictBrackets === true) throw new SyntaxError(syntaxError("closing", "]"));
+        state.output = utils.escapeLast(state.output, "[");
+        decrement("brackets");
+      }
+      while (state.parens > 0) {
+        if (opts.strictBrackets === true) throw new SyntaxError(syntaxError("closing", ")"));
+        state.output = utils.escapeLast(state.output, "(");
+        decrement("parens");
+      }
+      while (state.braces > 0) {
+        if (opts.strictBrackets === true) throw new SyntaxError(syntaxError("closing", "}"));
+        state.output = utils.escapeLast(state.output, "{");
+        decrement("braces");
+      }
+      if (opts.strictSlashes !== true && (prev.type === "star" || prev.type === "bracket")) {
+        push({ type: "maybe_slash", value: "", output: `${SLASH_LITERAL}?` });
+      }
+      if (state.backtrack === true) {
+        state.output = "";
+        for (const token of state.tokens) {
+          state.output += token.output != null ? token.output : token.value;
+          if (token.suffix) {
+            state.output += token.suffix;
+          }
+        }
+      }
+      return state;
+    };
+    parse4.fastpaths = (input, options) => {
+      const opts = { ...options };
+      const max = typeof opts.maxLength === "number" ? Math.min(MAX_LENGTH, opts.maxLength) : MAX_LENGTH;
+      const len = input.length;
+      if (len > max) {
+        throw new SyntaxError(`Input length: ${len}, exceeds maximum allowed length: ${max}`);
+      }
+      input = REPLACEMENTS[input] || input;
+      const {
+        DOT_LITERAL,
+        SLASH_LITERAL,
+        ONE_CHAR,
+        DOTS_SLASH,
+        NO_DOT,
+        NO_DOTS,
+        NO_DOTS_SLASH,
+        STAR,
+        START_ANCHOR
+      } = constants2.globChars(opts.windows);
+      const nodot = opts.dot ? NO_DOTS : NO_DOT;
+      const slashDot = opts.dot ? NO_DOTS_SLASH : NO_DOT;
+      const capture = opts.capture ? "" : "?:";
+      const state = { negated: false, prefix: "" };
+      let star = opts.bash === true ? ".*?" : STAR;
+      if (opts.capture) {
+        star = `(${star})`;
+      }
+      const globstar = (opts2) => {
+        if (opts2.noglobstar === true) return star;
+        return `(${capture}(?:(?!${START_ANCHOR}${opts2.dot ? DOTS_SLASH : DOT_LITERAL}).)*?)`;
+      };
+      const create = (str) => {
+        switch (str) {
+          case "*":
+            return `${nodot}${ONE_CHAR}${star}`;
+          case ".*":
+            return `${DOT_LITERAL}${ONE_CHAR}${star}`;
+          case "*.*":
+            return `${nodot}${star}${DOT_LITERAL}${ONE_CHAR}${star}`;
+          case "*/*":
+            return `${nodot}${star}${SLASH_LITERAL}${ONE_CHAR}${slashDot}${star}`;
+          case "**":
+            return nodot + globstar(opts);
+          case "**/*":
+            return `(?:${nodot}${globstar(opts)}${SLASH_LITERAL})?${slashDot}${ONE_CHAR}${star}`;
+          case "**/*.*":
+            return `(?:${nodot}${globstar(opts)}${SLASH_LITERAL})?${slashDot}${star}${DOT_LITERAL}${ONE_CHAR}${star}`;
+          case "**/.*":
+            return `(?:${nodot}${globstar(opts)}${SLASH_LITERAL})?${DOT_LITERAL}${ONE_CHAR}${star}`;
+          default: {
+            const match = /^(.*?)\.(\w+)$/.exec(str);
+            if (!match) return;
+            const source2 = create(match[1]);
+            if (!source2) return;
+            return source2 + DOT_LITERAL + match[2];
+          }
+        }
+      };
+      const output = utils.removePrefix(input, state);
+      let source = create(output);
+      if (source && opts.strictSlashes !== true) {
+        source += `${SLASH_LITERAL}?`;
+      }
+      return source;
+    };
+    module.exports = parse4;
+  }
+});
+
+// node_modules/picomatch/lib/picomatch.js
+var require_picomatch = __commonJS({
+  "node_modules/picomatch/lib/picomatch.js"(exports, module) {
+    "use strict";
+    var scan = require_scan();
+    var parse4 = require_parse();
+    var utils = require_utils2();
+    var constants2 = require_constants();
+    var isObject2 = (val) => val && typeof val === "object" && !Array.isArray(val);
+    var picomatch2 = (glob, options, returnState = false) => {
+      if (Array.isArray(glob)) {
+        const fns = glob.map((input) => picomatch2(input, options, returnState));
+        const arrayMatcher = (str) => {
+          for (const isMatch of fns) {
+            const state2 = isMatch(str);
+            if (state2) return state2;
+          }
+          return false;
+        };
+        return arrayMatcher;
+      }
+      const isState = isObject2(glob) && glob.tokens && glob.input;
+      if (glob === "" || typeof glob !== "string" && !isState) {
+        throw new TypeError("Expected pattern to be a non-empty string");
+      }
+      const opts = options || {};
+      const posix = opts.windows;
+      const regex = isState ? picomatch2.compileRe(glob, options) : picomatch2.makeRe(glob, options, false, true);
+      const state = regex.state;
+      delete regex.state;
+      let isIgnored = () => false;
+      if (opts.ignore) {
+        const ignoreOpts = { ...options, ignore: null, onMatch: null, onResult: null };
+        isIgnored = picomatch2(opts.ignore, ignoreOpts, returnState);
+      }
+      const matcher = (input, returnObject = false) => {
+        const { isMatch, match, output } = picomatch2.test(input, regex, options, { glob, posix });
+        const result = { glob, state, regex, posix, input, output, match, isMatch };
+        if (typeof opts.onResult === "function") {
+          opts.onResult(result);
+        }
+        if (isMatch === false) {
+          result.isMatch = false;
+          return returnObject ? result : false;
+        }
+        if (isIgnored(input)) {
+          if (typeof opts.onIgnore === "function") {
+            opts.onIgnore(result);
+          }
+          result.isMatch = false;
+          return returnObject ? result : false;
+        }
+        if (typeof opts.onMatch === "function") {
+          opts.onMatch(result);
+        }
+        return returnObject ? result : true;
+      };
+      if (returnState) {
+        matcher.state = state;
+      }
+      return matcher;
+    };
+    picomatch2.test = (input, regex, options, { glob, posix } = {}) => {
+      if (typeof input !== "string") {
+        throw new TypeError("Expected input to be a string");
+      }
+      if (input === "") {
+        return { isMatch: false, output: "" };
+      }
+      const opts = options || {};
+      const format = opts.format || (posix ? utils.toPosixSlashes : null);
+      let match = input === glob;
+      let output = match && format ? format(input) : input;
+      if (match === false) {
+        output = format ? format(input) : input;
+        match = output === glob;
+      }
+      if (match === false || opts.capture === true) {
+        if (opts.matchBase === true || opts.basename === true) {
+          match = picomatch2.matchBase(input, regex, options, posix);
+        } else {
+          match = regex.exec(output);
+        }
+      }
+      return { isMatch: Boolean(match), match, output };
+    };
+    picomatch2.matchBase = (input, glob, options, posix = options && options.windows) => {
+      const regex = glob instanceof RegExp ? glob : picomatch2.makeRe(glob, options);
+      return regex.test(utils.basename(input, { windows: posix }));
+    };
+    picomatch2.isMatch = (str, patterns, options) => picomatch2(patterns, options)(str);
+    picomatch2.parse = (pattern, options) => {
+      if (Array.isArray(pattern)) return pattern.map((p) => picomatch2.parse(p, options));
+      return parse4(pattern, { ...options, fastpaths: false });
+    };
+    picomatch2.scan = (input, options) => scan(input, options);
+    picomatch2.compileRe = (state, options, returnOutput = false, returnState = false) => {
+      if (returnOutput === true) {
+        return state.output;
+      }
+      const opts = options || {};
+      const prepend = opts.contains ? "" : "^";
+      const append = opts.contains ? "" : "$";
+      let source = `${prepend}(?:${state.output})${append}`;
+      if (state && state.negated === true) {
+        source = `^(?!${source}).*$`;
+      }
+      const regex = picomatch2.toRegex(source, options);
+      if (returnState === true) {
+        regex.state = state;
+      }
+      return regex;
+    };
+    picomatch2.makeRe = (input, options = {}, returnOutput = false, returnState = false) => {
+      if (!input || typeof input !== "string") {
+        throw new TypeError("Expected a non-empty string");
+      }
+      let parsed = { negated: false, fastpaths: true };
+      if (options.fastpaths !== false && (input[0] === "." || input[0] === "*")) {
+        parsed.output = parse4.fastpaths(input, options);
+      }
+      if (!parsed.output) {
+        parsed = parse4(input, options);
+      }
+      return picomatch2.compileRe(parsed, options, returnOutput, returnState);
+    };
+    picomatch2.toRegex = (source, options) => {
+      try {
+        const opts = options || {};
+        return new RegExp(source, opts.flags || (opts.nocase ? "i" : ""));
+      } catch (err) {
+        if (options && options.debug === true) throw err;
+        return /$^/;
+      }
+    };
+    picomatch2.constants = constants2;
+    module.exports = picomatch2;
+  }
+});
+
+// node_modules/picomatch/index.js
+var require_picomatch2 = __commonJS({
+  "node_modules/picomatch/index.js"(exports, module) {
+    "use strict";
+    var pico = require_picomatch();
+    var utils = require_utils2();
+    function picomatch2(glob, options, returnState = false) {
+      if (options && (options.windows === null || options.windows === void 0)) {
+        options = { ...options, windows: utils.isWindows() };
+      }
+      return pico(glob, options, returnState);
+    }
+    Object.assign(picomatch2, pico);
+    module.exports = picomatch2;
   }
 });
 
@@ -22829,16 +24605,32 @@ function normalizeObjectSchema(schema) {
   }
   return void 0;
 }
+function getDotPath(path) {
+  if (path.length === 0) {
+    return "object root";
+  }
+  return path.reduce((acc, seg, index) => {
+    if (index === 0) {
+      return String(seg);
+    }
+    if (typeof seg === "number") {
+      return `${acc}[${seg}]`;
+    }
+    return `${acc}.${seg}`;
+  }, "");
+}
 function getParseErrorMessage(error48) {
   if (error48 && typeof error48 === "object") {
+    if ("issues" in error48 && Array.isArray(error48.issues) && error48.issues.length > 0) {
+      return error48.issues.map((i) => {
+        if (!i.path?.length) {
+          return i.message;
+        }
+        return `${i.message} at ${getDotPath(i.path)}`;
+      }).join("\n");
+    }
     if ("message" in error48 && typeof error48.message === "string") {
       return error48.message;
-    }
-    if ("issues" in error48 && Array.isArray(error48.issues) && error48.issues.length > 0) {
-      const firstIssue = error48.issues[0];
-      if (firstIssue && typeof firstIssue === "object" && "message" in firstIssue) {
-        return String(firstIssue.message);
-      }
     }
     try {
       return JSON.stringify(error48);
@@ -25045,10 +26837,9 @@ var ProgressTokenSchema = union([string2(), number2().int()]);
 var CursorSchema = string2();
 var TaskCreationParamsSchema = looseObject({
   /**
-   * Time in milliseconds to keep task results available after completion.
-   * If null, the task has unlimited lifetime until manually cleaned up.
+   * Requested duration in milliseconds to retain task from creation.
    */
-  ttl: union([number2(), _null3()]).optional(),
+  ttl: number2().optional(),
   /**
    * Time in milliseconds to wait between task status requests.
    */
@@ -25348,7 +27139,11 @@ var ClientCapabilitiesSchema = object2({
   /**
    * Present if the client supports task creation.
    */
-  tasks: ClientTasksCapabilitySchema.optional()
+  tasks: ClientTasksCapabilitySchema.optional(),
+  /**
+   * Extensions that the client supports. Keys are extension identifiers (vendor-prefix/extension-name).
+   */
+  extensions: record(string2(), AssertObjectSchema).optional()
 });
 var InitializeRequestParamsSchema = BaseRequestParamsSchema.extend({
   /**
@@ -25409,7 +27204,11 @@ var ServerCapabilitiesSchema = object2({
   /**
    * Present if the server supports task creation.
    */
-  tasks: ServerTasksCapabilitySchema.optional()
+  tasks: ServerTasksCapabilitySchema.optional(),
+  /**
+   * Extensions that the server supports. Keys are extension identifiers (vendor-prefix/extension-name).
+   */
+  extensions: record(string2(), AssertObjectSchema).optional()
 });
 var InitializeResultSchema = ResultSchema.extend({
   /**
@@ -25601,6 +27400,12 @@ var ResourceSchema = object2({
    * The MIME type of this resource, if known.
    */
   mimeType: optional(string2()),
+  /**
+   * The size of the raw resource content, in bytes (i.e., before base64 encoding or any tokenization), if known.
+   *
+   * This can be used by Hosts to display file sizes and estimate context window usage.
+   */
+  size: optional(number2()),
   /**
    * Optional annotations for the client.
    */
@@ -27925,6 +29730,9 @@ var Protocol = class {
       this.setRequestHandler(GetTaskPayloadRequestSchema, async (request, extra) => {
         const handleTaskResult = async () => {
           const taskId = request.params.taskId;
+          if (!await this._taskStore.getTask(taskId, extra.sessionId)) {
+            throw new McpError(ErrorCode.InvalidParams, `Task not found: ${taskId}`);
+          }
           if (this._taskMessageQueue) {
             let queuedMessage;
             while (queuedMessage = await this._taskMessageQueue.dequeue(taskId, extra.sessionId)) {
@@ -27955,12 +29763,12 @@ var Protocol = class {
             throw new McpError(ErrorCode.InvalidParams, `Task not found: ${taskId}`);
           }
           if (!isTerminal(task.status)) {
-            await this._waitForTaskUpdate(taskId, extra.signal);
+            await this._waitForTaskUpdate(taskId, extra.signal, extra.sessionId);
             return await handleTaskResult();
           }
           if (isTerminal(task.status)) {
             const result = await this._taskStore.getTaskResult(taskId, extra.sessionId);
-            this._clearTaskQueue(taskId);
+            this._clearTaskQueue(taskId, extra.sessionId);
             return {
               ...result,
               _meta: {
@@ -27997,7 +29805,7 @@ var Protocol = class {
             throw new McpError(ErrorCode.InvalidParams, `Cannot cancel task in terminal status: ${task.status}`);
           }
           await this._taskStore.updateTaskStatus(request.params.taskId, "cancelled", "Client cancelled task execution.", extra.sessionId);
-          this._clearTaskQueue(request.params.taskId);
+          this._clearTaskQueue(request.params.taskId, extra.sessionId);
           const cancelledTask = await this._taskStore.getTask(request.params.taskId, extra.sessionId);
           if (!cancelledTask) {
             throw new McpError(ErrorCode.InvalidParams, `Task not found after cancellation: ${request.params.taskId}`);
@@ -28096,6 +29904,10 @@ var Protocol = class {
     this._progressHandlers.clear();
     this._taskProgressTokens.clear();
     this._pendingDebouncedNotifications.clear();
+    for (const info of this._timeoutInfo.values()) {
+      clearTimeout(info.timeoutId);
+    }
+    this._timeoutInfo.clear();
     for (const controller of this._requestHandlerAbortControllers.values()) {
       controller.abort();
     }
@@ -28121,6 +29933,19 @@ var Protocol = class {
     const handler = this._requestHandlers.get(request.method) ?? this.fallbackRequestHandler;
     const capturedTransport = this._transport;
     const relatedTaskId = request.params?._meta?.[RELATED_TASK_META_KEY]?.taskId;
+    const sessionId = capturedTransport?.sessionId;
+    const store = this._taskStore;
+    let relatedTaskFound = true;
+    let relatedTaskLookup;
+    if (relatedTaskId && store && this._taskMessageQueue && sessionId !== void 0) {
+      relatedTaskFound = false;
+      relatedTaskLookup = (async () => {
+        if (!await store.getTask(relatedTaskId, sessionId)) {
+          throw new McpError(ErrorCode.InvalidParams, `Task not found: ${relatedTaskId}`);
+        }
+        relatedTaskFound = true;
+      })();
+    }
     if (handler === void 0) {
       const errorResponse = {
         jsonrpc: "2.0",
@@ -28130,7 +29955,10 @@ var Protocol = class {
           message: "Method not found"
         }
       };
-      if (relatedTaskId && this._taskMessageQueue) {
+      if (relatedTaskId && relatedTaskLookup) {
+        const queuedError = { type: "error", message: errorResponse, timestamp: Date.now() };
+        relatedTaskLookup.then(() => this._enqueueTaskMessage(relatedTaskId, queuedError, sessionId), () => capturedTransport?.send(errorResponse)).catch((error48) => this._onerror(new Error(`Failed to send an error response: ${error48}`)));
+      } else if (relatedTaskId && this._taskMessageQueue) {
         this._enqueueTaskMessage(relatedTaskId, {
           type: "error",
           message: errorResponse,
@@ -28181,7 +30009,10 @@ var Protocol = class {
       closeSSEStream: extra?.closeSSEStream,
       closeStandaloneSSEStream: extra?.closeStandaloneSSEStream
     };
-    Promise.resolve().then(() => {
+    (relatedTaskLookup ?? Promise.resolve()).then(() => {
+      if (relatedTaskLookup && abortController.signal.aborted) {
+        throw new McpError(ErrorCode.ConnectionClosed, "Request was cancelled");
+      }
       if (taskCreationParams) {
         this.assertTaskHandlerCapability(request.method);
       }
@@ -28216,7 +30047,7 @@ var Protocol = class {
           ...error48["data"] !== void 0 && { data: error48["data"] }
         }
       };
-      if (relatedTaskId && this._taskMessageQueue) {
+      if (relatedTaskId && this._taskMessageQueue && relatedTaskFound) {
         await this._enqueueTaskMessage(relatedTaskId, {
           type: "error",
           message: errorResponse,
@@ -28226,7 +30057,9 @@ var Protocol = class {
         await capturedTransport?.send(errorResponse);
       }
     }).catch((error48) => this._onerror(new Error(`Failed to send response: ${error48}`))).finally(() => {
-      this._requestHandlerAbortControllers.delete(request.id);
+      if (this._requestHandlerAbortControllers.get(request.id) === abortController) {
+        this._requestHandlerAbortControllers.delete(request.id);
+      }
     });
   }
   _onprogress(notification) {
@@ -28378,7 +30211,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
+        await new Promise((resolve5) => setTimeout(resolve5, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error48) {
@@ -28395,7 +30228,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve5, reject) => {
       const earlyReject = (error48) => {
         reject(error48);
       };
@@ -28473,7 +30306,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve2(parseResult.data);
+            resolve5(parseResult.data);
           }
         } catch (error48) {
           reject(error48);
@@ -28694,7 +30527,7 @@ var Protocol = class {
       throw new Error("Cannot enqueue task message: taskStore and taskMessageQueue are not configured");
     }
     const maxQueueSize = this._options?.maxTaskQueueSize;
-    await this._taskMessageQueue.enqueue(taskId, message2, sessionId, maxQueueSize);
+    await this._taskMessageQueue.enqueue(taskId, message2, sessionId ?? this._transport?.sessionId, maxQueueSize);
   }
   /**
    * Clears the message queue for a task and rejects any pending request resolvers.
@@ -28723,23 +30556,24 @@ var Protocol = class {
    * Uses polling to check for updates at the task's configured poll interval.
    * @param taskId The task ID to wait for
    * @param signal Abort signal to cancel the wait
+   * @param sessionId Session of the request that waits, passed to the task store
    * @returns Promise that resolves when an update occurs or rejects if aborted
    */
-  async _waitForTaskUpdate(taskId, signal) {
+  async _waitForTaskUpdate(taskId, signal, sessionId) {
     let interval = this._options?.defaultTaskPollInterval ?? 1e3;
     try {
-      const task = await this._taskStore?.getTask(taskId);
+      const task = await this._taskStore?.getTask(taskId, sessionId);
       if (task?.pollInterval) {
         interval = task.pollInterval;
       }
     } catch {
     }
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve5, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve2, interval);
+      const timeoutId = setTimeout(resolve5, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -29214,16 +31048,7 @@ var Server = class extends Protocol {
     if (!methodSchema) {
       throw new Error("Schema is missing a method literal");
     }
-    let methodValue;
-    if (isZ4Schema(methodSchema)) {
-      const v4Schema = methodSchema;
-      const v4Def = v4Schema._zod?.def;
-      methodValue = v4Def?.value ?? v4Schema.value;
-    } else {
-      const v3Schema = methodSchema;
-      const legacyDef = v3Schema._def;
-      methodValue = legacyDef?.value ?? v3Schema.value;
-    }
+    const methodValue = getLiteralValue(methodSchema);
     if (typeof methodValue !== "string") {
       throw new Error("Schema method literal must be a string");
     }
@@ -29616,6 +31441,42 @@ var ExperimentalMcpServerTasks = class {
 };
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
+function toolInputElementCount(value, max) {
+  let count = 0;
+  const stack = [value];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (node === null || typeof node !== "object")
+      continue;
+    if (Array.isArray(node)) {
+      for (const child of node) {
+        if (++count > max)
+          return count;
+        if (child !== null && typeof child === "object")
+          stack.push(child);
+      }
+    } else {
+      for (const key in node) {
+        if (!Object.prototype.hasOwnProperty.call(node, key))
+          continue;
+        if (++count > max)
+          return count;
+        const child = node[key];
+        if (child !== null && typeof child === "object")
+          stack.push(child);
+      }
+    }
+  }
+  return count;
+}
+function resolveMaxToolInputElements(value) {
+  if (value === void 0 || value === Infinity)
+    return void 0;
+  if (typeof value !== "number" || Number.isNaN(value) || value < 1) {
+    throw new RangeError(`maxToolInputElements must be a number of at least 1, or Infinity, got ${String(value)}`);
+  }
+  return value;
+}
 var McpServer = class {
   constructor(serverInfo, options) {
     this._registeredResources = {};
@@ -29627,6 +31488,7 @@ var McpServer = class {
     this._resourceHandlersInitialized = false;
     this._promptHandlersInitialized = false;
     this.server = new Server(serverInfo, options);
+    this._maxToolInputElements = resolveMaxToolInputElements(options?.maxToolInputElements);
   }
   /**
    * Access experimental features.
@@ -29757,12 +31619,15 @@ var McpServer = class {
    * Validates tool input arguments against the tool's input schema.
    */
   async validateToolInput(tool, args, toolName) {
+    if (this._maxToolInputElements !== void 0 && toolInputElementCount(args, this._maxToolInputElements) > this._maxToolInputElements) {
+      throw new McpError(ErrorCode.InvalidParams, `Invalid arguments for tool ${toolName}: arguments contain more than the maximum of ${this._maxToolInputElements} elements`);
+    }
     if (!tool.inputSchema) {
       return void 0;
     }
     const inputObj = normalizeObjectSchema(tool.inputSchema);
     const schemaToParse = inputObj ?? tool.inputSchema;
-    const parseResult = await safeParseAsync2(schemaToParse, args);
+    const parseResult = await safeParseAsync2(schemaToParse, args ?? {});
     if (!parseResult.success) {
       const error48 = "error" in parseResult ? parseResult.error : "Unknown error";
       const errorMessage = getParseErrorMessage(error48);
@@ -29839,7 +31704,7 @@ var McpServer = class {
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
-      await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
+      await new Promise((resolve5) => setTimeout(resolve5, pollInterval));
       const updatedTask = await extra.taskStore.getTask(taskId);
       if (!updatedTask) {
         throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
@@ -30000,7 +31865,7 @@ var McpServer = class {
       }
       if (prompt.argsSchema) {
         const argsObj = normalizeObjectSchema(prompt.argsSchema);
-        const parseResult = await safeParseAsync2(argsObj, request.params.arguments);
+        const parseResult = await safeParseAsync2(argsObj, request.params.arguments ?? {});
         if (!parseResult.success) {
           const error48 = "error" in parseResult ? parseResult.error : "Unknown error";
           const errorMessage = getParseErrorMessage(error48);
@@ -30239,6 +32104,9 @@ var McpServer = class {
           annotations = rest.shift();
         }
       } else if (typeof firstArg === "object" && firstArg !== null) {
+        if (Object.values(firstArg).some((v) => typeof v === "object" && v !== null)) {
+          throw new Error(`Tool ${name} expected a Zod schema or ToolAnnotations, but received an unrecognized object`);
+        }
         annotations = rest.shift();
       }
     }
@@ -30357,6 +32225,9 @@ function getZodSchemaObject(schema) {
   if (isZodRawShapeCompat(schema)) {
     return objectFromShape(schema);
   }
+  if (!isZodSchemaInstance(schema)) {
+    throw new Error("inputSchema must be a Zod schema or raw shape, received an unrecognized object");
+  }
   return schema;
 }
 function promptArgumentsFromSchema(schema) {
@@ -30405,8 +32276,17 @@ var EMPTY_COMPLETION_RESULT = {
 import process3 from "node:process";
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
+var STDIO_DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
 var ReadBuffer = class {
+  constructor(options) {
+    this._maxBufferSize = options?.maxBufferSize ?? STDIO_DEFAULT_MAX_BUFFER_SIZE;
+  }
   append(chunk) {
+    const newSize = (this._buffer?.length ?? 0) + chunk.length;
+    if (newSize > this._maxBufferSize) {
+      this.clear();
+      throw new Error(`ReadBuffer exceeded maximum size of ${this._maxBufferSize} bytes`);
+    }
     this._buffer = this._buffer ? Buffer.concat([this._buffer, chunk]) : chunk;
   }
   readMessage() {
@@ -30434,18 +32314,24 @@ function serializeMessage(message2) {
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 var StdioServerTransport = class {
-  constructor(_stdin = process3.stdin, _stdout = process3.stdout) {
+  constructor(_stdin = process3.stdin, _stdout = process3.stdout, options) {
     this._stdin = _stdin;
     this._stdout = _stdout;
-    this._readBuffer = new ReadBuffer();
     this._started = false;
     this._ondata = (chunk) => {
-      this._readBuffer.append(chunk);
-      this.processReadBuffer();
+      try {
+        this._readBuffer.append(chunk);
+        this.processReadBuffer();
+      } catch (error48) {
+        this.onerror?.(error48);
+        this.close().catch(() => {
+        });
+      }
     };
     this._onerror = (error48) => {
       this.onerror?.(error48);
     };
+    this._readBuffer = new ReadBuffer({ maxBufferSize: options?.maxBufferSize });
   }
   /**
    * Starts listening for messages on stdin.
@@ -30482,50 +32368,2133 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message2) {
-    return new Promise((resolve2) => {
+    return new Promise((resolve5) => {
       const json2 = serializeMessage(message2);
       if (this._stdout.write(json2)) {
-        resolve2();
+        resolve5();
       } else {
-        this._stdout.once("drain", resolve2);
+        this._stdout.once("drain", resolve5);
       }
     });
   }
 };
 
 // src/pool.ts
-import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { existsSync as existsSync2 } from "node:fs";
+import { dirname as dirname4, join as join4 } from "node:path";
+
+// src/files.ts
+import { isAbsolute, relative, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+function pathToUri(file2) {
+  if (!isAbsolute(file2)) throw new Error("File path must be absolute");
+  return pathToFileURL(file2).href;
+}
+function uriToPath(uri) {
+  const parsed = new URL(uri);
+  if (parsed.protocol !== "file:" || parsed.search || parsed.hash) throw new Error("Expected a file URI without query or fragment");
+  return fileURLToPath(parsed);
+}
+function lineBounds(text) {
+  const starts = [0];
+  const ends = [];
+  for (const match of text.matchAll(/\r\n|\r|\n/g)) {
+    ends.push(match.index);
+    starts.push(match.index + match[0].length);
+  }
+  ends.push(text.length);
+  return { starts, ends };
+}
+function positionToOffset(text, position) {
+  const { line, character } = position;
+  if (!Number.isSafeInteger(line) || !Number.isSafeInteger(character) || line < 0 || character < 0) throw new Error("Invalid position");
+  const { starts, ends } = lineBounds(text);
+  const start = starts[line];
+  const end = ends[line];
+  if (start === void 0 || end === void 0) throw new Error("Position line is outside file");
+  if (character > end - start) throw new Error("Position character is outside line");
+  return start + character;
+}
+function endPosition(text) {
+  const { starts } = lineBounds(text);
+  return { line: starts.length - 1, character: text.length - starts[starts.length - 1] };
+}
+function inlayRange(text, startLine, endLine) {
+  const lines = lineBounds(text).starts.length;
+  if (!Number.isSafeInteger(endLine) || endLine < startLine || endLine > lines) throw new Error("Invalid inlay end position");
+  const start = { line: startLine, character: 0 };
+  positionToOffset(text, start);
+  const end = endLine === lines ? endPosition(text) : { line: endLine, character: 0 };
+  positionToOffset(text, end);
+  return { start, end };
+}
 
 // src/lsp-client.ts
 import { spawn } from "node:child_process";
+
+// src/documents.ts
 import { readFile } from "node:fs/promises";
-import { extname } from "node:path";
-import { fileURLToPath } from "node:url";
-var REQUEST_TIMEOUT_MS = 3e4;
-var jsonRpcMessageSchema = external_exports3.object({
-  jsonrpc: external_exports3.literal("2.0"),
-  id: external_exports3.union([external_exports3.number(), external_exports3.string()]).optional(),
-  method: external_exports3.string().optional(),
-  params: external_exports3.unknown().optional(),
-  result: external_exports3.unknown().optional(),
-  error: external_exports3.object({
-    code: external_exports3.number(),
-    message: external_exports3.string(),
-    data: external_exports3.unknown().optional()
-  }).optional()
-});
-var positionSchema = external_exports3.object({ line: external_exports3.number(), character: external_exports3.number() });
-var rangeSchema = external_exports3.object({ start: positionSchema, end: positionSchema });
+import { extname as extname2, relative as relative5, sep as sep3 } from "node:path";
+
+// node_modules/chokidar/esm/index.js
+import { stat as statcb } from "fs";
+import { stat as stat3, readdir as readdir2 } from "fs/promises";
+import { EventEmitter } from "events";
+import * as sysPath2 from "path";
+
+// node_modules/readdirp/esm/index.js
+import { stat, lstat, readdir, realpath } from "node:fs/promises";
+import { Readable } from "node:stream";
+import { resolve as presolve, relative as prelative, join as pjoin, sep as psep } from "node:path";
+var EntryTypes = {
+  FILE_TYPE: "files",
+  DIR_TYPE: "directories",
+  FILE_DIR_TYPE: "files_directories",
+  EVERYTHING_TYPE: "all"
+};
+var defaultOptions2 = {
+  root: ".",
+  fileFilter: (_entryInfo) => true,
+  directoryFilter: (_entryInfo) => true,
+  type: EntryTypes.FILE_TYPE,
+  lstat: false,
+  depth: 2147483648,
+  alwaysStat: false,
+  highWaterMark: 4096
+};
+Object.freeze(defaultOptions2);
+var RECURSIVE_ERROR_CODE = "READDIRP_RECURSIVE_ERROR";
+var NORMAL_FLOW_ERRORS = /* @__PURE__ */ new Set(["ENOENT", "EPERM", "EACCES", "ELOOP", RECURSIVE_ERROR_CODE]);
+var ALL_TYPES = [
+  EntryTypes.DIR_TYPE,
+  EntryTypes.EVERYTHING_TYPE,
+  EntryTypes.FILE_DIR_TYPE,
+  EntryTypes.FILE_TYPE
+];
+var DIR_TYPES = /* @__PURE__ */ new Set([
+  EntryTypes.DIR_TYPE,
+  EntryTypes.EVERYTHING_TYPE,
+  EntryTypes.FILE_DIR_TYPE
+]);
+var FILE_TYPES = /* @__PURE__ */ new Set([
+  EntryTypes.EVERYTHING_TYPE,
+  EntryTypes.FILE_DIR_TYPE,
+  EntryTypes.FILE_TYPE
+]);
+var isNormalFlowError = (error48) => NORMAL_FLOW_ERRORS.has(error48.code);
+var wantBigintFsStats = process.platform === "win32";
+var emptyFn = (_entryInfo) => true;
+var normalizeFilter = (filter) => {
+  if (filter === void 0)
+    return emptyFn;
+  if (typeof filter === "function")
+    return filter;
+  if (typeof filter === "string") {
+    const fl = filter.trim();
+    return (entry) => entry.basename === fl;
+  }
+  if (Array.isArray(filter)) {
+    const trItems = filter.map((item) => item.trim());
+    return (entry) => trItems.some((f) => entry.basename === f);
+  }
+  return emptyFn;
+};
+var ReaddirpStream = class extends Readable {
+  constructor(options = {}) {
+    super({
+      objectMode: true,
+      autoDestroy: true,
+      highWaterMark: options.highWaterMark
+    });
+    const opts = { ...defaultOptions2, ...options };
+    const { root, type } = opts;
+    this._fileFilter = normalizeFilter(opts.fileFilter);
+    this._directoryFilter = normalizeFilter(opts.directoryFilter);
+    const statMethod = opts.lstat ? lstat : stat;
+    if (wantBigintFsStats) {
+      this._stat = (path) => statMethod(path, { bigint: true });
+    } else {
+      this._stat = statMethod;
+    }
+    this._maxDepth = opts.depth ?? defaultOptions2.depth;
+    this._wantsDir = type ? DIR_TYPES.has(type) : false;
+    this._wantsFile = type ? FILE_TYPES.has(type) : false;
+    this._wantsEverything = type === EntryTypes.EVERYTHING_TYPE;
+    this._root = presolve(root);
+    this._isDirent = !opts.alwaysStat;
+    this._statsProp = this._isDirent ? "dirent" : "stats";
+    this._rdOptions = { encoding: "utf8", withFileTypes: this._isDirent };
+    this.parents = [this._exploreDir(root, 1)];
+    this.reading = false;
+    this.parent = void 0;
+  }
+  async _read(batch) {
+    if (this.reading)
+      return;
+    this.reading = true;
+    try {
+      while (!this.destroyed && batch > 0) {
+        const par = this.parent;
+        const fil = par && par.files;
+        if (fil && fil.length > 0) {
+          const { path, depth } = par;
+          const slice = fil.splice(0, batch).map((dirent) => this._formatEntry(dirent, path));
+          const awaited = await Promise.all(slice);
+          for (const entry of awaited) {
+            if (!entry)
+              continue;
+            if (this.destroyed)
+              return;
+            const entryType = await this._getEntryType(entry);
+            if (entryType === "directory" && this._directoryFilter(entry)) {
+              if (depth <= this._maxDepth) {
+                this.parents.push(this._exploreDir(entry.fullPath, depth + 1));
+              }
+              if (this._wantsDir) {
+                this.push(entry);
+                batch--;
+              }
+            } else if ((entryType === "file" || this._includeAsFile(entry)) && this._fileFilter(entry)) {
+              if (this._wantsFile) {
+                this.push(entry);
+                batch--;
+              }
+            }
+          }
+        } else {
+          const parent = this.parents.pop();
+          if (!parent) {
+            this.push(null);
+            break;
+          }
+          this.parent = await parent;
+          if (this.destroyed)
+            return;
+        }
+      }
+    } catch (error48) {
+      this.destroy(error48);
+    } finally {
+      this.reading = false;
+    }
+  }
+  async _exploreDir(path, depth) {
+    let files;
+    try {
+      files = await readdir(path, this._rdOptions);
+    } catch (error48) {
+      this._onError(error48);
+    }
+    return { files, depth, path };
+  }
+  async _formatEntry(dirent, path) {
+    let entry;
+    const basename3 = this._isDirent ? dirent.name : dirent;
+    try {
+      const fullPath = presolve(pjoin(path, basename3));
+      entry = { path: prelative(this._root, fullPath), fullPath, basename: basename3 };
+      entry[this._statsProp] = this._isDirent ? dirent : await this._stat(fullPath);
+    } catch (err) {
+      this._onError(err);
+      return;
+    }
+    return entry;
+  }
+  _onError(err) {
+    if (isNormalFlowError(err) && !this.destroyed) {
+      this.emit("warn", err);
+    } else {
+      this.destroy(err);
+    }
+  }
+  async _getEntryType(entry) {
+    if (!entry && this._statsProp in entry) {
+      return "";
+    }
+    const stats = entry[this._statsProp];
+    if (stats.isFile())
+      return "file";
+    if (stats.isDirectory())
+      return "directory";
+    if (stats && stats.isSymbolicLink()) {
+      const full = entry.fullPath;
+      try {
+        const entryRealPath = await realpath(full);
+        const entryRealPathStats = await lstat(entryRealPath);
+        if (entryRealPathStats.isFile()) {
+          return "file";
+        }
+        if (entryRealPathStats.isDirectory()) {
+          const len = entryRealPath.length;
+          if (full.startsWith(entryRealPath) && full.substr(len, 1) === psep) {
+            const recursiveError = new Error(`Circular symlink detected: "${full}" points to "${entryRealPath}"`);
+            recursiveError.code = RECURSIVE_ERROR_CODE;
+            return this._onError(recursiveError);
+          }
+          return "directory";
+        }
+      } catch (error48) {
+        this._onError(error48);
+        return "";
+      }
+    }
+  }
+  _includeAsFile(entry) {
+    const stats = entry && entry[this._statsProp];
+    return stats && this._wantsEverything && !stats.isDirectory();
+  }
+};
+function readdirp(root, options = {}) {
+  let type = options.entryType || options.type;
+  if (type === "both")
+    type = EntryTypes.FILE_DIR_TYPE;
+  if (type)
+    options.type = type;
+  if (!root) {
+    throw new Error("readdirp: root argument is required. Usage: readdirp(root, options)");
+  } else if (typeof root !== "string") {
+    throw new TypeError("readdirp: root argument must be a string. Usage: readdirp(root, options)");
+  } else if (type && !ALL_TYPES.includes(type)) {
+    throw new Error(`readdirp: Invalid type passed. Use one of ${ALL_TYPES.join(", ")}`);
+  }
+  options.root = root;
+  return new ReaddirpStream(options);
+}
+
+// node_modules/chokidar/esm/handler.js
+import { watchFile, unwatchFile, watch as fs_watch } from "fs";
+import { open, stat as stat2, lstat as lstat2, realpath as fsrealpath } from "fs/promises";
+import * as sysPath from "path";
+import { type as osType } from "os";
+var STR_DATA = "data";
+var STR_END = "end";
+var STR_CLOSE = "close";
+var EMPTY_FN = () => {
+};
+var pl = process.platform;
+var isWindows = pl === "win32";
+var isMacos = pl === "darwin";
+var isLinux = pl === "linux";
+var isFreeBSD = pl === "freebsd";
+var isIBMi = osType() === "OS400";
+var EVENTS = {
+  ALL: "all",
+  READY: "ready",
+  ADD: "add",
+  CHANGE: "change",
+  ADD_DIR: "addDir",
+  UNLINK: "unlink",
+  UNLINK_DIR: "unlinkDir",
+  RAW: "raw",
+  ERROR: "error"
+};
+var EV = EVENTS;
+var THROTTLE_MODE_WATCH = "watch";
+var statMethods = { lstat: lstat2, stat: stat2 };
+var KEY_LISTENERS = "listeners";
+var KEY_ERR = "errHandlers";
+var KEY_RAW = "rawEmitters";
+var HANDLER_KEYS = [KEY_LISTENERS, KEY_ERR, KEY_RAW];
+var binaryExtensions = /* @__PURE__ */ new Set([
+  "3dm",
+  "3ds",
+  "3g2",
+  "3gp",
+  "7z",
+  "a",
+  "aac",
+  "adp",
+  "afdesign",
+  "afphoto",
+  "afpub",
+  "ai",
+  "aif",
+  "aiff",
+  "alz",
+  "ape",
+  "apk",
+  "appimage",
+  "ar",
+  "arj",
+  "asf",
+  "au",
+  "avi",
+  "bak",
+  "baml",
+  "bh",
+  "bin",
+  "bk",
+  "bmp",
+  "btif",
+  "bz2",
+  "bzip2",
+  "cab",
+  "caf",
+  "cgm",
+  "class",
+  "cmx",
+  "cpio",
+  "cr2",
+  "cur",
+  "dat",
+  "dcm",
+  "deb",
+  "dex",
+  "djvu",
+  "dll",
+  "dmg",
+  "dng",
+  "doc",
+  "docm",
+  "docx",
+  "dot",
+  "dotm",
+  "dra",
+  "DS_Store",
+  "dsk",
+  "dts",
+  "dtshd",
+  "dvb",
+  "dwg",
+  "dxf",
+  "ecelp4800",
+  "ecelp7470",
+  "ecelp9600",
+  "egg",
+  "eol",
+  "eot",
+  "epub",
+  "exe",
+  "f4v",
+  "fbs",
+  "fh",
+  "fla",
+  "flac",
+  "flatpak",
+  "fli",
+  "flv",
+  "fpx",
+  "fst",
+  "fvt",
+  "g3",
+  "gh",
+  "gif",
+  "graffle",
+  "gz",
+  "gzip",
+  "h261",
+  "h263",
+  "h264",
+  "icns",
+  "ico",
+  "ief",
+  "img",
+  "ipa",
+  "iso",
+  "jar",
+  "jpeg",
+  "jpg",
+  "jpgv",
+  "jpm",
+  "jxr",
+  "key",
+  "ktx",
+  "lha",
+  "lib",
+  "lvp",
+  "lz",
+  "lzh",
+  "lzma",
+  "lzo",
+  "m3u",
+  "m4a",
+  "m4v",
+  "mar",
+  "mdi",
+  "mht",
+  "mid",
+  "midi",
+  "mj2",
+  "mka",
+  "mkv",
+  "mmr",
+  "mng",
+  "mobi",
+  "mov",
+  "movie",
+  "mp3",
+  "mp4",
+  "mp4a",
+  "mpeg",
+  "mpg",
+  "mpga",
+  "mxu",
+  "nef",
+  "npx",
+  "numbers",
+  "nupkg",
+  "o",
+  "odp",
+  "ods",
+  "odt",
+  "oga",
+  "ogg",
+  "ogv",
+  "otf",
+  "ott",
+  "pages",
+  "pbm",
+  "pcx",
+  "pdb",
+  "pdf",
+  "pea",
+  "pgm",
+  "pic",
+  "png",
+  "pnm",
+  "pot",
+  "potm",
+  "potx",
+  "ppa",
+  "ppam",
+  "ppm",
+  "pps",
+  "ppsm",
+  "ppsx",
+  "ppt",
+  "pptm",
+  "pptx",
+  "psd",
+  "pya",
+  "pyc",
+  "pyo",
+  "pyv",
+  "qt",
+  "rar",
+  "ras",
+  "raw",
+  "resources",
+  "rgb",
+  "rip",
+  "rlc",
+  "rmf",
+  "rmvb",
+  "rpm",
+  "rtf",
+  "rz",
+  "s3m",
+  "s7z",
+  "scpt",
+  "sgi",
+  "shar",
+  "snap",
+  "sil",
+  "sketch",
+  "slk",
+  "smv",
+  "snk",
+  "so",
+  "stl",
+  "suo",
+  "sub",
+  "swf",
+  "tar",
+  "tbz",
+  "tbz2",
+  "tga",
+  "tgz",
+  "thmx",
+  "tif",
+  "tiff",
+  "tlz",
+  "ttc",
+  "ttf",
+  "txz",
+  "udf",
+  "uvh",
+  "uvi",
+  "uvm",
+  "uvp",
+  "uvs",
+  "uvu",
+  "viv",
+  "vob",
+  "war",
+  "wav",
+  "wax",
+  "wbmp",
+  "wdp",
+  "weba",
+  "webm",
+  "webp",
+  "whl",
+  "wim",
+  "wm",
+  "wma",
+  "wmv",
+  "wmx",
+  "woff",
+  "woff2",
+  "wrm",
+  "wvx",
+  "xbm",
+  "xif",
+  "xla",
+  "xlam",
+  "xls",
+  "xlsb",
+  "xlsm",
+  "xlsx",
+  "xlt",
+  "xltm",
+  "xltx",
+  "xm",
+  "xmind",
+  "xpi",
+  "xpm",
+  "xwd",
+  "xz",
+  "z",
+  "zip",
+  "zipx"
+]);
+var isBinaryPath = (filePath) => binaryExtensions.has(sysPath.extname(filePath).slice(1).toLowerCase());
+var foreach = (val, fn) => {
+  if (val instanceof Set) {
+    val.forEach(fn);
+  } else {
+    fn(val);
+  }
+};
+var addAndConvert = (main, prop, item) => {
+  let container = main[prop];
+  if (!(container instanceof Set)) {
+    main[prop] = container = /* @__PURE__ */ new Set([container]);
+  }
+  container.add(item);
+};
+var clearItem = (cont) => (key) => {
+  const set2 = cont[key];
+  if (set2 instanceof Set) {
+    set2.clear();
+  } else {
+    delete cont[key];
+  }
+};
+var delFromSet = (main, prop, item) => {
+  const container = main[prop];
+  if (container instanceof Set) {
+    container.delete(item);
+  } else if (container === item) {
+    delete main[prop];
+  }
+};
+var isEmptySet = (val) => val instanceof Set ? val.size === 0 : !val;
+var FsWatchInstances = /* @__PURE__ */ new Map();
+function createFsWatchInstance(path, options, listener, errHandler, emitRaw) {
+  const handleEvent = (rawEvent, evPath) => {
+    listener(path);
+    emitRaw(rawEvent, evPath, { watchedPath: path });
+    if (evPath && path !== evPath) {
+      fsWatchBroadcast(sysPath.resolve(path, evPath), KEY_LISTENERS, sysPath.join(path, evPath));
+    }
+  };
+  try {
+    return fs_watch(path, {
+      persistent: options.persistent
+    }, handleEvent);
+  } catch (error48) {
+    errHandler(error48);
+    return void 0;
+  }
+}
+var fsWatchBroadcast = (fullPath, listenerType, val1, val2, val3) => {
+  const cont = FsWatchInstances.get(fullPath);
+  if (!cont)
+    return;
+  foreach(cont[listenerType], (listener) => {
+    listener(val1, val2, val3);
+  });
+};
+var setFsWatchListener = (path, fullPath, options, handlers) => {
+  const { listener, errHandler, rawEmitter } = handlers;
+  let cont = FsWatchInstances.get(fullPath);
+  let watcher;
+  if (!options.persistent) {
+    watcher = createFsWatchInstance(path, options, listener, errHandler, rawEmitter);
+    if (!watcher)
+      return;
+    return watcher.close.bind(watcher);
+  }
+  if (cont) {
+    addAndConvert(cont, KEY_LISTENERS, listener);
+    addAndConvert(cont, KEY_ERR, errHandler);
+    addAndConvert(cont, KEY_RAW, rawEmitter);
+  } else {
+    watcher = createFsWatchInstance(
+      path,
+      options,
+      fsWatchBroadcast.bind(null, fullPath, KEY_LISTENERS),
+      errHandler,
+      // no need to use broadcast here
+      fsWatchBroadcast.bind(null, fullPath, KEY_RAW)
+    );
+    if (!watcher)
+      return;
+    watcher.on(EV.ERROR, async (error48) => {
+      const broadcastErr = fsWatchBroadcast.bind(null, fullPath, KEY_ERR);
+      if (cont)
+        cont.watcherUnusable = true;
+      if (isWindows && error48.code === "EPERM") {
+        try {
+          const fd = await open(path, "r");
+          await fd.close();
+          broadcastErr(error48);
+        } catch (err) {
+        }
+      } else {
+        broadcastErr(error48);
+      }
+    });
+    cont = {
+      listeners: listener,
+      errHandlers: errHandler,
+      rawEmitters: rawEmitter,
+      watcher
+    };
+    FsWatchInstances.set(fullPath, cont);
+  }
+  return () => {
+    delFromSet(cont, KEY_LISTENERS, listener);
+    delFromSet(cont, KEY_ERR, errHandler);
+    delFromSet(cont, KEY_RAW, rawEmitter);
+    if (isEmptySet(cont.listeners)) {
+      cont.watcher.close();
+      FsWatchInstances.delete(fullPath);
+      HANDLER_KEYS.forEach(clearItem(cont));
+      cont.watcher = void 0;
+      Object.freeze(cont);
+    }
+  };
+};
+var FsWatchFileInstances = /* @__PURE__ */ new Map();
+var setFsWatchFileListener = (path, fullPath, options, handlers) => {
+  const { listener, rawEmitter } = handlers;
+  let cont = FsWatchFileInstances.get(fullPath);
+  const copts = cont && cont.options;
+  if (copts && (copts.persistent < options.persistent || copts.interval > options.interval)) {
+    unwatchFile(fullPath);
+    cont = void 0;
+  }
+  if (cont) {
+    addAndConvert(cont, KEY_LISTENERS, listener);
+    addAndConvert(cont, KEY_RAW, rawEmitter);
+  } else {
+    cont = {
+      listeners: listener,
+      rawEmitters: rawEmitter,
+      options,
+      watcher: watchFile(fullPath, options, (curr, prev) => {
+        foreach(cont.rawEmitters, (rawEmitter2) => {
+          rawEmitter2(EV.CHANGE, fullPath, { curr, prev });
+        });
+        const currmtime = curr.mtimeMs;
+        if (curr.size !== prev.size || currmtime > prev.mtimeMs || currmtime === 0) {
+          foreach(cont.listeners, (listener2) => listener2(path, curr));
+        }
+      })
+    };
+    FsWatchFileInstances.set(fullPath, cont);
+  }
+  return () => {
+    delFromSet(cont, KEY_LISTENERS, listener);
+    delFromSet(cont, KEY_RAW, rawEmitter);
+    if (isEmptySet(cont.listeners)) {
+      FsWatchFileInstances.delete(fullPath);
+      unwatchFile(fullPath);
+      cont.options = cont.watcher = void 0;
+      Object.freeze(cont);
+    }
+  };
+};
+var NodeFsHandler = class {
+  constructor(fsW) {
+    this.fsw = fsW;
+    this._boundHandleError = (error48) => fsW._handleError(error48);
+  }
+  /**
+   * Watch file for changes with fs_watchFile or fs_watch.
+   * @param path to file or dir
+   * @param listener on fs change
+   * @returns closer for the watcher instance
+   */
+  _watchWithNodeFs(path, listener) {
+    const opts = this.fsw.options;
+    const directory = sysPath.dirname(path);
+    const basename3 = sysPath.basename(path);
+    const parent = this.fsw._getWatchedDir(directory);
+    parent.add(basename3);
+    const absolutePath = sysPath.resolve(path);
+    const options = {
+      persistent: opts.persistent
+    };
+    if (!listener)
+      listener = EMPTY_FN;
+    let closer;
+    if (opts.usePolling) {
+      const enableBin = opts.interval !== opts.binaryInterval;
+      options.interval = enableBin && isBinaryPath(basename3) ? opts.binaryInterval : opts.interval;
+      closer = setFsWatchFileListener(path, absolutePath, options, {
+        listener,
+        rawEmitter: this.fsw._emitRaw
+      });
+    } else {
+      closer = setFsWatchListener(path, absolutePath, options, {
+        listener,
+        errHandler: this._boundHandleError,
+        rawEmitter: this.fsw._emitRaw
+      });
+    }
+    return closer;
+  }
+  /**
+   * Watch a file and emit add event if warranted.
+   * @returns closer for the watcher instance
+   */
+  _handleFile(file2, stats, initialAdd) {
+    if (this.fsw.closed) {
+      return;
+    }
+    const dirname6 = sysPath.dirname(file2);
+    const basename3 = sysPath.basename(file2);
+    const parent = this.fsw._getWatchedDir(dirname6);
+    let prevStats = stats;
+    if (parent.has(basename3))
+      return;
+    const listener = async (path, newStats) => {
+      if (!this.fsw._throttle(THROTTLE_MODE_WATCH, file2, 5))
+        return;
+      if (!newStats || newStats.mtimeMs === 0) {
+        try {
+          const newStats2 = await stat2(file2);
+          if (this.fsw.closed)
+            return;
+          const at = newStats2.atimeMs;
+          const mt = newStats2.mtimeMs;
+          if (!at || at <= mt || mt !== prevStats.mtimeMs) {
+            this.fsw._emit(EV.CHANGE, file2, newStats2);
+          }
+          if ((isMacos || isLinux || isFreeBSD) && prevStats.ino !== newStats2.ino) {
+            this.fsw._closeFile(path);
+            prevStats = newStats2;
+            const closer2 = this._watchWithNodeFs(file2, listener);
+            if (closer2)
+              this.fsw._addPathCloser(path, closer2);
+          } else {
+            prevStats = newStats2;
+          }
+        } catch (error48) {
+          this.fsw._remove(dirname6, basename3);
+        }
+      } else if (parent.has(basename3)) {
+        const at = newStats.atimeMs;
+        const mt = newStats.mtimeMs;
+        if (!at || at <= mt || mt !== prevStats.mtimeMs) {
+          this.fsw._emit(EV.CHANGE, file2, newStats);
+        }
+        prevStats = newStats;
+      }
+    };
+    const closer = this._watchWithNodeFs(file2, listener);
+    if (!(initialAdd && this.fsw.options.ignoreInitial) && this.fsw._isntIgnored(file2)) {
+      if (!this.fsw._throttle(EV.ADD, file2, 0))
+        return;
+      this.fsw._emit(EV.ADD, file2, stats);
+    }
+    return closer;
+  }
+  /**
+   * Handle symlinks encountered while reading a dir.
+   * @param entry returned by readdirp
+   * @param directory path of dir being read
+   * @param path of this item
+   * @param item basename of this item
+   * @returns true if no more processing is needed for this entry.
+   */
+  async _handleSymlink(entry, directory, path, item) {
+    if (this.fsw.closed) {
+      return;
+    }
+    const full = entry.fullPath;
+    const dir = this.fsw._getWatchedDir(directory);
+    if (!this.fsw.options.followSymlinks) {
+      this.fsw._incrReadyCount();
+      let linkPath;
+      try {
+        linkPath = await fsrealpath(path);
+      } catch (e) {
+        this.fsw._emitReady();
+        return true;
+      }
+      if (this.fsw.closed)
+        return;
+      if (dir.has(item)) {
+        if (this.fsw._symlinkPaths.get(full) !== linkPath) {
+          this.fsw._symlinkPaths.set(full, linkPath);
+          this.fsw._emit(EV.CHANGE, path, entry.stats);
+        }
+      } else {
+        dir.add(item);
+        this.fsw._symlinkPaths.set(full, linkPath);
+        this.fsw._emit(EV.ADD, path, entry.stats);
+      }
+      this.fsw._emitReady();
+      return true;
+    }
+    if (this.fsw._symlinkPaths.has(full)) {
+      return true;
+    }
+    this.fsw._symlinkPaths.set(full, true);
+  }
+  _handleRead(directory, initialAdd, wh, target, dir, depth, throttler) {
+    directory = sysPath.join(directory, "");
+    throttler = this.fsw._throttle("readdir", directory, 1e3);
+    if (!throttler)
+      return;
+    const previous = this.fsw._getWatchedDir(wh.path);
+    const current = /* @__PURE__ */ new Set();
+    let stream = this.fsw._readdirp(directory, {
+      fileFilter: (entry) => wh.filterPath(entry),
+      directoryFilter: (entry) => wh.filterDir(entry)
+    });
+    if (!stream)
+      return;
+    stream.on(STR_DATA, async (entry) => {
+      if (this.fsw.closed) {
+        stream = void 0;
+        return;
+      }
+      const item = entry.path;
+      let path = sysPath.join(directory, item);
+      current.add(item);
+      if (entry.stats.isSymbolicLink() && await this._handleSymlink(entry, directory, path, item)) {
+        return;
+      }
+      if (this.fsw.closed) {
+        stream = void 0;
+        return;
+      }
+      if (item === target || !target && !previous.has(item)) {
+        this.fsw._incrReadyCount();
+        path = sysPath.join(dir, sysPath.relative(dir, path));
+        this._addToNodeFs(path, initialAdd, wh, depth + 1);
+      }
+    }).on(EV.ERROR, this._boundHandleError);
+    return new Promise((resolve5, reject) => {
+      if (!stream)
+        return reject();
+      stream.once(STR_END, () => {
+        if (this.fsw.closed) {
+          stream = void 0;
+          return;
+        }
+        const wasThrottled = throttler ? throttler.clear() : false;
+        resolve5(void 0);
+        previous.getChildren().filter((item) => {
+          return item !== directory && !current.has(item);
+        }).forEach((item) => {
+          this.fsw._remove(directory, item);
+        });
+        stream = void 0;
+        if (wasThrottled)
+          this._handleRead(directory, false, wh, target, dir, depth, throttler);
+      });
+    });
+  }
+  /**
+   * Read directory to add / remove files from `@watched` list and re-read it on change.
+   * @param dir fs path
+   * @param stats
+   * @param initialAdd
+   * @param depth relative to user-supplied path
+   * @param target child path targeted for watch
+   * @param wh Common watch helpers for this path
+   * @param realpath
+   * @returns closer for the watcher instance.
+   */
+  async _handleDir(dir, stats, initialAdd, depth, target, wh, realpath3) {
+    const parentDir = this.fsw._getWatchedDir(sysPath.dirname(dir));
+    const tracked = parentDir.has(sysPath.basename(dir));
+    if (!(initialAdd && this.fsw.options.ignoreInitial) && !target && !tracked) {
+      this.fsw._emit(EV.ADD_DIR, dir, stats);
+    }
+    parentDir.add(sysPath.basename(dir));
+    this.fsw._getWatchedDir(dir);
+    let throttler;
+    let closer;
+    const oDepth = this.fsw.options.depth;
+    if ((oDepth == null || depth <= oDepth) && !this.fsw._symlinkPaths.has(realpath3)) {
+      if (!target) {
+        await this._handleRead(dir, initialAdd, wh, target, dir, depth, throttler);
+        if (this.fsw.closed)
+          return;
+      }
+      closer = this._watchWithNodeFs(dir, (dirPath, stats2) => {
+        if (stats2 && stats2.mtimeMs === 0)
+          return;
+        this._handleRead(dirPath, false, wh, target, dir, depth, throttler);
+      });
+    }
+    return closer;
+  }
+  /**
+   * Handle added file, directory, or glob pattern.
+   * Delegates call to _handleFile / _handleDir after checks.
+   * @param path to file or ir
+   * @param initialAdd was the file added at watch instantiation?
+   * @param priorWh depth relative to user-supplied path
+   * @param depth Child path actually targeted for watch
+   * @param target Child path actually targeted for watch
+   */
+  async _addToNodeFs(path, initialAdd, priorWh, depth, target) {
+    const ready = this.fsw._emitReady;
+    if (this.fsw._isIgnored(path) || this.fsw.closed) {
+      ready();
+      return false;
+    }
+    const wh = this.fsw._getWatchHelpers(path);
+    if (priorWh) {
+      wh.filterPath = (entry) => priorWh.filterPath(entry);
+      wh.filterDir = (entry) => priorWh.filterDir(entry);
+    }
+    try {
+      const stats = await statMethods[wh.statMethod](wh.watchPath);
+      if (this.fsw.closed)
+        return;
+      if (this.fsw._isIgnored(wh.watchPath, stats)) {
+        ready();
+        return false;
+      }
+      const follow = this.fsw.options.followSymlinks;
+      let closer;
+      if (stats.isDirectory()) {
+        const absPath = sysPath.resolve(path);
+        const targetPath = follow ? await fsrealpath(path) : path;
+        if (this.fsw.closed)
+          return;
+        closer = await this._handleDir(wh.watchPath, stats, initialAdd, depth, target, wh, targetPath);
+        if (this.fsw.closed)
+          return;
+        if (absPath !== targetPath && targetPath !== void 0) {
+          this.fsw._symlinkPaths.set(absPath, targetPath);
+        }
+      } else if (stats.isSymbolicLink()) {
+        const targetPath = follow ? await fsrealpath(path) : path;
+        if (this.fsw.closed)
+          return;
+        const parent = sysPath.dirname(wh.watchPath);
+        this.fsw._getWatchedDir(parent).add(wh.watchPath);
+        this.fsw._emit(EV.ADD, wh.watchPath, stats);
+        closer = await this._handleDir(parent, stats, initialAdd, depth, path, wh, targetPath);
+        if (this.fsw.closed)
+          return;
+        if (targetPath !== void 0) {
+          this.fsw._symlinkPaths.set(sysPath.resolve(path), targetPath);
+        }
+      } else {
+        closer = this._handleFile(wh.watchPath, stats, initialAdd);
+      }
+      ready();
+      if (closer)
+        this.fsw._addPathCloser(path, closer);
+      return false;
+    } catch (error48) {
+      if (this.fsw._handleError(error48)) {
+        ready();
+        return path;
+      }
+    }
+  }
+};
+
+// node_modules/chokidar/esm/index.js
+var SLASH = "/";
+var SLASH_SLASH = "//";
+var ONE_DOT = ".";
+var TWO_DOTS = "..";
+var STRING_TYPE = "string";
+var BACK_SLASH_RE = /\\/g;
+var DOUBLE_SLASH_RE = /\/\//;
+var DOT_RE = /\..*\.(sw[px])$|~$|\.subl.*\.tmp/;
+var REPLACER_RE = /^\.[/\\]/;
+function arrify(item) {
+  return Array.isArray(item) ? item : [item];
+}
+var isMatcherObject = (matcher) => typeof matcher === "object" && matcher !== null && !(matcher instanceof RegExp);
+function createPattern(matcher) {
+  if (typeof matcher === "function")
+    return matcher;
+  if (typeof matcher === "string")
+    return (string4) => matcher === string4;
+  if (matcher instanceof RegExp)
+    return (string4) => matcher.test(string4);
+  if (typeof matcher === "object" && matcher !== null) {
+    return (string4) => {
+      if (matcher.path === string4)
+        return true;
+      if (matcher.recursive) {
+        const relative7 = sysPath2.relative(matcher.path, string4);
+        if (!relative7) {
+          return false;
+        }
+        return !relative7.startsWith("..") && !sysPath2.isAbsolute(relative7);
+      }
+      return false;
+    };
+  }
+  return () => false;
+}
+function normalizePath(path) {
+  if (typeof path !== "string")
+    throw new Error("string expected");
+  path = sysPath2.normalize(path);
+  path = path.replace(/\\/g, "/");
+  let prepend = false;
+  if (path.startsWith("//"))
+    prepend = true;
+  const DOUBLE_SLASH_RE2 = /\/\//;
+  while (path.match(DOUBLE_SLASH_RE2))
+    path = path.replace(DOUBLE_SLASH_RE2, "/");
+  if (prepend)
+    path = "/" + path;
+  return path;
+}
+function matchPatterns(patterns, testString, stats) {
+  const path = normalizePath(testString);
+  for (let index = 0; index < patterns.length; index++) {
+    const pattern = patterns[index];
+    if (pattern(path, stats)) {
+      return true;
+    }
+  }
+  return false;
+}
+function anymatch(matchers, testString) {
+  if (matchers == null) {
+    throw new TypeError("anymatch: specify first argument");
+  }
+  const matchersArray = arrify(matchers);
+  const patterns = matchersArray.map((matcher) => createPattern(matcher));
+  if (testString == null) {
+    return (testString2, stats) => {
+      return matchPatterns(patterns, testString2, stats);
+    };
+  }
+  return matchPatterns(patterns, testString);
+}
+var unifyPaths = (paths_) => {
+  const paths = arrify(paths_).flat();
+  if (!paths.every((p) => typeof p === STRING_TYPE)) {
+    throw new TypeError(`Non-string provided as watch path: ${paths}`);
+  }
+  return paths.map(normalizePathToUnix);
+};
+var toUnix = (string4) => {
+  let str = string4.replace(BACK_SLASH_RE, SLASH);
+  let prepend = false;
+  if (str.startsWith(SLASH_SLASH)) {
+    prepend = true;
+  }
+  while (str.match(DOUBLE_SLASH_RE)) {
+    str = str.replace(DOUBLE_SLASH_RE, SLASH);
+  }
+  if (prepend) {
+    str = SLASH + str;
+  }
+  return str;
+};
+var normalizePathToUnix = (path) => toUnix(sysPath2.normalize(toUnix(path)));
+var normalizeIgnored = (cwd = "") => (path) => {
+  if (typeof path === "string") {
+    return normalizePathToUnix(sysPath2.isAbsolute(path) ? path : sysPath2.join(cwd, path));
+  } else {
+    return path;
+  }
+};
+var getAbsolutePath = (path, cwd) => {
+  if (sysPath2.isAbsolute(path)) {
+    return path;
+  }
+  return sysPath2.join(cwd, path);
+};
+var EMPTY_SET = Object.freeze(/* @__PURE__ */ new Set());
+var DirEntry = class {
+  constructor(dir, removeWatcher) {
+    this.path = dir;
+    this._removeWatcher = removeWatcher;
+    this.items = /* @__PURE__ */ new Set();
+  }
+  add(item) {
+    const { items } = this;
+    if (!items)
+      return;
+    if (item !== ONE_DOT && item !== TWO_DOTS)
+      items.add(item);
+  }
+  async remove(item) {
+    const { items } = this;
+    if (!items)
+      return;
+    items.delete(item);
+    if (items.size > 0)
+      return;
+    const dir = this.path;
+    try {
+      await readdir2(dir);
+    } catch (err) {
+      if (this._removeWatcher) {
+        this._removeWatcher(sysPath2.dirname(dir), sysPath2.basename(dir));
+      }
+    }
+  }
+  has(item) {
+    const { items } = this;
+    if (!items)
+      return;
+    return items.has(item);
+  }
+  getChildren() {
+    const { items } = this;
+    if (!items)
+      return [];
+    return [...items.values()];
+  }
+  dispose() {
+    this.items.clear();
+    this.path = "";
+    this._removeWatcher = EMPTY_FN;
+    this.items = EMPTY_SET;
+    Object.freeze(this);
+  }
+};
+var STAT_METHOD_F = "stat";
+var STAT_METHOD_L = "lstat";
+var WatchHelper = class {
+  constructor(path, follow, fsw) {
+    this.fsw = fsw;
+    const watchPath = path;
+    this.path = path = path.replace(REPLACER_RE, "");
+    this.watchPath = watchPath;
+    this.fullWatchPath = sysPath2.resolve(watchPath);
+    this.dirParts = [];
+    this.dirParts.forEach((parts) => {
+      if (parts.length > 1)
+        parts.pop();
+    });
+    this.followSymlinks = follow;
+    this.statMethod = follow ? STAT_METHOD_F : STAT_METHOD_L;
+  }
+  entryPath(entry) {
+    return sysPath2.join(this.watchPath, sysPath2.relative(this.watchPath, entry.fullPath));
+  }
+  filterPath(entry) {
+    const { stats } = entry;
+    if (stats && stats.isSymbolicLink())
+      return this.filterDir(entry);
+    const resolvedPath = this.entryPath(entry);
+    return this.fsw._isntIgnored(resolvedPath, stats) && this.fsw._hasReadPermissions(stats);
+  }
+  filterDir(entry) {
+    return this.fsw._isntIgnored(this.entryPath(entry), entry.stats);
+  }
+};
+var FSWatcher = class extends EventEmitter {
+  // Not indenting methods for history sake; for now.
+  constructor(_opts = {}) {
+    super();
+    this.closed = false;
+    this._closers = /* @__PURE__ */ new Map();
+    this._ignoredPaths = /* @__PURE__ */ new Set();
+    this._throttled = /* @__PURE__ */ new Map();
+    this._streams = /* @__PURE__ */ new Set();
+    this._symlinkPaths = /* @__PURE__ */ new Map();
+    this._watched = /* @__PURE__ */ new Map();
+    this._pendingWrites = /* @__PURE__ */ new Map();
+    this._pendingUnlinks = /* @__PURE__ */ new Map();
+    this._readyCount = 0;
+    this._readyEmitted = false;
+    const awf = _opts.awaitWriteFinish;
+    const DEF_AWF = { stabilityThreshold: 2e3, pollInterval: 100 };
+    const opts = {
+      // Defaults
+      persistent: true,
+      ignoreInitial: false,
+      ignorePermissionErrors: false,
+      interval: 100,
+      binaryInterval: 300,
+      followSymlinks: true,
+      usePolling: false,
+      // useAsync: false,
+      atomic: true,
+      // NOTE: overwritten later (depends on usePolling)
+      ..._opts,
+      // Change format
+      ignored: _opts.ignored ? arrify(_opts.ignored) : arrify([]),
+      awaitWriteFinish: awf === true ? DEF_AWF : typeof awf === "object" ? { ...DEF_AWF, ...awf } : false
+    };
+    if (isIBMi)
+      opts.usePolling = true;
+    if (opts.atomic === void 0)
+      opts.atomic = !opts.usePolling;
+    const envPoll = process.env.CHOKIDAR_USEPOLLING;
+    if (envPoll !== void 0) {
+      const envLower = envPoll.toLowerCase();
+      if (envLower === "false" || envLower === "0")
+        opts.usePolling = false;
+      else if (envLower === "true" || envLower === "1")
+        opts.usePolling = true;
+      else
+        opts.usePolling = !!envLower;
+    }
+    const envInterval = process.env.CHOKIDAR_INTERVAL;
+    if (envInterval)
+      opts.interval = Number.parseInt(envInterval, 10);
+    let readyCalls = 0;
+    this._emitReady = () => {
+      readyCalls++;
+      if (readyCalls >= this._readyCount) {
+        this._emitReady = EMPTY_FN;
+        this._readyEmitted = true;
+        process.nextTick(() => this.emit(EVENTS.READY));
+      }
+    };
+    this._emitRaw = (...args) => this.emit(EVENTS.RAW, ...args);
+    this._boundRemove = this._remove.bind(this);
+    this.options = opts;
+    this._nodeFsHandler = new NodeFsHandler(this);
+    Object.freeze(opts);
+  }
+  _addIgnoredPath(matcher) {
+    if (isMatcherObject(matcher)) {
+      for (const ignored of this._ignoredPaths) {
+        if (isMatcherObject(ignored) && ignored.path === matcher.path && ignored.recursive === matcher.recursive) {
+          return;
+        }
+      }
+    }
+    this._ignoredPaths.add(matcher);
+  }
+  _removeIgnoredPath(matcher) {
+    this._ignoredPaths.delete(matcher);
+    if (typeof matcher === "string") {
+      for (const ignored of this._ignoredPaths) {
+        if (isMatcherObject(ignored) && ignored.path === matcher) {
+          this._ignoredPaths.delete(ignored);
+        }
+      }
+    }
+  }
+  // Public methods
+  /**
+   * Adds paths to be watched on an existing FSWatcher instance.
+   * @param paths_ file or file list. Other arguments are unused
+   */
+  add(paths_, _origAdd, _internal) {
+    const { cwd } = this.options;
+    this.closed = false;
+    this._closePromise = void 0;
+    let paths = unifyPaths(paths_);
+    if (cwd) {
+      paths = paths.map((path) => {
+        const absPath = getAbsolutePath(path, cwd);
+        return absPath;
+      });
+    }
+    paths.forEach((path) => {
+      this._removeIgnoredPath(path);
+    });
+    this._userIgnored = void 0;
+    if (!this._readyCount)
+      this._readyCount = 0;
+    this._readyCount += paths.length;
+    Promise.all(paths.map(async (path) => {
+      const res = await this._nodeFsHandler._addToNodeFs(path, !_internal, void 0, 0, _origAdd);
+      if (res)
+        this._emitReady();
+      return res;
+    })).then((results) => {
+      if (this.closed)
+        return;
+      results.forEach((item) => {
+        if (item)
+          this.add(sysPath2.dirname(item), sysPath2.basename(_origAdd || item));
+      });
+    });
+    return this;
+  }
+  /**
+   * Close watchers or start ignoring events from specified paths.
+   */
+  unwatch(paths_) {
+    if (this.closed)
+      return this;
+    const paths = unifyPaths(paths_);
+    const { cwd } = this.options;
+    paths.forEach((path) => {
+      if (!sysPath2.isAbsolute(path) && !this._closers.has(path)) {
+        if (cwd)
+          path = sysPath2.join(cwd, path);
+        path = sysPath2.resolve(path);
+      }
+      this._closePath(path);
+      this._addIgnoredPath(path);
+      if (this._watched.has(path)) {
+        this._addIgnoredPath({
+          path,
+          recursive: true
+        });
+      }
+      this._userIgnored = void 0;
+    });
+    return this;
+  }
+  /**
+   * Close watchers and remove all listeners from watched paths.
+   */
+  close() {
+    if (this._closePromise) {
+      return this._closePromise;
+    }
+    this.closed = true;
+    this.removeAllListeners();
+    const closers = [];
+    this._closers.forEach((closerList) => closerList.forEach((closer) => {
+      const promise2 = closer();
+      if (promise2 instanceof Promise)
+        closers.push(promise2);
+    }));
+    this._streams.forEach((stream) => stream.destroy());
+    this._userIgnored = void 0;
+    this._readyCount = 0;
+    this._readyEmitted = false;
+    this._watched.forEach((dirent) => dirent.dispose());
+    this._closers.clear();
+    this._watched.clear();
+    this._streams.clear();
+    this._symlinkPaths.clear();
+    this._throttled.clear();
+    this._closePromise = closers.length ? Promise.all(closers).then(() => void 0) : Promise.resolve();
+    return this._closePromise;
+  }
+  /**
+   * Expose list of watched paths
+   * @returns for chaining
+   */
+  getWatched() {
+    const watchList = {};
+    this._watched.forEach((entry, dir) => {
+      const key = this.options.cwd ? sysPath2.relative(this.options.cwd, dir) : dir;
+      const index = key || ONE_DOT;
+      watchList[index] = entry.getChildren().sort();
+    });
+    return watchList;
+  }
+  emitWithAll(event, args) {
+    this.emit(event, ...args);
+    if (event !== EVENTS.ERROR)
+      this.emit(EVENTS.ALL, event, ...args);
+  }
+  // Common helpers
+  // --------------
+  /**
+   * Normalize and emit events.
+   * Calling _emit DOES NOT MEAN emit() would be called!
+   * @param event Type of event
+   * @param path File or directory path
+   * @param stats arguments to be passed with event
+   * @returns the error if defined, otherwise the value of the FSWatcher instance's `closed` flag
+   */
+  async _emit(event, path, stats) {
+    if (this.closed)
+      return;
+    const opts = this.options;
+    if (isWindows)
+      path = sysPath2.normalize(path);
+    if (opts.cwd)
+      path = sysPath2.relative(opts.cwd, path);
+    const args = [path];
+    if (stats != null)
+      args.push(stats);
+    const awf = opts.awaitWriteFinish;
+    let pw;
+    if (awf && (pw = this._pendingWrites.get(path))) {
+      pw.lastChange = /* @__PURE__ */ new Date();
+      return this;
+    }
+    if (opts.atomic) {
+      if (event === EVENTS.UNLINK) {
+        this._pendingUnlinks.set(path, [event, ...args]);
+        setTimeout(() => {
+          this._pendingUnlinks.forEach((entry, path2) => {
+            this.emit(...entry);
+            this.emit(EVENTS.ALL, ...entry);
+            this._pendingUnlinks.delete(path2);
+          });
+        }, typeof opts.atomic === "number" ? opts.atomic : 100);
+        return this;
+      }
+      if (event === EVENTS.ADD && this._pendingUnlinks.has(path)) {
+        event = EVENTS.CHANGE;
+        this._pendingUnlinks.delete(path);
+      }
+    }
+    if (awf && (event === EVENTS.ADD || event === EVENTS.CHANGE) && this._readyEmitted) {
+      const awfEmit = (err, stats2) => {
+        if (err) {
+          event = EVENTS.ERROR;
+          args[0] = err;
+          this.emitWithAll(event, args);
+        } else if (stats2) {
+          if (args.length > 1) {
+            args[1] = stats2;
+          } else {
+            args.push(stats2);
+          }
+          this.emitWithAll(event, args);
+        }
+      };
+      this._awaitWriteFinish(path, awf.stabilityThreshold, event, awfEmit);
+      return this;
+    }
+    if (event === EVENTS.CHANGE) {
+      const isThrottled = !this._throttle(EVENTS.CHANGE, path, 50);
+      if (isThrottled)
+        return this;
+    }
+    if (opts.alwaysStat && stats === void 0 && (event === EVENTS.ADD || event === EVENTS.ADD_DIR || event === EVENTS.CHANGE)) {
+      const fullPath = opts.cwd ? sysPath2.join(opts.cwd, path) : path;
+      let stats2;
+      try {
+        stats2 = await stat3(fullPath);
+      } catch (err) {
+      }
+      if (!stats2 || this.closed)
+        return;
+      args.push(stats2);
+    }
+    this.emitWithAll(event, args);
+    return this;
+  }
+  /**
+   * Common handler for errors
+   * @returns The error if defined, otherwise the value of the FSWatcher instance's `closed` flag
+   */
+  _handleError(error48) {
+    const code = error48 && error48.code;
+    if (error48 && code !== "ENOENT" && code !== "ENOTDIR" && (!this.options.ignorePermissionErrors || code !== "EPERM" && code !== "EACCES")) {
+      this.emit(EVENTS.ERROR, error48);
+    }
+    return error48 || this.closed;
+  }
+  /**
+   * Helper utility for throttling
+   * @param actionType type being throttled
+   * @param path being acted upon
+   * @param timeout duration of time to suppress duplicate actions
+   * @returns tracking object or false if action should be suppressed
+   */
+  _throttle(actionType, path, timeout) {
+    if (!this._throttled.has(actionType)) {
+      this._throttled.set(actionType, /* @__PURE__ */ new Map());
+    }
+    const action = this._throttled.get(actionType);
+    if (!action)
+      throw new Error("invalid throttle");
+    const actionPath = action.get(path);
+    if (actionPath) {
+      actionPath.count++;
+      return false;
+    }
+    let timeoutObject;
+    const clear = () => {
+      const item = action.get(path);
+      const count = item ? item.count : 0;
+      action.delete(path);
+      clearTimeout(timeoutObject);
+      if (item)
+        clearTimeout(item.timeoutObject);
+      return count;
+    };
+    timeoutObject = setTimeout(clear, timeout);
+    const thr = { timeoutObject, clear, count: 0 };
+    action.set(path, thr);
+    return thr;
+  }
+  _incrReadyCount() {
+    return this._readyCount++;
+  }
+  /**
+   * Awaits write operation to finish.
+   * Polls a newly created file for size variations. When files size does not change for 'threshold' milliseconds calls callback.
+   * @param path being acted upon
+   * @param threshold Time in milliseconds a file size must be fixed before acknowledging write OP is finished
+   * @param event
+   * @param awfEmit Callback to be called when ready for event to be emitted.
+   */
+  _awaitWriteFinish(path, threshold, event, awfEmit) {
+    const awf = this.options.awaitWriteFinish;
+    if (typeof awf !== "object")
+      return;
+    const pollInterval = awf.pollInterval;
+    let timeoutHandler;
+    let fullPath = path;
+    if (this.options.cwd && !sysPath2.isAbsolute(path)) {
+      fullPath = sysPath2.join(this.options.cwd, path);
+    }
+    const now = /* @__PURE__ */ new Date();
+    const writes = this._pendingWrites;
+    function awaitWriteFinishFn(prevStat) {
+      statcb(fullPath, (err, curStat) => {
+        if (err || !writes.has(path)) {
+          if (err && err.code !== "ENOENT")
+            awfEmit(err);
+          return;
+        }
+        const now2 = Number(/* @__PURE__ */ new Date());
+        if (prevStat && curStat.size !== prevStat.size) {
+          writes.get(path).lastChange = now2;
+        }
+        const pw = writes.get(path);
+        const df = now2 - pw.lastChange;
+        if (df >= threshold) {
+          writes.delete(path);
+          awfEmit(void 0, curStat);
+        } else {
+          timeoutHandler = setTimeout(awaitWriteFinishFn, pollInterval, curStat);
+        }
+      });
+    }
+    if (!writes.has(path)) {
+      writes.set(path, {
+        lastChange: now,
+        cancelWait: () => {
+          writes.delete(path);
+          clearTimeout(timeoutHandler);
+          return event;
+        }
+      });
+      timeoutHandler = setTimeout(awaitWriteFinishFn, pollInterval);
+    }
+  }
+  /**
+   * Determines whether user has asked to ignore this path.
+   */
+  _isIgnored(path, stats) {
+    if (this.options.atomic && DOT_RE.test(path))
+      return true;
+    if (!this._userIgnored) {
+      const { cwd } = this.options;
+      const ign = this.options.ignored;
+      const ignored = (ign || []).map(normalizeIgnored(cwd));
+      const ignoredPaths = [...this._ignoredPaths];
+      const list = [...ignoredPaths.map(normalizeIgnored(cwd)), ...ignored];
+      this._userIgnored = anymatch(list, void 0);
+    }
+    return this._userIgnored(path, stats);
+  }
+  _isntIgnored(path, stat5) {
+    return !this._isIgnored(path, stat5);
+  }
+  /**
+   * Provides a set of common helpers and properties relating to symlink handling.
+   * @param path file or directory pattern being watched
+   */
+  _getWatchHelpers(path) {
+    return new WatchHelper(path, this.options.followSymlinks, this);
+  }
+  // Directory helpers
+  // -----------------
+  /**
+   * Provides directory tracking objects
+   * @param directory path of the directory
+   */
+  _getWatchedDir(directory) {
+    const dir = sysPath2.resolve(directory);
+    if (!this._watched.has(dir))
+      this._watched.set(dir, new DirEntry(dir, this._boundRemove));
+    return this._watched.get(dir);
+  }
+  // File helpers
+  // ------------
+  /**
+   * Check for read permissions: https://stackoverflow.com/a/11781404/1358405
+   */
+  _hasReadPermissions(stats) {
+    if (this.options.ignorePermissionErrors)
+      return true;
+    return Boolean(Number(stats.mode) & 256);
+  }
+  /**
+   * Handles emitting unlink events for
+   * files and directories, and via recursion, for
+   * files and directories within directories that are unlinked
+   * @param directory within which the following item is located
+   * @param item      base path of item/directory
+   */
+  _remove(directory, item, isDirectory) {
+    const path = sysPath2.join(directory, item);
+    const fullPath = sysPath2.resolve(path);
+    isDirectory = isDirectory != null ? isDirectory : this._watched.has(path) || this._watched.has(fullPath);
+    if (!this._throttle("remove", path, 100))
+      return;
+    if (!isDirectory && this._watched.size === 1) {
+      this.add(directory, item, true);
+    }
+    const wp = this._getWatchedDir(path);
+    const nestedDirectoryChildren = wp.getChildren();
+    nestedDirectoryChildren.forEach((nested) => this._remove(path, nested));
+    const parent = this._getWatchedDir(directory);
+    const wasTracked = parent.has(item);
+    parent.remove(item);
+    if (this._symlinkPaths.has(fullPath)) {
+      this._symlinkPaths.delete(fullPath);
+    }
+    let relPath = path;
+    if (this.options.cwd)
+      relPath = sysPath2.relative(this.options.cwd, path);
+    if (this.options.awaitWriteFinish && this._pendingWrites.has(relPath)) {
+      const event = this._pendingWrites.get(relPath).cancelWait();
+      if (event === EVENTS.ADD)
+        return;
+    }
+    this._watched.delete(path);
+    this._watched.delete(fullPath);
+    const eventName = isDirectory ? EVENTS.UNLINK_DIR : EVENTS.UNLINK;
+    if (wasTracked && !this._isIgnored(path))
+      this._emit(eventName, path);
+    this._closePath(path);
+  }
+  /**
+   * Closes all watchers for a path
+   */
+  _closePath(path) {
+    this._closeFile(path);
+    const dir = sysPath2.dirname(path);
+    this._getWatchedDir(dir).remove(sysPath2.basename(path));
+  }
+  /**
+   * Closes only file-specific watchers
+   */
+  _closeFile(path) {
+    const closers = this._closers.get(path);
+    if (!closers)
+      return;
+    closers.forEach((closer) => closer());
+    this._closers.delete(path);
+  }
+  _addPathCloser(path, closer) {
+    if (!closer)
+      return;
+    let list = this._closers.get(path);
+    if (!list) {
+      list = [];
+      this._closers.set(path, list);
+    }
+    list.push(closer);
+  }
+  _readdirp(root, opts) {
+    if (this.closed)
+      return;
+    const options = { type: EVENTS.ALL, alwaysStat: true, lstat: true, ...opts, depth: 0 };
+    let stream = readdirp(root, options);
+    this._streams.add(stream);
+    stream.once(STR_CLOSE, () => {
+      stream = void 0;
+    });
+    stream.once(STR_END, () => {
+      if (stream) {
+        this._streams.delete(stream);
+        stream = void 0;
+      }
+    });
+    return stream;
+  }
+};
+function watch(paths, options = {}) {
+  const watcher = new FSWatcher(options);
+  watcher.add(paths);
+  return watcher;
+}
+var esm_default = { watch, FSWatcher };
+
+// src/watchers.ts
+import { existsSync, readdirSync, realpathSync, statSync, watch as watch2 } from "node:fs";
+import { lstat as lstat3, readdir as readdir3 } from "node:fs/promises";
+import { dirname as dirname3, isAbsolute as isAbsolute3, join as join3, parse as parse3, relative as relative4, resolve as resolve3, sep as sep2 } from "node:path";
+var import_picomatch = __toESM(require_picomatch2(), 1);
+var slash = (file2) => file2.split(sep2).join("/");
+var caseInsensitive = process.platform === "darwin" || process.platform === "win32";
+var permissionError = (error48) => ["EACCES", "EPERM"].includes(error48.code ?? "");
+function actualCase(file2) {
+  if (!caseInsensitive) return file2;
+  let current = parse3(file2).root;
+  for (const component of file2.slice(current.length).split(sep2).filter(Boolean)) {
+    let spelling = component;
+    try {
+      spelling = readdirSync(current).find((name) => name.toLowerCase() === component.toLowerCase()) ?? component;
+    } catch (error48) {
+      if (error48.code !== "ENOENT" && !permissionError(error48)) throw error48;
+    }
+    current = join3(current, spelling);
+  }
+  return current;
+}
+function compileWatchPattern(root, raw) {
+  const pattern = raw.globPattern;
+  let absolute;
+  if (typeof pattern === "string") absolute = pattern.startsWith("file:") ? uriToPath(pattern) : isAbsolute3(pattern) ? pattern : resolve3(root, pattern);
+  else {
+    const base = uriToPath(typeof pattern.baseUri === "string" ? pattern.baseUri : pattern.baseUri.uri);
+    if (isAbsolute3(pattern.pattern)) throw new Error("RelativePattern must be relative");
+    absolute = resolve3(base, pattern.pattern);
+  }
+  const normalized = slash(absolute);
+  const scan = import_picomatch.default.scan(normalized);
+  const staticRoot = actualCase(scan.isGlob ? scan.base : dirname3(absolute));
+  let watchRoot = staticRoot;
+  if (!watchRoot || !isAbsolute3(watchRoot)) throw new Error("Invalid watcher pattern root");
+  while (!existsSync(watchRoot)) {
+    const parent = dirname3(watchRoot);
+    if (parent === watchRoot) break;
+    watchRoot = parent;
+  }
+  if (existsSync(watchRoot) && !statSync(watchRoot).isDirectory()) watchRoot = dirname3(watchRoot);
+  let nativeRecursive = false;
+  if (caseInsensitive && staticRoot === watchRoot) {
+    try {
+      const physicalWatchRoot = realpathSync(watchRoot);
+      const physicalProjectRoot = realpathSync(actualCase(root));
+      const relationship = relative4(physicalWatchRoot.toLowerCase(), physicalProjectRoot.toLowerCase());
+      nativeRecursive = relationship !== "" && relationship !== ".." && !relationship.startsWith(".." + sep2) && !isAbsolute3(relationship);
+    } catch (error48) {
+      if (!permissionError(error48)) throw error48;
+    }
+  }
+  const matches = (0, import_picomatch.default)(normalized, { dot: true, nocase: caseInsensitive });
+  const prefix = caseInsensitive ? slash(staticRoot).toLowerCase() : slash(staticRoot);
+  return { root: watchRoot, nativeRecursive, kind: raw.kind ?? 7, matches: (file2) => matches(slash(file2)), ignored(file2, stats) {
+    if (stats && !stats.isFile() && !stats.isDirectory() && !stats.isSymbolicLink()) return true;
+    const candidate = caseInsensitive ? slash(file2).toLowerCase() : slash(file2);
+    return candidate !== prefix && !candidate.startsWith(prefix + "/") && !prefix.startsWith(candidate + "/");
+  } };
+}
+function createRegisteredWatcher(pattern, emit, fail) {
+  const output = (file2, type) => {
+    if (pattern.kind & 1 << type - 1 && pattern.matches(file2)) emit(file2, type);
+  };
+  if (!pattern.nativeRecursive) {
+    const watcher2 = esm_default.watch(pattern.root, { ignoreInitial: true, ignorePermissionErrors: true, ignored: pattern.ignored, usePolling: true, interval: 100, binaryInterval: 100 });
+    let settle;
+    const ready = new Promise((resolveReady, reject) => {
+      settle = resolveReady;
+      watcher2.once("ready", resolveReady);
+      watcher2.on("error", (error48) => {
+        const normalized = error48 instanceof Error ? error48 : new Error(String(error48));
+        fail(normalized);
+        reject(normalized);
+      });
+    });
+    void ready.catch(() => {
+    });
+    for (const [event, type] of [["add", 1], ["change", 2], ["unlink", 3]]) watcher2.on(event, (file2) => output(file2, type));
+    return { ready, flush: () => ready, noteFile() {
+    }, async close() {
+      settle();
+      await watcher2.close();
+    } };
+  }
+  const known = /* @__PURE__ */ new Set();
+  let closed = false;
+  let work = Promise.resolve();
+  let closing;
+  const inspect = async (file2, event) => {
+    if (closed || pattern.ignored(file2)) return;
+    let stats;
+    try {
+      stats = await lstat3(file2);
+    } catch (error48) {
+      if (error48.code === "ENOENT") {
+        const descendants = [...known].filter((knownFile) => knownFile === file2 || knownFile.startsWith(file2 + sep2));
+        if (!descendants.length) output(file2, 3);
+        for (const descendant of descendants) {
+          known.delete(descendant);
+          output(descendant, 3);
+        }
+        return;
+      }
+      if (permissionError(error48)) return;
+      throw error48;
+    }
+    if (pattern.ignored(file2, stats)) return;
+    if (stats.isDirectory()) {
+      let entries;
+      try {
+        entries = await readdir3(file2, { withFileTypes: true });
+      } catch (error48) {
+        if (permissionError(error48) || error48.code === "ENOENT") return;
+        throw error48;
+      }
+      for (const entry of entries) {
+        if (closed) break;
+        await inspect(join3(file2, entry.name), event);
+      }
+      return;
+    }
+    if (!stats.isFile()) return;
+    if (known.has(file2)) output(file2, 2);
+    else {
+      output(file2, 1);
+      output(file2, 2);
+    }
+    known.add(file2);
+  };
+  let watcher;
+  watcher = watch2(pattern.root, { recursive: true }, (event, filename) => {
+    if (closed) return;
+    if (filename === null) {
+      fail(new Error("Native file watcher did not identify the changed path"));
+      return;
+    }
+    const file2 = join3(pattern.root, String(filename));
+    work = work.then(() => inspect(file2, event)).catch((error48) => {
+      if (!closed && !permissionError(error48)) fail(error48 instanceof Error ? error48 : new Error(String(error48)));
+    });
+  });
+  watcher.on("error", (error48) => {
+    if (!closed && !permissionError(error48)) fail(error48);
+  });
+  return { ready: new Promise((resolveReady) => setImmediate(resolveReady)), flush: () => work, noteFile(file2) {
+    known.add(file2);
+  }, close() {
+    if (closing) return closing;
+    closed = true;
+    watcher.close();
+    closing = work.then(() => {
+      known.clear();
+    });
+    return closing;
+  } };
+}
+
+// src/documents.ts
+var registrationSchema = external_exports3.object({ registrations: external_exports3.array(external_exports3.object({ id: external_exports3.string().min(1), method: external_exports3.string(), registerOptions: external_exports3.unknown().optional() })) });
+var watcherSchema = external_exports3.object({ globPattern: external_exports3.union([external_exports3.string().min(1), external_exports3.object({ baseUri: external_exports3.union([external_exports3.string(), external_exports3.object({ uri: external_exports3.string(), name: external_exports3.string().optional() })]), pattern: external_exports3.string().min(1) })]), kind: external_exports3.number().int().min(1).max(7).optional() });
+var DocumentSession = class {
+  constructor(root, notify) {
+    this.root = root;
+    this.notify = notify;
+    pathToUri(root);
+    const watcher = this.watch(root, (file2) => /\.(?:[cm]?[jt]sx?|json)$/.test(file2), 7, (file2) => {
+      const parts = relative5(root, file2).split(sep3);
+      return parts.includes("node_modules") || parts.includes(".git");
+    });
+    void watcher;
+  }
+  root;
+  notify;
+  documents = /* @__PURE__ */ new Map();
+  events = /* @__PURE__ */ new Map();
+  watchers = /* @__PURE__ */ new Set();
+  registeredWatchers = /* @__PURE__ */ new Set();
+  readiness = /* @__PURE__ */ new Set();
+  settleReady = /* @__PURE__ */ new Map();
+  registrations = /* @__PURE__ */ new Map();
+  watcherError;
+  closed = false;
+  closing;
+  syncKind = 1;
+  revision = 0;
+  get generation() {
+    return this.revision;
+  }
+  getVersion(uri) {
+    return this.documents.get(uri)?.version;
+  }
+  getText(uri) {
+    return this.documents.get(uri)?.content;
+  }
+  setSyncKind(value) {
+    const parsed = external_exports3.union([external_exports3.number().int().min(0).max(2), external_exports3.object({ openClose: external_exports3.boolean().optional(), change: external_exports3.number().int().min(0).max(2).optional() })]).safeParse(value);
+    if (!parsed.success) throw new Error("Invalid LSP textDocumentSync capability");
+    this.syncKind = typeof parsed.data === "number" ? parsed.data : parsed.data.change ?? 0;
+  }
+  enqueue(file2, type) {
+    if (this.closed) return;
+    const uri = pathToUri(file2);
+    const key = `${uri}:${type}`;
+    if (!this.events.has(key)) {
+      this.events.set(key, { uri, type });
+      this.revision++;
+    }
+  }
+  watch(root, matches, kind, ignored, ignorePermissionErrors = false) {
+    if (this.closed) throw new Error("Document session is closed");
+    const watcher = esm_default.watch(root, { ignoreInitial: true, ignorePermissionErrors, usePolling: true, interval: 100, binaryInterval: 100, ...ignored ? { ignored } : {} });
+    this.watchers.add(watcher);
+    const ready = new Promise((resolveReady, reject) => {
+      this.settleReady.set(watcher, resolveReady);
+      watcher.once("ready", resolveReady);
+      watcher.on("error", (error48) => {
+        this.watcherError = error48 instanceof Error ? error48 : new Error(String(error48));
+        reject(this.watcherError);
+      });
+    });
+    this.readiness.add(ready);
+    void ready.catch(() => {
+    }).finally(() => {
+      this.readiness.delete(ready);
+      this.settleReady.delete(watcher);
+    });
+    for (const [event, type, mask] of [["add", 1, 1], ["change", 2, 2], ["unlink", 3, 4]]) {
+      watcher.on(event, (file2) => {
+        if (kind & mask && matches(file2)) this.enqueue(file2, type);
+      });
+    }
+    return watcher;
+  }
+  async register(params) {
+    if (this.closed) throw new Error("Document session is closed");
+    const { registrations } = registrationSchema.parse(params);
+    const ids = /* @__PURE__ */ new Set();
+    const entries = registrations.map((entry) => {
+      if (ids.has(entry.id) || this.registrations.has(entry.id)) throw new Error("Duplicate LSP registration");
+      ids.add(entry.id);
+      if (entry.method === "workspace/didChangeConfiguration") {
+        external_exports3.object({ section: external_exports3.union([external_exports3.string(), external_exports3.array(external_exports3.string())]).optional() }).parse(entry.registerOptions ?? {});
+        return { ...entry, specs: [] };
+      }
+      if (entry.method !== "workspace/didChangeWatchedFiles") throw new Error(`Unsupported LSP registration: ${entry.method}`);
+      const options = external_exports3.object({ watchers: external_exports3.array(watcherSchema) }).parse(entry.registerOptions);
+      return { ...entry, specs: options.watchers.map((raw) => compileWatchPattern(this.root, raw)) };
+    });
+    const created = [];
+    try {
+      for (const entry of entries) {
+        const registration = { method: entry.method, watchers: [] };
+        this.registrations.set(entry.id, registration);
+        created.push(entry.id);
+        for (const spec of entry.specs) {
+          const watcher = createRegisteredWatcher(spec, (file2, type) => this.enqueue(file2, type), (error48) => {
+            this.watcherError = error48;
+          });
+          registration.watchers.push(watcher);
+          this.registeredWatchers.add(watcher);
+          this.readiness.add(watcher.ready);
+          void watcher.ready.catch(() => {
+          }).finally(() => this.readiness.delete(watcher.ready));
+        }
+      }
+      await this.waitForWatchers();
+      if (this.closed) throw new Error("Document session closed during registration");
+    } catch (error48) {
+      await Promise.all(created.map((id) => this.removeRegistration(id)));
+      throw error48;
+    }
+  }
+  async unregister(params) {
+    const { unregisterations } = external_exports3.object({ unregisterations: external_exports3.array(external_exports3.object({ id: external_exports3.string(), method: external_exports3.string() })) }).parse(params);
+    for (const entry of unregisterations) {
+      const registration = this.registrations.get(entry.id);
+      if (!registration || registration.method !== entry.method) throw new Error("Unknown LSP unregistration");
+    }
+    await Promise.all(unregisterations.map((entry) => this.removeRegistration(entry.id)));
+  }
+  async removeRegistration(id) {
+    const registration = this.registrations.get(id);
+    this.registrations.delete(id);
+    await Promise.all((registration?.watchers ?? []).map(async (watcher) => {
+      await watcher.close();
+      this.registeredWatchers.delete(watcher);
+    }));
+  }
+  async waitForWatchers() {
+    await Promise.all([...this.readiness]);
+    if (this.watcherError) throw this.watcherError;
+  }
+  async flushFileEvents() {
+    if (this.closed) throw new Error("Document session is closed");
+    await this.waitForWatchers();
+    await Promise.all([...this.registeredWatchers].map((watcher) => watcher.flush()));
+    if (this.watcherError) throw this.watcherError;
+    if (this.events.size) {
+      const changes = [...this.events.values()];
+      this.events.clear();
+      this.notify("workspace/didChangeWatchedFiles", { changes });
+    }
+  }
+  deleted(uri) {
+    this.notify("textDocument/didClose", { textDocument: { uri } });
+    this.documents.delete(uri);
+    this.revision++;
+    this.enqueue(uriToPath(uri), 3);
+  }
+  changed(uri, state, content) {
+    if (state.content === content) return;
+    if (!this.syncKind) throw new Error("LSP server does not support document changes");
+    const version2 = state.version + 1;
+    const change = this.syncKind === 2 ? { range: { start: { line: 0, character: 0 }, end: endPosition(state.content) }, text: content } : { text: content };
+    this.notify("textDocument/didChange", { textDocument: { uri, version: version2 }, contentChanges: [change] });
+    this.documents.set(uri, { version: version2, content });
+    this.revision++;
+  }
+  async sync(file2) {
+    const uri = pathToUri(file2);
+    await this.flushFileEvents();
+    for (const [openUri, state2] of this.documents) {
+      let content2;
+      try {
+        content2 = await readFile(uriToPath(openUri), "utf8");
+      } catch (error48) {
+        if (error48.code !== "ENOENT") throw error48;
+        this.deleted(openUri);
+        continue;
+      }
+      this.changed(openUri, state2, content2);
+    }
+    await this.flushFileEvents();
+    const content = await readFile(file2, "utf8");
+    for (const watcher of this.registeredWatchers) watcher.noteFile(file2);
+    const state = this.documents.get(uri);
+    if (state) this.changed(uri, state, content);
+    else {
+      const extension = extname2(file2);
+      const languageId = extension === ".tsx" ? "typescriptreact" : extension === ".jsx" ? "javascriptreact" : [".js", ".mjs", ".cjs"].includes(extension) ? "javascript" : "typescript";
+      this.notify("textDocument/didOpen", { textDocument: { uri, languageId, version: 1, text: content } });
+      this.documents.set(uri, { version: 1, content });
+      this.revision++;
+    }
+    return content;
+  }
+  close() {
+    if (this.closing) return this.closing;
+    this.closed = true;
+    for (const settle of this.settleReady.values()) settle();
+    this.closing = Promise.all([...this.watchers, ...this.registeredWatchers].map((watcher) => watcher.close())).then(() => {
+      this.watchers.clear();
+      this.registeredWatchers.clear();
+      this.documents.clear();
+      this.events.clear();
+      for (const registration of this.registrations.values()) registration.watchers = [];
+    });
+    return this.closing;
+  }
+};
+
+// src/protocol.ts
+var positionSchema = external_exports3.object({ line: external_exports3.number().int().nonnegative(), character: external_exports3.number().int().nonnegative() });
+var rangeSchema = external_exports3.object({ start: positionSchema, end: positionSchema }).refine((r) => r.start.line < r.end.line || r.start.line === r.end.line && r.start.character <= r.end.character, "Invalid range");
 var locationSchema = external_exports3.object({ uri: external_exports3.string(), range: rangeSchema });
-var diagnosticItemSchema = external_exports3.object({
-  range: rangeSchema,
-  severity: external_exports3.number().optional(),
-  code: external_exports3.union([external_exports3.number(), external_exports3.string()]).optional(),
-  source: external_exports3.string().optional(),
-  message: external_exports3.string()
-});
+var diagnosticItemSchema = external_exports3.object({ range: rangeSchema, severity: external_exports3.number().int().min(1).max(4).optional(), code: external_exports3.union([external_exports3.number(), external_exports3.string()]).optional(), source: external_exports3.string().optional(), message: external_exports3.string() });
 var textEditSchema = external_exports3.object({ range: rangeSchema, newText: external_exports3.string() });
 var SEVERITY_LABELS = ["", "error", "warning", "info", "hint"];
 var SYMBOL_KIND_LABELS = {
@@ -30549,19 +34518,115 @@ var INLAY_HINT_KIND_LABELS = {
   1: "type",
   2: "parameter"
 };
+function parseLocations(value) {
+  if (value === null) return [];
+  return (Array.isArray(value) ? value : [value]).map((item) => {
+    const loc = locationSchema.safeParse(item);
+    if (loc.success) return { file: uriToPath(loc.data.uri), ...loc.data.range.start };
+    const link = external_exports3.object({ targetUri: external_exports3.string(), targetRange: rangeSchema, targetSelectionRange: rangeSchema.optional() }).safeParse(item);
+    if (!link.success) throw new Error("Invalid LSP protocol location response");
+    return { file: uriToPath(link.data.targetUri), ...(link.data.targetSelectionRange ?? link.data.targetRange).start };
+  });
+}
+function parseSymbols(value, file2) {
+  if (value === null) return [];
+  if (!Array.isArray(value)) throw new Error("Invalid LSP protocol symbol response");
+  const seen = /* @__PURE__ */ new WeakSet();
+  const parseNested = (item) => {
+    const parsed = external_exports3.object({ name: external_exports3.string(), kind: external_exports3.number().int(), range: rangeSchema, selectionRange: rangeSchema, children: external_exports3.array(external_exports3.unknown()).optional() }).safeParse(item);
+    if (!parsed.success || seen.has(item)) throw new Error("Invalid or cyclic LSP protocol document symbol");
+    seen.add(item);
+    return { name: parsed.data.name, kind: SYMBOL_KIND_LABELS[parsed.data.kind] ?? `kind(${parsed.data.kind})`, ...parsed.data.selectionRange.start, children: (parsed.data.children ?? []).map(parseNested) };
+  };
+  if (value.some((item) => item && typeof item === "object" && "selectionRange" in item)) return value.map(parseNested);
+  const entries = value.map((item) => {
+    const parsed = external_exports3.object({ name: external_exports3.string(), kind: external_exports3.number().int(), location: locationSchema, containerName: external_exports3.string().optional() }).safeParse(item);
+    if (!parsed.success) throw new Error("Invalid LSP protocol symbol information");
+    const data = parsed.data;
+    return { ...data, file: uriToPath(data.location.uri), symbol: { name: data.name, kind: SYMBOL_KIND_LABELS[data.kind] ?? `kind(${data.kind})`, ...data.location.range.start, children: [] } };
+  });
+  const roots = [];
+  const parents = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    const candidates = entries.filter((parent2) => parent2 !== entry && parent2.name === entry.containerName && parent2.file === entry.file);
+    const parent = candidates.length === 1 ? candidates[0] : void 0;
+    let ancestor = parent?.symbol;
+    const visited = /* @__PURE__ */ new Set([entry.symbol]);
+    while (ancestor && !visited.has(ancestor)) {
+      visited.add(ancestor);
+      ancestor = parents.get(ancestor);
+    }
+    if (entry.file === file2 && parent && !ancestor) {
+      parent.symbol.children.push(entry.symbol);
+      parents.set(entry.symbol, parent.symbol);
+    } else roots.push(entry.symbol);
+  }
+  return roots;
+}
+var CAPABILITIES = {
+  "textDocument/hover": "hoverProvider",
+  "textDocument/definition": "definitionProvider",
+  "textDocument/diagnostic": "diagnosticProvider",
+  "textDocument/codeAction": "codeActionProvider",
+  "textDocument/documentSymbol": "documentSymbolProvider",
+  "textDocument/rename": "renameProvider",
+  "textDocument/inlayHint": "inlayHintProvider",
+  "textDocument/references": "referencesProvider",
+  "workspace/symbol": "workspaceSymbolProvider",
+  "textDocument/implementation": "implementationProvider",
+  "textDocument/prepareCallHierarchy": "callHierarchyProvider",
+  "callHierarchy/incomingCalls": "callHierarchyProvider",
+  "callHierarchy/outgoingCalls": "callHierarchyProvider"
+};
+function requireCapability(method, capabilities) {
+  const key = CAPABILITIES[method];
+  const value = key && capabilities[key];
+  if (!key || !(value === true || value !== null && typeof value === "object" && !Array.isArray(value))) throw new Error(`Missing LSP capability for ${method}`);
+}
+function configurationResults(params) {
+  const parsed = external_exports3.object({ items: external_exports3.array(external_exports3.object({ section: external_exports3.string().optional(), scopeUri: external_exports3.string().optional() })) }).parse(params);
+  return parsed.items.map(({ section }) => {
+    if (section === "editor") return { tabSize: 2, insertSpaces: true };
+    if (!["js/ts", "typescript", "javascript"].includes(section ?? "")) return null;
+    return { inlayHints: { parameterNames: { enabled: "all" }, variableTypes: { enabled: true }, functionLikeReturnTypes: { enabled: true } }, tsserver: { automaticTypeAcquisition: { enabled: false } }, disableAutomaticTypeAcquisition: true };
+  });
+}
+function parseWorkspaceEdit(value) {
+  if (value === null) return [];
+  const parsed = external_exports3.object({ changes: external_exports3.record(external_exports3.string(), external_exports3.array(textEditSchema)).optional(), documentChanges: external_exports3.array(external_exports3.object({ textDocument: external_exports3.object({ uri: external_exports3.string(), version: external_exports3.number().nullable().optional() }), edits: external_exports3.array(textEditSchema) })).optional() }).safeParse(value);
+  if (!parsed.success) throw new Error("Invalid LSP protocol workspace edit");
+  const groups = [...Object.entries(parsed.data.changes ?? {}), ...(parsed.data.documentChanges ?? []).map((change) => [change.textDocument.uri, change.edits])];
+  return groups.flatMap(([uri, edits]) => edits.map((edit) => ({ file: uriToPath(uri), startLine: edit.range.start.line, startCharacter: edit.range.start.character, endLine: edit.range.end.line, endCharacter: edit.range.end.character, newText: edit.newText })));
+}
+
+// src/lsp-client.ts
+var REQUEST_TIMEOUT_MS = 3e4;
+var jsonRpcMessageSchema = external_exports3.object({
+  jsonrpc: external_exports3.literal("2.0"),
+  id: external_exports3.union([external_exports3.number(), external_exports3.string()]).optional(),
+  method: external_exports3.string().optional(),
+  params: external_exports3.unknown().optional(),
+  result: external_exports3.unknown().optional(),
+  error: external_exports3.object({
+    code: external_exports3.number(),
+    message: external_exports3.string(),
+    data: external_exports3.unknown().optional()
+  }).optional()
+});
 var LspClient = class _LspClient {
   constructor(binaryPath, rootUri, options) {
     this.rootUri = rootUri;
     this.requestTimeoutMs = options.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
     this.shutdownTimeoutMs = options.shutdownTimeoutMs ?? 2e3;
-    const projectRoot = fileURLToPath(rootUri);
+    const projectRoot = this.projectRoot = uriToPath(rootUri);
     this.proc = options.spawnProcess ? options.spawnProcess(binaryPath, projectRoot) : spawn(binaryPath, ["--lsp", "--stdio"], { cwd: projectRoot, stdio: "pipe", shell: false });
-    this.closed = new Promise((resolve2) => {
+    this.documentSession = new DocumentSession(projectRoot, (method, params) => this.sendNotification(method, params));
+    this.closed = new Promise((resolve5) => {
       this.proc.once("close", () => {
         this.alive = false;
         this.rejectPending(new Error("TypeScript process closed"));
         this.removeAbortListener();
-        resolve2();
+        resolve5();
       });
     });
     this.proc.once("error", (error48) => this.failTransport(error48));
@@ -30605,7 +34670,10 @@ var LspClient = class _LspClient {
   nextId = 1;
   pending = /* @__PURE__ */ new Map();
   buffer = Buffer.alloc(0);
-  documents = /* @__PURE__ */ new Map();
+  projectRoot;
+  documentSession;
+  capabilities = {};
+  diagnosticCache = /* @__PURE__ */ new Map();
   alive = true;
   closing = false;
   shutdownPromise;
@@ -30640,13 +34708,15 @@ var LspClient = class _LspClient {
   async hover(filePath, line, character, options) {
     if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
-    await this.ensureDocumentOpen(filePath, uri);
+    const content = await this.prepareDocument(filePath);
+    positionToOffset(content, { line, character });
     const result = await this.sendRequest("textDocument/hover", {
       textDocument: { uri },
       position: { line, character }
     }, options);
     const parsed = external_exports3.object({ contents: external_exports3.unknown() }).safeParse(result);
-    if (!parsed.success) return null;
+    if (result === null) return null;
+    if (!parsed.success) throw new Error("Invalid LSP protocol hover response");
     return formatHoverContents(parsed.data.contents);
   }
   /**
@@ -30659,7 +34729,8 @@ var LspClient = class _LspClient {
   async definition(filePath, line, character, options) {
     if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
-    await this.ensureDocumentOpen(filePath, uri);
+    const content = await this.prepareDocument(filePath);
+    positionToOffset(content, { line, character });
     const result = await this.sendRequest("textDocument/definition", {
       textDocument: { uri },
       position: { line, character }
@@ -30674,16 +34745,23 @@ var LspClient = class _LspClient {
   async diagnostics(filePath, options) {
     if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
-    await this.ensureDocumentOpen(filePath, uri);
+    await this.prepareDocument(filePath);
+    const cached2 = this.diagnosticCache.get(uri);
     const result = await this.sendRequest("textDocument/diagnostic", {
-      textDocument: { uri }
+      textDocument: { uri },
+      ...cached2?.resultId ? { previousResultId: cached2.resultId } : {}
     }, options);
-    const parsed = external_exports3.object({
-      kind: external_exports3.string(),
-      items: external_exports3.array(diagnosticItemSchema)
-    }).safeParse(result);
-    if (!parsed.success) return [];
-    return parsed.data.items.map(({ code, message: message2, range, severity }) => ({
+    const parsed = external_exports3.discriminatedUnion("kind", [
+      external_exports3.object({ kind: external_exports3.literal("full"), resultId: external_exports3.string().optional(), items: external_exports3.array(diagnosticItemSchema) }),
+      external_exports3.object({ kind: external_exports3.literal("unchanged"), resultId: external_exports3.string() })
+    ]).safeParse(result);
+    if (!parsed.success) throw new Error("Invalid LSP protocol diagnostic report");
+    if (parsed.data.kind === "unchanged") {
+      if (!cached2) throw new Error("LSP unchanged diagnostic report has no cached result");
+      this.diagnosticCache.set(uri, { ...cached2, resultId: parsed.data.resultId });
+      return cached2.items;
+    }
+    const items = parsed.data.items.map(({ code, message: message2, range, severity }) => ({
       line: range.start.line,
       character: range.start.character,
       endLine: range.end.line,
@@ -30692,6 +34770,8 @@ var LspClient = class _LspClient {
       message: message2,
       code
     }));
+    this.diagnosticCache.set(uri, { resultId: parsed.data.resultId, items });
+    return items;
   }
   /**
    * Get code actions for a range, optionally scoped to specific diagnostics
@@ -30709,7 +34789,9 @@ var LspClient = class _LspClient {
   async codeActions(filePath, range, diagnostics = [], options) {
     if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
-    await this.ensureDocumentOpen(filePath, uri);
+    const content = await this.prepareDocument(filePath);
+    positionToOffset(content, range.start);
+    positionToOffset(content, range.end);
     const result = await this.sendRequest("textDocument/codeAction", {
       textDocument: { uri },
       range,
@@ -30735,7 +34817,8 @@ var LspClient = class _LspClient {
         )
       }
     }, options);
-    if (!Array.isArray(result)) return [];
+    if (result === null) return [];
+    if (!Array.isArray(result)) throw new Error("Invalid LSP protocol array response");
     const actions = [];
     for (const item of result) {
       const parsed = external_exports3.object({
@@ -30743,10 +34826,12 @@ var LspClient = class _LspClient {
         kind: external_exports3.string().optional(),
         diagnostics: external_exports3.array(diagnosticItemSchema).optional(),
         edit: external_exports3.object({
-          changes: external_exports3.record(external_exports3.string(), external_exports3.array(textEditSchema)).optional()
+          changes: external_exports3.record(external_exports3.string(), external_exports3.array(textEditSchema)).optional(),
+          documentChanges: external_exports3.array(external_exports3.unknown()).optional()
         }).optional()
       }).safeParse(item);
-      if (!parsed.success || !parsed.data.edit) continue;
+      if (!parsed.success) throw new Error("Invalid LSP protocol code action");
+      if (!parsed.data.edit) continue;
       actions.push({
         title: parsed.data.title,
         kind: parsed.data.kind,
@@ -30763,14 +34848,13 @@ var LspClient = class _LspClient {
   async documentSymbols(filePath, options) {
     if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
-    await this.ensureDocumentOpen(filePath, uri);
+    await this.prepareDocument(filePath);
     const result = await this.sendRequest(
       "textDocument/documentSymbol",
       { textDocument: { uri } },
       options
     );
-    if (!Array.isArray(result)) return [];
-    return buildSymbolTree(result);
+    return parseSymbols(result, filePath);
   }
   /**
    * Rename a symbol across the project
@@ -30783,7 +34867,8 @@ var LspClient = class _LspClient {
   async rename(filePath, line, character, newName, options) {
     if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
-    await this.ensureDocumentOpen(filePath, uri);
+    const content = await this.prepareDocument(filePath);
+    positionToOffset(content, { line, character });
     const result = await this.sendRequest("textDocument/rename", {
       textDocument: { uri },
       position: { line, character },
@@ -30801,15 +34886,13 @@ var LspClient = class _LspClient {
   async inlayHints(filePath, startLine, endLine, options) {
     if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
-    await this.ensureDocumentOpen(filePath, uri);
+    const content = await this.prepareDocument(filePath);
     const result = await this.sendRequest("textDocument/inlayHint", {
       textDocument: { uri },
-      range: {
-        start: { line: startLine, character: 0 },
-        end: { line: endLine, character: 0 }
-      }
+      range: inlayRange(content, startLine, endLine)
     }, options);
-    if (!Array.isArray(result)) return [];
+    if (result === null) return [];
+    if (!Array.isArray(result)) throw new Error("Invalid LSP protocol array response");
     const hints = [];
     for (const item of result) {
       const parsed = external_exports3.object({
@@ -30820,7 +34903,7 @@ var LspClient = class _LspClient {
         ]),
         kind: external_exports3.number().optional()
       }).safeParse(item);
-      if (!parsed.success) continue;
+      if (!parsed.success) throw new Error("Invalid LSP protocol inlay hint");
       const label = parsed.data.label;
       hints.push({
         line: parsed.data.position.line,
@@ -30841,7 +34924,8 @@ var LspClient = class _LspClient {
   async references(filePath, line, character, options) {
     if (!this.isAlive) throw new Error("LSP client is not alive");
     const uri = pathToUri(filePath);
-    await this.ensureDocumentOpen(filePath, uri);
+    const content = await this.prepareDocument(filePath);
+    positionToOffset(content, { line, character });
     const result = await this.sendRequest("textDocument/references", {
       textDocument: { uri },
       position: { line, character },
@@ -30860,6 +34944,7 @@ var LspClient = class _LspClient {
         this.proc.kill("SIGKILL");
       }, Math.max(0, this.shutdownTimeoutMs - 50));
       try {
+        await this.documentSession.close();
         if (this.alive) {
           try {
             await this.sendRequest("shutdown", null, { timeoutMs: Math.max(1, this.shutdownTimeoutMs - 100) });
@@ -30873,7 +34958,7 @@ var LspClient = class _LspClient {
         clearTimeout(deadline);
         this.rejectPending(new Error("LSP client shut down"));
         this.buffer = Buffer.alloc(0);
-        this.documents.clear();
+        this.diagnosticCache.clear();
       }
     })();
     return this.shutdownPromise;
@@ -30884,10 +34969,13 @@ var LspClient = class _LspClient {
       rootUri: this.rootUri,
       capabilities: {
         general: { positionEncodings: ["utf-16"] },
-        textDocument: { hover: { contentFormat: ["markdown", "plaintext"] } }
+        workspace: { configuration: true, didChangeConfiguration: { dynamicRegistration: true }, didChangeWatchedFiles: { dynamicRegistration: true, relativePatternSupport: true } },
+        textDocument: { hover: { contentFormat: ["markdown", "plaintext"] }, documentSymbol: { hierarchicalDocumentSymbolSupport: true }, diagnostic: { dynamicRegistration: false } }
       }
     }, { signal });
-    const encoding = external_exports3.object({ capabilities: external_exports3.object({ positionEncoding: external_exports3.string().optional() }) }).parse(result).capabilities.positionEncoding;
+    this.capabilities = external_exports3.object({ capabilities: external_exports3.record(external_exports3.string(), external_exports3.unknown()) }).parse(result).capabilities;
+    const encoding = this.capabilities.positionEncoding;
+    this.documentSession.setSyncKind(this.capabilities.textDocumentSync ?? 0);
     if (encoding !== void 0 && encoding !== "utf-16") throw new Error(`Unsupported LSP position encoding: ${encoding}`);
     await this.send({ jsonrpc: "2.0", method: "initialized", params: {} });
   }
@@ -30904,59 +34992,20 @@ var LspClient = class _LspClient {
     this.proc.kill("SIGKILL");
     void this.shutdown();
   }
-  /**
-   * Re-read all previously opened documents from disk and push changes to
-   * TypeScript. This ensures that edits to imported/dependency files are picked
-   * up before we query a file that depends on them.
-   */
-  async refreshOpenDocuments() {
-    for (const [uri, state] of this.documents) {
-      let content;
-      try {
-        content = await readFile(uriToPath(uri), "utf-8");
-      } catch {
-        continue;
-      }
-      if (content !== state.content) {
-        const version2 = state.version + 1;
-        this.sendNotification("textDocument/didChange", {
-          textDocument: { uri, version: version2 },
-          contentChanges: [{ text: content }]
-        });
-        this.documents.set(uri, { version: version2, content });
-      }
+  snapshot;
+  /** Composite leased operations reuse one synced disk snapshot. */
+  async withDocumentSnapshot(filePath, operation) {
+    const content = await this.documentSession.sync(filePath);
+    this.snapshot = { uri: pathToUri(filePath), content };
+    try {
+      return await operation(content);
+    } finally {
+      this.snapshot = void 0;
     }
   }
-  /**
-   * Open a document in the LSP if needed, or update it if contents changed
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param uri - LSP document URI for the file.
-   */
-  async ensureDocumentOpen(filePath, uri) {
-    await this.refreshOpenDocuments();
-    const content = await readFile(filePath, "utf-8");
-    const existing = this.documents.get(uri);
-    if (!existing) {
-      this.sendNotification("textDocument/didOpen", {
-        textDocument: {
-          uri,
-          languageId: getLanguageId(filePath),
-          version: 1,
-          text: content
-        }
-      });
-      this.documents.set(uri, { version: 1, content });
-      return;
-    }
-    if (existing.content !== content) {
-      const version2 = existing.version + 1;
-      this.sendNotification("textDocument/didChange", {
-        textDocument: { uri, version: version2 },
-        contentChanges: [{ text: content }]
-      });
-      this.documents.set(uri, { version: version2, content });
-    }
+  prepareDocument(filePath) {
+    const uri = pathToUri(filePath);
+    return this.snapshot?.uri === uri ? Promise.resolve(this.snapshot.content) : this.documentSession.sync(filePath);
   }
   /**
    * Send an LSP request and await its response.
@@ -30967,7 +35016,14 @@ var LspClient = class _LspClient {
   sendRequest(method, params, options = {}) {
     if (!this.alive || this.closing && method !== "shutdown") return Promise.reject(new Error("LSP client is closed"));
     if (options.signal?.aborted) return Promise.reject(new Error(`Request "${method}" aborted`));
-    return new Promise((resolve2, reject) => {
+    if (method !== "initialize" && method !== "shutdown") {
+      try {
+        requireCapability(method, this.capabilities);
+      } catch (error48) {
+        return Promise.reject(error48);
+      }
+    }
+    return new Promise((resolve5, reject) => {
       const id = this.nextId++;
       const timeoutMs = options.timeoutMs ?? this.requestTimeoutMs;
       const cancel = (error48) => {
@@ -30984,7 +35040,7 @@ var LspClient = class _LspClient {
         clearTimeout(timer);
         options.signal?.removeEventListener("abort", abort);
       };
-      this.pending.set(id, { resolve: resolve2, reject, dispose });
+      this.pending.set(id, { resolve: resolve5, reject, dispose });
       options.signal?.addEventListener("abort", abort, { once: true });
       void this.send({ jsonrpc: "2.0", id, method, params }, () => this.pending.has(id)).catch((error48) => this.failTransport(error48));
     });
@@ -31004,8 +35060,8 @@ ${body}`;
     const write = this.writeQueue.then(() => {
       if (!shouldSend()) return;
       if (!this.alive) throw new Error("LSP transport is closed");
-      return new Promise((resolve2, reject) => {
-        this.proc.stdin.write(frame, (error48) => error48 ? reject(error48) : resolve2());
+      return new Promise((resolve5, reject) => {
+        this.proc.stdin.write(frame, (error48) => error48 ? reject(error48) : resolve5());
       });
     });
     this.writeQueue = write.catch(() => {
@@ -31064,131 +35120,33 @@ ${body}`;
       return;
     }
     if (message2.id != null && message2.method) {
-      this.sendResponse(message2.id, null);
+      void this.handleServerRequest(message2.id, message2.method, message2.params);
+    }
+  }
+  async handleServerRequest(id, method, params) {
+    try {
+      if (method === "workspace/configuration") this.sendResponse(id, configurationResults(params));
+      else if (method === "client/registerCapability") {
+        await this.documentSession.register(params);
+        this.sendResponse(id, null);
+      } else if (method === "client/unregisterCapability") {
+        await this.documentSession.unregister(params);
+        this.sendResponse(id, null);
+      } else throw new Error(`Unsupported LSP server request: ${method}`);
+    } catch (error48) {
+      void this.send({ jsonrpc: "2.0", id, error: { code: -32602, message: error48 instanceof Error ? error48.message : String(error48) } }).catch((error49) => this.failTransport(error49));
     }
   }
 };
-function pathToUri(filePath) {
-  return `file://${filePath}`;
-}
-function uriToPath(uri) {
-  return uri.replace(/^file:\/\//, "");
-}
-function parseLocations(result) {
-  if (result == null) return [];
-  const locations = [];
-  for (const item of Array.isArray(result) ? result : [result]) {
-    const loc = locationSchema.safeParse(item);
-    if (loc.success) {
-      locations.push({
-        file: uriToPath(loc.data.uri),
-        line: loc.data.range.start.line,
-        character: loc.data.range.start.character
-      });
-      continue;
-    }
-    const link = external_exports3.object({
-      targetUri: external_exports3.string(),
-      targetRange: rangeSchema,
-      targetSelectionRange: rangeSchema.optional()
-    }).safeParse(item);
-    if (link.success) {
-      const range = link.data.targetSelectionRange ?? link.data.targetRange;
-      locations.push({
-        file: uriToPath(link.data.targetUri),
-        line: range.start.line,
-        character: range.start.character
-      });
-    }
-  }
-  return locations;
-}
-function buildSymbolTree(items) {
-  const flat = [];
-  for (const item of items) {
-    const parsed = external_exports3.object({
-      name: external_exports3.string(),
-      kind: external_exports3.number(),
-      containerName: external_exports3.string().optional(),
-      location: locationSchema
-    }).safeParse(item);
-    if (!parsed.success) continue;
-    flat.push({
-      symbol: {
-        name: parsed.data.name,
-        kind: SYMBOL_KIND_LABELS[parsed.data.kind] ?? `kind(${parsed.data.kind})`,
-        line: parsed.data.location.range.start.line,
-        character: parsed.data.location.range.start.character,
-        children: []
-      },
-      containerName: parsed.data.containerName
-    });
-  }
-  const byName = /* @__PURE__ */ new Map();
-  for (const entry of flat) {
-    if (!byName.has(entry.symbol.name)) {
-      byName.set(entry.symbol.name, entry.symbol);
-    }
-  }
-  const roots = [];
-  for (const entry of flat) {
-    const parent = entry.containerName ? byName.get(entry.containerName) : void 0;
-    if (parent) {
-      parent.children.push(entry.symbol);
-    } else {
-      roots.push(entry.symbol);
-    }
-  }
-  return roots;
-}
-function parseWorkspaceEdit(result) {
-  const parsed = external_exports3.object({
-    changes: external_exports3.record(external_exports3.string(), external_exports3.array(textEditSchema)).optional()
-  }).safeParse(result);
-  if (!parsed.success || !parsed.data.changes) return [];
-  const edits = [];
-  for (const [editUri, textEdits] of Object.entries(parsed.data.changes)) {
-    for (const te of textEdits) {
-      edits.push({
-        file: uriToPath(editUri),
-        startLine: te.range.start.line,
-        startCharacter: te.range.start.character,
-        endLine: te.range.end.line,
-        endCharacter: te.range.end.character,
-        newText: te.newText
-      });
-    }
-  }
-  return edits;
-}
-function getLanguageId(filePath) {
-  switch (extname(filePath)) {
-    case ".ts":
-    case ".mts":
-    case ".cts":
-      return "typescript";
-    case ".tsx":
-      return "typescriptreact";
-    case ".js":
-    case ".mjs":
-    case ".cjs":
-      return "javascript";
-    case ".jsx":
-      return "javascriptreact";
-    default:
-      return "typescript";
-  }
-}
 function formatHoverContents(contents) {
-  const str = external_exports3.string().safeParse(contents);
-  if (str.success) return str.data;
+  if (typeof contents === "string") return contents;
   if (Array.isArray(contents)) {
-    const parts = contents.map(formatHoverContents).filter(Boolean);
-    return parts.length > 0 ? parts.join("\n\n") : null;
+    if (contents.some(Array.isArray)) throw new Error("Invalid LSP protocol hover contents");
+    return contents.map(formatHoverContents).join("\n\n");
   }
   const markup = external_exports3.object({ value: external_exports3.string() }).safeParse(contents);
   if (markup.success) return markup.data.value;
-  return null;
+  throw new Error("Invalid LSP protocol hover contents");
 }
 
 // src/pool.ts
@@ -31209,6 +35167,7 @@ var TypeScriptPool = class {
   /** Keep a lease through initialization, queueing and the complete operation. */
   withClient(filePath, operation) {
     if (this.closed) return Promise.reject(new Error("TypeScript pool is closed"));
+    pathToUri(filePath);
     const root = findProjectRoot(filePath);
     let entry = this.entries.get(root);
     if (entry?.client && !entry.client.isAlive) {
@@ -31226,7 +35185,7 @@ var TypeScriptPool = class {
         initialization: Promise.resolve().then(async () => {
           const binary = await this.resolveBinary(controller.signal);
           if (this.closed || controller.signal.aborted) throw new Error("TypeScript pool initialization aborted");
-          const client = await this.createClient(binary, pathToFileURL(root).href, { signal: controller.signal });
+          const client = await this.createClient(binary, pathToUri(root), { signal: controller.signal });
           if (this.closed || controller.signal.aborted) {
             await client.shutdown();
             throw new Error("TypeScript pool initialization aborted");
@@ -31267,7 +35226,7 @@ var TypeScriptPool = class {
     });
   }
   hoverWithDefinition(filePath, line, character) {
-    return this.withClient(filePath, async (client) => {
+    return this.withClient(filePath, (client) => client.withDocumentSnapshot(filePath, async () => {
       let failed = false;
       let firstError;
       const captureFailure = (error48) => {
@@ -31283,14 +35242,14 @@ var TypeScriptPool = class {
       ]);
       if (hover.status === "rejected" || definitions.status === "rejected") throw firstError;
       return { hover: hover.value, definition: definitions.value[0] ?? null };
-    });
+    }));
   }
   diagnosticsWithFixes(filePath) {
-    return this.withClient(filePath, async (client) => {
+    return this.withClient(filePath, (client) => client.withDocumentSnapshot(filePath, async (content) => {
       const diagnostics = await client.diagnostics(filePath);
-      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: { line: 1e6, character: 0 } }, diagnostics);
+      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: endPosition(content) }, diagnostics);
       return { diagnostics, actions };
-    });
+    }));
   }
   references(filePath, line, character) {
     return this.withClient(filePath, (client) => client.references(filePath, line, character));
@@ -31333,21 +35292,21 @@ var TypeScriptPool = class {
   }
 };
 function findProjectRoot(filePath) {
-  let dir = dirname(filePath);
+  let dir = dirname4(filePath);
   for (; ; ) {
-    if (existsSync(join(dir, "tsconfig.json"))) return dir;
-    const parent = dirname(dir);
+    if (existsSync2(join4(dir, "tsconfig.json"))) return dir;
+    const parent = dirname4(dir);
     if (parent === dir) break;
     dir = parent;
   }
-  return dirname(filePath);
+  return dirname4(filePath);
 }
 
 // src/resolve-binary.ts
 import { spawn as spawn2 } from "node:child_process";
 import { constants } from "node:fs";
-import { access, open, realpath, stat } from "node:fs/promises";
-import { dirname as dirname2, isAbsolute, join as join2, normalize, relative, resolve, sep } from "node:path";
+import { access, open as open2, realpath as realpath2, stat as stat4 } from "node:fs/promises";
+import { dirname as dirname5, isAbsolute as isAbsolute4, join as join5, normalize as normalize2, relative as relative6, resolve as resolve4, sep as sep4 } from "node:path";
 var GUIDANCE = "Install TypeScript 7+ globally and add tsc to PATH, or set TSC_PATH to its absolute native binary path.";
 async function resolveTscBinary(options = {}) {
   options.signal?.throwIfAborted();
@@ -31362,7 +35321,7 @@ async function discoverTscBinary(options = {}) {
   const arch = options.arch ?? process.arch;
   if (env.TSC_PATH) {
     try {
-      if (!isAbsolute(env.TSC_PATH)) throw new Error("TSC_PATH must be absolute");
+      if (!isAbsolute4(env.TSC_PATH)) throw new Error("TSC_PATH must be absolute");
       return await nativeBinary(env.TSC_PATH, platform);
     } catch (error48) {
       throw new Error(`Invalid TSC_PATH: ${message(error48)}. ${GUIDANCE}`, { cause: error48 });
@@ -31372,20 +35331,20 @@ async function discoverTscBinary(options = {}) {
   const names = platform === "win32" ? ["tsc.exe", "tsc.cmd", "tsc", "tsc.ps1"] : ["tsc"];
   for (const entry of path.split(platform === "win32" ? ";" : ":")) {
     const rawDirectory = entry.replace(/^"(.*)"$/, "$1");
-    if (!isAbsolute(rawDirectory)) continue;
-    const normalizedDirectory = normalize(rawDirectory);
+    if (!isAbsolute4(rawDirectory)) continue;
+    const normalizedDirectory = normalize2(rawDirectory);
     let directory;
     try {
-      directory = await realpath(normalizedDirectory);
+      directory = await realpath2(normalizedDirectory);
     } catch {
       continue;
     }
     const localBin = /(?:^|[\\/])node_modules[\\/]\.bin[\\/]?$/i;
     if (localBin.test(normalizedDirectory) || localBin.test(directory)) continue;
     for (const name of names) {
-      const launcher = join2(directory, name);
+      const launcher = join5(directory, name);
       try {
-        await stat(launcher);
+        await stat4(launcher);
       } catch {
         continue;
       }
@@ -31399,11 +35358,11 @@ async function discoverTscBinary(options = {}) {
   throw new Error(`Could not find TypeScript 7+ on PATH. ${GUIDANCE}`);
 }
 async function nativeFromLauncher(launcher, platform, arch) {
-  const target = await realpath(launcher);
+  const target = await realpath2(launcher);
   if (await hasNativeHeader(target, platform)) return nativeBinary(target, platform);
   let script = target;
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) {
-    const file2 = await open(target, "r");
+    const file2 = await open2(target, "r");
     let text;
     try {
       const buffer = Buffer.alloc(64 * 1024);
@@ -31414,40 +35373,40 @@ async function nativeFromLauncher(launcher, platform, arch) {
     }
     const reference = text.match(/["'](?:%dp0%|%~dp0|\$basedir|\$\{basedir\}|\$PSScriptRoot)[\\/]((?:\.\.[\\/])?(?:lib[\\/])?node_modules[\\/]typescript[\\/]bin[\\/]tsc)["']/i)?.[1];
     if (!reference) throw new Error("tsc is not a standard TypeScript npm launcher or native executable");
-    script = await realpath(resolve(dirname2(target), reference.replaceAll("\\", "/")));
+    script = await realpath2(resolve4(dirname5(target), reference.replaceAll("\\", "/")));
   }
   if (!/[\\/]typescript[\\/]bin[\\/]tsc$/.test(script)) throw new Error("npm launcher does not target typescript/bin/tsc");
-  const packageRoot = dirname2(dirname2(script));
-  const installationRoot = await realpath(dirname2(packageRoot));
+  const packageRoot = dirname5(dirname5(script));
+  const installationRoot = await realpath2(dirname5(packageRoot));
   const nativePackage = `@typescript/typescript-${platform}-${arch}`;
-  for (const nativeRoot of [join2(packageRoot, "node_modules", nativePackage), join2(dirname2(packageRoot), nativePackage)]) {
+  for (const nativeRoot of [join5(packageRoot, "node_modules", nativePackage), join5(dirname5(packageRoot), nativePackage)]) {
     try {
-      await stat(join2(nativeRoot, "package.json"));
+      await stat4(join5(nativeRoot, "package.json"));
     } catch {
       continue;
     }
-    const canonicalRoot = await realpath(nativeRoot);
+    const canonicalRoot = await realpath2(nativeRoot);
     requireInInstallation(installationRoot, canonicalRoot);
-    const binary = await realpath(join2(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"));
+    const binary = await realpath2(join5(canonicalRoot, "lib", platform === "win32" ? "tsc.exe" : "tsc"));
     requireInInstallation(installationRoot, binary);
     return nativeBinary(binary, platform);
   }
   throw new Error(`Global TypeScript installation is missing native package ${nativePackage}`);
 }
 function requireInInstallation(installationRoot, target) {
-  const path = relative(installationRoot, target);
-  if (path === ".." || path.startsWith(`..${sep}`) || isAbsolute(path)) {
+  const path = relative6(installationRoot, target);
+  if (path === ".." || path.startsWith(`..${sep4}`) || isAbsolute4(path)) {
     throw new Error(`Native TypeScript target "${target}" is outside the global installation "${installationRoot}"`);
   }
 }
 async function nativeBinary(path, platform) {
   let binary;
   try {
-    binary = await realpath(path);
+    binary = await realpath2(path);
   } catch {
     throw new Error(`binary "${path}" does not exist`);
   }
-  if (!(await stat(binary)).isFile()) throw new Error("binary must be a file");
+  if (!(await stat4(binary)).isFile()) throw new Error("binary must be a file");
   if (platform !== "win32") {
     try {
       await access(binary, constants.X_OK);
@@ -31459,7 +35418,7 @@ async function nativeBinary(path, platform) {
   return binary;
 }
 async function hasNativeHeader(path, platform) {
-  const file2 = await open(path, "r");
+  const file2 = await open2(path, "r");
   try {
     const header = Buffer.alloc(64);
     const { bytesRead } = await file2.read(header, 0, header.length, 0);
@@ -31478,7 +35437,7 @@ async function hasNativeHeader(path, platform) {
 }
 async function probeVersion(binary, env, timeoutMs, signal) {
   signal?.throwIfAborted();
-  await new Promise((resolve2, reject) => {
+  await new Promise((resolve5, reject) => {
     const child = spawn2(binary, ["--version"], { env, stdio: ["ignore", "pipe", "pipe"], shell: false });
     let stdout = "";
     let stderr = "";
@@ -31523,7 +35482,7 @@ async function probeVersion(binary, env, timeoutMs, signal) {
         reject(new Error(`Expected TypeScript 7+ native compiler; version probe returned ${JSON.stringify((stdout || stderr).trim())} (exit ${code}). ${GUIDANCE}`));
         return;
       }
-      resolve2();
+      resolve5();
     });
   });
 }
@@ -31810,3 +35769,8 @@ try {
 } catch {
   await cleanup(1);
 }
+/*! Bundled license information:
+
+chokidar/esm/index.js:
+  (*! chokidar - MIT License (c) 2012 Paul Miller (paulmillr.com) *)
+*/

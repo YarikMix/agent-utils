@@ -17,7 +17,7 @@ test('pinned standalone import has metadata, six tools and real native hover', a
   assert.equal(pkg.version, '1.1.0');
   assert.match(upstream, /039e5f38503eb5ace3a82a4a55fb6d5e7dce3ce1/);
   assert.match(license, /Copyright \(c\) Zach Sents/);
-  assert.equal(pkg.dependencies['@modelcontextprotocol/sdk'], '1.27.1');
+  assert.equal(pkg.dependencies['@modelcontextprotocol/sdk'], '1.32.1');
   assert.equal(pkg.dependencies.zod, '4.3.6');
   assert.equal(pkg.devDependencies.typescript, '7.0.2');
   assert.equal(pkg.devDependencies.esbuild, '0.28.2');

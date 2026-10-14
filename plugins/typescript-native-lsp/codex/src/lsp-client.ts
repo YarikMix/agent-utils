@@ -1,8 +1,9 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process"
-import { readFile } from "node:fs/promises"
-import { extname } from "node:path"
-import { fileURLToPath } from "node:url"
 import { z } from "zod"
+import { DocumentSession } from "./documents.ts"
+import { inlayRange, pathToUri, positionToOffset, uriToPath } from "./files.ts"
+import { configurationResults, diagnosticItemSchema, INLAY_HINT_KIND_LABELS, parseLocations, parseSymbols, parseWorkspaceEdit, positionSchema, requireCapability, SEVERITY_LABELS, textEditSchema, type LspCodeAction, type LspDiagnostic, type LspInlayHint, type LspLocation, type LspSymbol, type LspTextEdit } from "./protocol.ts"
+export type { LspCodeAction, LspDiagnostic, LspInlayHint, LspLocation, LspSymbol, LspTextEdit, Position, Range } from "./protocol.ts"
 
 const REQUEST_TIMEOUT_MS = 30_000
 
@@ -22,96 +23,6 @@ const jsonRpcMessageSchema = z.object({
     .optional(),
 })
 
-/** Shared LSP position shape. */
-const positionSchema = z.object({ line: z.number(), character: z.number() })
-const rangeSchema = z.object({ start: positionSchema, end: positionSchema })
-
-/** Location shape returned by definition and reference requests. */
-const locationSchema = z.object({ uri: z.string(), range: rangeSchema })
-
-/** Diagnostic item shape returned by TypeScript. */
-const diagnosticItemSchema = z.object({
-  range: rangeSchema,
-  severity: z.number().optional(),
-  code: z.union([z.number(), z.string()]).optional(),
-  source: z.string().optional(),
-  message: z.string(),
-})
-
-/** Text-edit shape shared by code actions and workspace edits. */
-const textEditSchema = z.object({ range: rangeSchema, newText: z.string() })
-
-export interface LspLocation {
-  file: string
-  line: number
-  character: number
-}
-
-const SEVERITY_LABELS = ["", "error", "warning", "info", "hint"] as const
-
-export interface LspDiagnostic {
-  line: number
-  character: number
-  endLine: number
-  endCharacter: number
-  severity: (typeof SEVERITY_LABELS)[number]
-  message: string
-  code?: number | string
-}
-
-export interface LspTextEdit {
-  file: string
-  startLine: number
-  startCharacter: number
-  endLine: number
-  endCharacter: number
-  newText: string
-}
-
-export interface LspCodeAction {
-  title: string
-  kind?: string
-  edits: LspTextEdit[]
-}
-
-const SYMBOL_KIND_LABELS: Record<number, string> = {
-  1: "file",
-  2: "module",
-  3: "namespace",
-  5: "class",
-  6: "method",
-  7: "property",
-  8: "field",
-  9: "constructor",
-  10: "enum",
-  11: "interface",
-  12: "function",
-  13: "variable",
-  14: "constant",
-  22: "enum member",
-  26: "type parameter",
-}
-
-export interface LspSymbol {
-  name: string
-  kind: string
-  line: number
-  character: number
-  children: LspSymbol[]
-}
-
-const INLAY_HINT_KIND_LABELS: Record<number, string> = {
-  1: "type",
-  2: "parameter",
-}
-
-export interface LspInlayHint {
-  line: number
-  character: number
-  text: string
-  kind: string
-}
-
 export interface RequestOptions {
   signal?: AbortSignal
   timeoutMs?: number
@@ -130,11 +41,6 @@ interface PendingRequest {
   dispose: () => void
 }
 
-interface DocumentState {
-  version: number
-  content: string
-}
-
 /**
  * LSP JSON-RPC client that communicates with a TypeScript process over stdio.
  * Handles Content-Length message framing, request/response correlation,
@@ -146,7 +52,10 @@ export class LspClient {
   private nextId = 1
   private pending = new Map<number, PendingRequest>()
   private buffer = Buffer.alloc(0)
-  private documents = new Map<string, DocumentState>()
+  readonly projectRoot: string
+  readonly documentSession: DocumentSession
+  private capabilities: Record<string, unknown> = {}
+  private diagnosticCache = new Map<string, { resultId?: string; items: LspDiagnostic[] }>()
   private alive = true
   private closing = false
   private shutdownPromise?: Promise<void>
@@ -159,10 +68,11 @@ export class LspClient {
   private constructor(binaryPath: string, private rootUri: string, options: ClientOptions) {
     this.requestTimeoutMs = options.requestTimeoutMs ?? REQUEST_TIMEOUT_MS
     this.shutdownTimeoutMs = options.shutdownTimeoutMs ?? 2000
-    const projectRoot = fileURLToPath(rootUri)
+    const projectRoot = this.projectRoot = uriToPath(rootUri)
     this.proc = options.spawnProcess
       ? options.spawnProcess(binaryPath, projectRoot)
       : spawn(binaryPath, ["--lsp", "--stdio"], { cwd: projectRoot, stdio: "pipe", shell: false })
+    this.documentSession = new DocumentSession(projectRoot, (method, params) => this.sendNotification(method, params))
     this.closed = new Promise(resolve => {
       this.proc.once("close", () => {
         this.alive = false
@@ -237,15 +147,17 @@ export class LspClient {
     if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
-    await this.ensureDocumentOpen(filePath, uri)
+    const content = await this.prepareDocument(filePath)
 
+    positionToOffset(content, { line, character })
     const result: unknown = await this.sendRequest("textDocument/hover", {
       textDocument: { uri },
       position: { line, character },
     }, options)
 
     const parsed = z.object({ contents: z.unknown() }).safeParse(result)
-    if (!parsed.success) return null
+    if (result === null) return null
+    if (!parsed.success) throw new Error("Invalid LSP protocol hover response")
 
     return formatHoverContents(parsed.data.contents)
   }
@@ -266,8 +178,9 @@ export class LspClient {
     if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
-    await this.ensureDocumentOpen(filePath, uri)
+    const content = await this.prepareDocument(filePath)
 
+    positionToOffset(content, { line, character })
     const result: unknown = await this.sendRequest("textDocument/definition", {
       textDocument: { uri },
       position: { line, character },
@@ -285,29 +198,29 @@ export class LspClient {
     if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
-    await this.ensureDocumentOpen(filePath, uri)
+    await this.prepareDocument(filePath)
 
-    const result: unknown = await this.sendRequest("textDocument/diagnostic", {
-      textDocument: { uri },
+    const cached = this.diagnosticCache.get(uri)
+    const result = await this.sendRequest("textDocument/diagnostic", {
+      textDocument: { uri }, ...(cached?.resultId ? { previousResultId: cached.resultId } : {}),
     }, options)
-
-    const parsed = z
-      .object({
-        kind: z.string(),
-        items: z.array(diagnosticItemSchema),
-      })
-      .safeParse(result)
-    if (!parsed.success) return []
-
-    return parsed.data.items.map(({ code, message, range, severity }) => ({
-      line: range.start.line,
-      character: range.start.character,
-      endLine: range.end.line,
-      endCharacter: range.end.character,
-      severity: SEVERITY_LABELS[severity ?? 1] ?? "error",
-      message,
-      code,
+    const parsed = z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("full"), resultId: z.string().optional(), items: z.array(diagnosticItemSchema) }),
+      z.object({ kind: z.literal("unchanged"), resultId: z.string() }),
+    ]).safeParse(result)
+    if (!parsed.success) throw new Error("Invalid LSP protocol diagnostic report")
+    if (parsed.data.kind === "unchanged") {
+      if (!cached) throw new Error("LSP unchanged diagnostic report has no cached result")
+      this.diagnosticCache.set(uri, { ...cached, resultId: parsed.data.resultId })
+      return cached.items
+    }
+    const items = parsed.data.items.map(({ code, message, range, severity }) => ({
+      line: range.start.line, character: range.start.character,
+      endLine: range.end.line, endCharacter: range.end.character,
+      severity: SEVERITY_LABELS[severity ?? 1] ?? "error", message, code,
     }))
+    this.diagnosticCache.set(uri, { resultId: parsed.data.resultId, items })
+    return items
   }
 
   /**
@@ -335,8 +248,10 @@ export class LspClient {
     if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
-    await this.ensureDocumentOpen(filePath, uri)
+    const content = await this.prepareDocument(filePath)
 
+    positionToOffset(content, range.start)
+    positionToOffset(content, range.end)
     const result: unknown = await this.sendRequest("textDocument/codeAction", {
       textDocument: { uri },
       range,
@@ -363,7 +278,8 @@ export class LspClient {
       },
     }, options)
 
-    if (!Array.isArray(result)) return []
+    if (result === null) return []
+    if (!Array.isArray(result)) throw new Error("Invalid LSP protocol array response")
 
     const actions: LspCodeAction[] = []
     for (const item of result) {
@@ -375,11 +291,13 @@ export class LspClient {
           edit: z
             .object({
               changes: z.record(z.string(), z.array(textEditSchema)).optional(),
+              documentChanges: z.array(z.unknown()).optional(),
             })
             .optional(),
         })
         .safeParse(item)
-      if (!parsed.success || !parsed.data.edit) continue
+      if (!parsed.success) throw new Error("Invalid LSP protocol code action")
+      if (!parsed.data.edit) continue
 
       actions.push({
         title: parsed.data.title,
@@ -400,7 +318,7 @@ export class LspClient {
     if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
-    await this.ensureDocumentOpen(filePath, uri)
+    await this.prepareDocument(filePath)
 
     const result: unknown = await this.sendRequest(
       "textDocument/documentSymbol",
@@ -408,9 +326,7 @@ export class LspClient {
       options,
     )
 
-    if (!Array.isArray(result)) return []
-
-    return buildSymbolTree(result)
+    return parseSymbols(result, filePath)
   }
 
   /**
@@ -431,8 +347,9 @@ export class LspClient {
     if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
-    await this.ensureDocumentOpen(filePath, uri)
+    const content = await this.prepareDocument(filePath)
 
+    positionToOffset(content, { line, character })
     const result: unknown = await this.sendRequest("textDocument/rename", {
       textDocument: { uri },
       position: { line, character },
@@ -458,17 +375,15 @@ export class LspClient {
     if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
-    await this.ensureDocumentOpen(filePath, uri)
+    const content = await this.prepareDocument(filePath)
 
     const result: unknown = await this.sendRequest("textDocument/inlayHint", {
       textDocument: { uri },
-      range: {
-        start: { line: startLine, character: 0 },
-        end: { line: endLine, character: 0 },
-      },
+      range: inlayRange(content, startLine, endLine),
     }, options)
 
-    if (!Array.isArray(result)) return []
+    if (result === null) return []
+    if (!Array.isArray(result)) throw new Error("Invalid LSP protocol array response")
 
     const hints: LspInlayHint[] = []
     for (const item of result) {
@@ -482,7 +397,7 @@ export class LspClient {
           kind: z.number().optional(),
         })
         .safeParse(item)
-      if (!parsed.success) continue
+      if (!parsed.success) throw new Error("Invalid LSP protocol inlay hint")
 
       const label = parsed.data.label
       hints.push({
@@ -515,8 +430,9 @@ export class LspClient {
     if (!this.isAlive) throw new Error("LSP client is not alive")
 
     const uri = pathToUri(filePath)
-    await this.ensureDocumentOpen(filePath, uri)
+    const content = await this.prepareDocument(filePath)
 
+    positionToOffset(content, { line, character })
     const result: unknown = await this.sendRequest("textDocument/references", {
       textDocument: { uri },
       position: { line, character },
@@ -536,6 +452,7 @@ export class LspClient {
       // Leave scheduling room to reap the child within the full 2 s deadline.
       const deadline = setTimeout(() => { this.proc.kill("SIGKILL") }, Math.max(0, this.shutdownTimeoutMs - 50))
       try {
+        await this.documentSession.close()
         if (this.alive) {
           try {
             await this.sendRequest("shutdown", null, { timeoutMs: Math.max(1, this.shutdownTimeoutMs - 100) })
@@ -548,7 +465,7 @@ export class LspClient {
         clearTimeout(deadline)
         this.rejectPending(new Error("LSP client shut down"))
         this.buffer = Buffer.alloc(0)
-        this.documents.clear()
+        this.diagnosticCache.clear()
       }
     })()
     return this.shutdownPromise
@@ -560,10 +477,13 @@ export class LspClient {
       rootUri: this.rootUri,
       capabilities: {
         general: { positionEncodings: ["utf-16"] },
-        textDocument: { hover: { contentFormat: ["markdown", "plaintext"] } },
+        workspace: { configuration: true, didChangeConfiguration: { dynamicRegistration: true }, didChangeWatchedFiles: { dynamicRegistration: true, relativePatternSupport: true } },
+        textDocument: { hover: { contentFormat: ["markdown", "plaintext"] }, documentSymbol: { hierarchicalDocumentSymbolSupport: true }, diagnostic: { dynamicRegistration: false } },
       },
     }, { signal })
-    const encoding = z.object({ capabilities: z.object({ positionEncoding: z.string().optional() }) }).parse(result).capabilities.positionEncoding
+    this.capabilities = z.object({ capabilities: z.record(z.string(), z.unknown()) }).parse(result).capabilities
+    const encoding = this.capabilities.positionEncoding
+    this.documentSession.setSyncKind(this.capabilities.textDocumentSync ?? 0)
     if (encoding !== undefined && encoding !== "utf-16") throw new Error(`Unsupported LSP position encoding: ${encoding}`)
     await this.send({ jsonrpc: "2.0", method: "initialized", params: {} })
   }
@@ -583,66 +503,18 @@ export class LspClient {
     void this.shutdown()
   }
 
-  /**
-   * Re-read all previously opened documents from disk and push changes to
-   * TypeScript. This ensures that edits to imported/dependency files are picked
-   * up before we query a file that depends on them.
-   */
-  private async refreshOpenDocuments(): Promise<void> {
-    for (const [uri, state] of this.documents) {
-      let content: string
-      try {
-        content = await readFile(uriToPath(uri), "utf-8")
-      } catch {
-        continue
-      }
-      if (content !== state.content) {
-        const version = state.version + 1
-        this.sendNotification("textDocument/didChange", {
-          textDocument: { uri, version },
-          contentChanges: [{ text: content }],
-        })
-        this.documents.set(uri, { version, content })
-      }
-    }
+  private snapshot?: { uri: string; content: string }
+
+  /** Composite leased operations reuse one synced disk snapshot. */
+  async withDocumentSnapshot<T>(filePath: string, operation: (content: string) => Promise<T>): Promise<T> {
+    const content = await this.documentSession.sync(filePath)
+    this.snapshot = { uri: pathToUri(filePath), content }
+    try { return await operation(content) } finally { this.snapshot = undefined }
   }
 
-  /**
-   * Open a document in the LSP if needed, or update it if contents changed
-   *
-   * @param filePath - Absolute path to the source file.
-   * @param uri - LSP document URI for the file.
-   */
-  private async ensureDocumentOpen(
-    filePath: string,
-    uri: string,
-  ): Promise<void> {
-    await this.refreshOpenDocuments()
-
-    const content = await readFile(filePath, "utf-8")
-    const existing = this.documents.get(uri)
-
-    if (!existing) {
-      this.sendNotification("textDocument/didOpen", {
-        textDocument: {
-          uri,
-          languageId: getLanguageId(filePath),
-          version: 1,
-          text: content,
-        },
-      })
-      this.documents.set(uri, { version: 1, content })
-      return
-    }
-
-    if (existing.content !== content) {
-      const version = existing.version + 1
-      this.sendNotification("textDocument/didChange", {
-        textDocument: { uri, version },
-        contentChanges: [{ text: content }],
-      })
-      this.documents.set(uri, { version, content })
-    }
+  private prepareDocument(filePath: string): Promise<string> {
+    const uri = pathToUri(filePath)
+    return this.snapshot?.uri === uri ? Promise.resolve(this.snapshot.content) : this.documentSession.sync(filePath)
   }
 
   /**
@@ -654,6 +526,9 @@ export class LspClient {
   private sendRequest(method: string, params: unknown, options: RequestOptions = {}): Promise<unknown> {
     if (!this.alive || (this.closing && method !== "shutdown")) return Promise.reject(new Error("LSP client is closed"))
     if (options.signal?.aborted) return Promise.reject(new Error(`Request "${method}" aborted`))
+    if (method !== "initialize" && method !== "shutdown") {
+      try { requireCapability(method, this.capabilities) } catch (error) { return Promise.reject(error) }
+    }
     return new Promise((resolve, reject) => {
       const id = this.nextId++
       const timeoutMs = options.timeoutMs ?? this.requestTimeoutMs
@@ -750,178 +625,21 @@ export class LspClient {
       return
     }
 
-    // Server-initiated request — auto-acknowledge
     if (message.id != null && message.method) {
-      this.sendResponse(message.id, null)
+      void this.handleServerRequest(message.id, message.method, message.params)
     }
   }
-}
-
-/**
- * Convert a file path to an LSP file URI.
- *
- * @param filePath - Absolute path to convert.
- */
-function pathToUri(filePath: string): string {
-  return `file://${filePath}`
-}
-
-/**
- * Convert an LSP file URI to a file path.
- *
- * @param uri - File URI to convert.
- */
-function uriToPath(uri: string): string {
-  return uri.replace(/^file:\/\//, "")
-}
-
-/**
- * Parse Location[] or LocationLink[] from an LSP response into LspLocation[].
- * Handles single objects, arrays, and null.
- *
- * @param result - Raw LSP definition response.
- */
-function parseLocations(result: unknown): LspLocation[] {
-  if (result == null) return []
-  const locations: LspLocation[] = []
-
-  for (const item of Array.isArray(result) ? result : [result]) {
-    const loc = locationSchema.safeParse(item)
-    if (loc.success) {
-      locations.push({
-        file: uriToPath(loc.data.uri),
-        line: loc.data.range.start.line,
-        character: loc.data.range.start.character,
-      })
-      continue
-    }
-
-    const link = z
-      .object({
-        targetUri: z.string(),
-        targetRange: rangeSchema,
-        targetSelectionRange: rangeSchema.optional(),
-      })
-      .safeParse(item)
-    if (link.success) {
-      const range = link.data.targetSelectionRange ?? link.data.targetRange
-      locations.push({
-        file: uriToPath(link.data.targetUri),
-        line: range.start.line,
-        character: range.start.character,
-      })
+  private async handleServerRequest(id: number | string, method: string, params: unknown): Promise<void> {
+    try {
+      if (method === "workspace/configuration") this.sendResponse(id, configurationResults(params))
+      else if (method === "client/registerCapability") { await this.documentSession.register(params); this.sendResponse(id, null) }
+      else if (method === "client/unregisterCapability") { await this.documentSession.unregister(params); this.sendResponse(id, null) }
+      else throw new Error(`Unsupported LSP server request: ${method}`)
+    } catch (error) {
+      void this.send({ jsonrpc: "2.0", id, error: { code: -32602, message: error instanceof Error ? error.message : String(error) } }).catch(error => this.failTransport(error))
     }
   }
 
-  return locations
-}
-
-/**
- * Build a symbol tree from flat SymbolInformation[]. Uses containerName to
- * reconstruct parent-child relationships.
- *
- * @param items - Raw LSP symbol information records.
- */
-function buildSymbolTree(items: unknown[]): LspSymbol[] {
-  const flat: Array<{ symbol: LspSymbol; containerName?: string }> = []
-
-  for (const item of items) {
-    const parsed = z
-      .object({
-        name: z.string(),
-        kind: z.number(),
-        containerName: z.string().optional(),
-        location: locationSchema,
-      })
-      .safeParse(item)
-    if (!parsed.success) continue
-
-    flat.push({
-      symbol: {
-        name: parsed.data.name,
-        kind:
-          SYMBOL_KIND_LABELS[parsed.data.kind] ?? `kind(${parsed.data.kind})`,
-        line: parsed.data.location.range.start.line,
-        character: parsed.data.location.range.start.character,
-        children: [],
-      },
-      containerName: parsed.data.containerName,
-    })
-  }
-
-  const byName = new Map<string, LspSymbol>()
-  for (const entry of flat) {
-    if (!byName.has(entry.symbol.name)) {
-      byName.set(entry.symbol.name, entry.symbol)
-    }
-  }
-
-  const roots: LspSymbol[] = []
-  for (const entry of flat) {
-    const parent = entry.containerName
-      ? byName.get(entry.containerName)
-      : undefined
-    if (parent) {
-      parent.children.push(entry.symbol)
-    } else {
-      roots.push(entry.symbol)
-    }
-  }
-
-  return roots
-}
-
-/**
- * Parse a WorkspaceEdit into flat LspTextEdit[]
- *
- * @param result - Raw LSP workspace edit.
- */
-function parseWorkspaceEdit(result: unknown): LspTextEdit[] {
-  const parsed = z
-    .object({
-      changes: z.record(z.string(), z.array(textEditSchema)).optional(),
-    })
-    .safeParse(result)
-  if (!parsed.success || !parsed.data.changes) return []
-
-  const edits: LspTextEdit[] = []
-  for (const [editUri, textEdits] of Object.entries(parsed.data.changes)) {
-    for (const te of textEdits) {
-      edits.push({
-        file: uriToPath(editUri),
-        startLine: te.range.start.line,
-        startCharacter: te.range.start.character,
-        endLine: te.range.end.line,
-        endCharacter: te.range.end.character,
-        newText: te.newText,
-      })
-    }
-  }
-  return edits
-}
-
-/**
- * Return the LSP language identifier for a source file.
- *
- * @param filePath - Source file path.
- */
-function getLanguageId(filePath: string): string {
-  switch (extname(filePath)) {
-    case ".ts":
-    case ".mts":
-    case ".cts":
-      return "typescript"
-    case ".tsx":
-      return "typescriptreact"
-    case ".js":
-    case ".mjs":
-    case ".cjs":
-      return "javascript"
-    case ".jsx":
-      return "javascriptreact"
-    default:
-      return "typescript"
-  }
 }
 
 /**
@@ -930,17 +648,13 @@ function getLanguageId(filePath: string): string {
  *
  * @param contents - Raw LSP hover content.
  */
-function formatHoverContents(contents: unknown): string | null {
-  const str = z.string().safeParse(contents)
-  if (str.success) return str.data
-
+function formatHoverContents(contents: unknown): string {
+  if (typeof contents === "string") return contents
   if (Array.isArray(contents)) {
-    const parts = contents.map(formatHoverContents).filter(Boolean)
-    return parts.length > 0 ? parts.join("\n\n") : null
+    if (contents.some(Array.isArray)) throw new Error("Invalid LSP protocol hover contents")
+    return contents.map(formatHoverContents).join("\n\n")
   }
-
   const markup = z.object({ value: z.string() }).safeParse(contents)
   if (markup.success) return markup.data.value
-
-  return null
+  throw new Error("Invalid LSP protocol hover contents")
 }

@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs"
 import { dirname, join } from "node:path"
-import { pathToFileURL } from "node:url"
+import { endPosition, pathToUri } from "./files.ts"
 import {
   type ClientOptions,
   type LspCodeAction,
@@ -45,6 +45,7 @@ export class TypeScriptPool {
   /** Keep a lease through initialization, queueing and the complete operation. */
   withClient<T>(filePath: string, operation: (client: LspClient) => Promise<T>): Promise<T> {
     if (this.closed) return Promise.reject(new Error("TypeScript pool is closed"))
+    pathToUri(filePath)
     const root = findProjectRoot(filePath)
     let entry = this.entries.get(root)
     if (entry?.client && !entry.client.isAlive) {
@@ -63,7 +64,7 @@ export class TypeScriptPool {
         initialization: Promise.resolve().then(async () => {
           const binary = await this.resolveBinary(controller.signal)
           if (this.closed || controller.signal.aborted) throw new Error("TypeScript pool initialization aborted")
-          const client = await this.createClient(binary, pathToFileURL(root).href, { signal: controller.signal })
+          const client = await this.createClient(binary, pathToUri(root), { signal: controller.signal })
           if (this.closed || controller.signal.aborted) {
             await client.shutdown()
             throw new Error("TypeScript pool initialization aborted")
@@ -104,7 +105,7 @@ export class TypeScriptPool {
   }
 
   hoverWithDefinition(filePath: string, line: number, character: number): Promise<{ hover: string | null; definition: LspLocation | null }> {
-    return this.withClient(filePath, async client => {
+    return this.withClient(filePath, client => client.withDocumentSnapshot(filePath, async () => {
       let failed = false
       let firstError: unknown
       const captureFailure = (error: unknown): never => {
@@ -118,15 +119,15 @@ export class TypeScriptPool {
       ])
       if (hover.status === "rejected" || definitions.status === "rejected") throw firstError
       return { hover: hover.value, definition: definitions.value[0] ?? null }
-    })
+    }))
   }
 
   diagnosticsWithFixes(filePath: string): Promise<{ diagnostics: LspDiagnostic[]; actions: LspCodeAction[] }> {
-    return this.withClient(filePath, async client => {
+    return this.withClient(filePath, client => client.withDocumentSnapshot(filePath, async content => {
       const diagnostics = await client.diagnostics(filePath)
-      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: { line: 1_000_000, character: 0 } }, diagnostics)
+      const actions = await client.codeActions(filePath, { start: { line: 0, character: 0 }, end: endPosition(content) }, diagnostics)
       return { diagnostics, actions }
-    })
+    }))
   }
 
   references(filePath: string, line: number, character: number): Promise<LspLocation[]> {

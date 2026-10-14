@@ -4,6 +4,7 @@ const options = JSON.parse(process.argv[2] || '{}')
 let buffer = Buffer.alloc(0)
 let hoverId
 let definitionId
+let diagnosticIndex = 0
 const frame = message => {
   const body = JSON.stringify(message)
   return Buffer.from(`Content-Length: ${Buffer.byteLength(body)}\r\n${options.contentType ? "Content-Type: application/vscode-jsonrpc; charset=utf-8\r\n" : ""}\r\n${body}`)
@@ -17,6 +18,14 @@ function send(message) {
 }
 function handle(message) {
   if (options.log) appendFileSync(options.log, JSON.stringify(message) + '\n')
+  if (!message.method) return
+  if (message.id !== undefined && Object.hasOwn(options.results ?? {}, message.method)) {
+    send({ jsonrpc: '2.0', id: message.id, result: options.results[message.method] }); return
+  }
+  if (message.method === 'initialized') {
+    for (const request of options.serverRequests ?? []) send({ jsonrpc: '2.0', ...request })
+    return
+  }
   if (options.siblingFailure && ['textDocument/hover', 'textDocument/definition'].includes(message.method)) {
     if (message.method === 'textDocument/hover') hoverId = message.id
     else definitionId = message.id
@@ -35,7 +44,9 @@ function handle(message) {
   if (message.method === 'initialize') {
     if (options.noise) process.stderr.write('native compiler warning\n'.repeat(10000))
     if (options.hangInitialize) return
-    send({ jsonrpc: '2.0', id: message.id, result: { capabilities: options.encoding ? { positionEncoding: options.encoding } : {} } })
+    send({ jsonrpc: '2.0', id: message.id, result: { capabilities: { textDocumentSync: options.syncKind ?? 1, hoverProvider: true, definitionProvider: true, diagnosticProvider: {}, codeActionProvider: true, documentSymbolProvider: true, renameProvider: true, inlayHintProvider: true, referencesProvider: true, ...(options.encoding ? { positionEncoding: options.encoding } : {}), ...options.capabilities } } })
+  } else if (message.method === 'textDocument/diagnostic') {
+    send({ jsonrpc: '2.0', id: message.id, result: options.diagnosticReports?.[diagnosticIndex++] ?? { kind: 'full', items: [] } })
   } else if (message.method === 'shutdown') {
     if (!options.hangShutdown) send({ jsonrpc: '2.0', id: message.id, result: null })
   } else if (message.method === 'exit') {

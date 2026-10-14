@@ -155,3 +155,19 @@ export async function nativeLifetimeProbe(root: string, pidPath: string, stage: 
   })
   return binary
 }
+
+/** Test-only native launch boundary: version probe then the owned framed fixture. */
+export async function nativeProtocolPeer(root: string, options: Record<string, unknown>): Promise<string> {
+  const source = join(root, 'protocol-peer.c')
+  const binary = join(root, 'protocol-peer')
+  const fixture = fileURLToPath(new URL('./fixtures/fake-lsp.mjs', import.meta.url))
+  const code = `#include <stdio.h>\n#include <string.h>\n#include <unistd.h>\nint main(int argc, char **argv) {\nif (argc > 1 && !strcmp(argv[1], "--version")) { puts("Version 7.0.0"); return 0; }\nexecl(${JSON.stringify(process.execPath)}, "node", ${JSON.stringify(fixture)}, ${JSON.stringify(JSON.stringify(options))}, (char *)0); return 2;\n}\n`
+  await writeFile(source, code)
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn('cc', [source, '-o', binary], { stdio: 'pipe', shell: false })
+    let stderr = ''; child.stderr.on('data', chunk => { stderr += chunk.toString() })
+    child.once('error', reject)
+    child.once('close', code => code === 0 ? resolve() : reject(new Error(`Protocol peer compilation failed: ${stderr}`)))
+  })
+  return binary
+}
