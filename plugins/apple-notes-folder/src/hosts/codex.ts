@@ -26,18 +26,23 @@ export async function readAttachments(context: Omit<AttachmentContext, 'callId'>
     if (!Array.isArray(payload.content)) throw provenanceError('неизвестный формат пользовательского сообщения');
     const metadata = object(payload.internal_chat_message_metadata_passthrough);
     const kinds = metadata?.content_item_kinds;
-    if (Array.isArray(kinds) && (kinds.includes('images.preparation_error')
-      || (kinds.includes('user.image') && !payload.content.some(raw => object(raw)?.type === 'input_image')))) {
+    if (!Array.isArray(kinds) || kinds.length !== payload.content.length) {
+      throw provenanceError('не совпадает структура блоков пользовательского сообщения и их metadata');
+    }
+    if (kinds.includes('images.preparation_error')) {
       throw provenanceError('исходные bytes пользовательского изображения недоступны после подготовки');
     }
-    for (const raw of payload.content) {
+    for (const [index, raw] of payload.content.entries()) {
       const item = object(raw);
       if (!item) throw provenanceError('неизвестный блок пользовательского сообщения');
-      if (item.type === 'input_text') continue;
+      if (item.type === 'input_text') {
+        if (kinds[index] !== 'user.text') throw provenanceError('не совпадает источник текстового блока с его metadata');
+        continue;
+      }
       if (item.type !== 'input_image') throw provenanceError('неподдерживаемый источник вложения Codex');
       const source = object(object(object(record.metadata)?.retained_source)?.id);
       if (!nonempty(payload.id) || !nonempty(metadata?.turn_id) || source?.message_id !== payload.id || source?.turn_id !== metadata.turn_id || source?.role !== 'user'
-        || !Array.isArray(metadata.content_item_kinds) || !metadata.content_item_kinds.includes('user.image')) {
+        || kinds[index] !== 'user.image') {
         throw provenanceError('не совпадает идентичность сохранённого пользовательского изображения');
       }
       if (typeof item.image_url !== 'string') throw provenanceError('нет сохранённых исходных inline bytes Codex');

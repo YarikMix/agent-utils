@@ -122,7 +122,9 @@ describe.each(['claude', 'codex'] as const)('%s hook contexts and original user 
 
   it('does not promote text paths (including Cyrillic and spaces) to image aliases', async () => {
     const { context, records } = await materialize(host);
-    contentOf(host, imageRecord(host, records)).push({ type: host === 'claude' ? 'text' : 'input_text', text: '<image name=[Image #1] path="/tmp/Мои фото/original.png">' });
+    const record = imageRecord(host, records);
+    contentOf(host, record).push({ type: host === 'claude' ? 'text' : 'input_text', text: '<image name=[Image #1] path="/tmp/Мои фото/original.png">' });
+    if (host === 'codex') record.payload.internal_chat_message_metadata_passthrough.content_item_kinds.push('user.text');
     await save(context, records);
     expect(await readVerifiedAttachments(context)).toEqual(expected);
   });
@@ -142,7 +144,9 @@ describe.each(['claude', 'codex'] as const)('%s hook contexts and original user 
     const { context, records } = await materialize(host);
     const source = join(dir, 'original.png');
     await writeFile(source, 'replacement');
-    contentOf(host, imageRecord(host, records)).push({ type: host === 'claude' ? 'text' : 'input_text', text: source });
+    const record = imageRecord(host, records);
+    contentOf(host, record).push({ type: host === 'claude' ? 'text' : 'input_text', text: source });
+    if (host === 'codex') record.payload.internal_chat_message_metadata_passthrough.content_item_kinds.push('user.text');
     await save(context, records);
     expect(await readVerifiedAttachments(context)).toEqual(expected);
     await rm(source);
@@ -211,6 +215,31 @@ describe('host-specific binding and clearly labeled structural negatives', () =>
     if (field === 'image-kind') record.payload.internal_chat_message_metadata_passthrough.content_item_kinds = ['user.text'];
     await save(context, records);
     await expect(readVerifiedAttachments(context)).rejects.toMatchObject({ code: 'IMAGE_PROVENANCE' });
+  });
+
+  it.each(['swapped-kinds', 'text-declared-image', 'extra-declaration', 'short-kinds', 'extra-image'] as const)(
+    'Codex rejects contradictory per-item image provenance: %s', async mismatch => {
+      const { context, records } = await materialize('codex');
+      const record = imageRecord('codex', records);
+      const content = record.payload.content;
+      const kinds = record.payload.internal_chat_message_metadata_passthrough.content_item_kinds;
+      if (mismatch === 'swapped-kinds') [kinds[0], kinds[1]] = [kinds[1], kinds[0]];
+      if (mismatch === 'text-declared-image') kinds[2] = 'user.image';
+      if (mismatch === 'extra-declaration') kinds.push('user.image');
+      if (mismatch === 'short-kinds') kinds.pop();
+      if (mismatch === 'extra-image') content.push(structuredClone(content[1]));
+      await save(context, records);
+      await expect(readVerifiedAttachments(context)).rejects.toMatchObject({ code: 'IMAGE_PROVENANCE' });
+    },
+  );
+
+  it('Codex accepts multiple image blocks only with corresponding per-item declarations', async () => {
+    const { context, records } = await materialize('codex');
+    const record = imageRecord('codex', records);
+    record.payload.content.push(structuredClone(record.payload.content[1]));
+    record.payload.internal_chat_message_metadata_passthrough.content_item_kinds.push('user.image');
+    await save(context, records);
+    expect(await readVerifiedAttachments(context)).toEqual(expected);
   });
 
   it('Codex rejects concatenated transcripts from another session', async () => {
