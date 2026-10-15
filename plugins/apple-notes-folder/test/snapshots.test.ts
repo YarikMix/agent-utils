@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
+import { watch } from 'node:fs';
 import { mkdtemp, readFile, realpath, rm, stat, symlink, unlink, writeFile, mkdir, rename, chmod, link } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -14,6 +15,19 @@ beforeEach(async () => { root = await realpath(await mkdtemp(join(tmpdir(), 'anf
 afterEach(async () => { await rm(root, { recursive: true, force: true }); });
 
 describe('private snapshots', () => {
+  it('identifies the live owner in temporary names even for standalone saveSnapshot', async () => {
+    await mkdir(join(root, 'snapshots'), { mode: 0o700 });
+    let observe!: (name: string) => void;
+    const temporary = new Promise<string>(resolve => { observe = resolve; });
+    const watcher = watch(join(root, 'snapshots'), (_event, name) => {
+      if (name?.startsWith('.tmp-')) observe(name);
+    });
+    try {
+      await saveSnapshot(root, attachment());
+      expect(await temporary).toMatch(new RegExp(`^\\.tmp-${process.pid}-[a-f0-9]{64}$`));
+    } finally { watcher.close(); }
+  });
+
   it('roundtrips each supported format and a full 10 MiB image', async () => {
     const max = Buffer.alloc(10 * 1024 * 1024);
     png.copy(max);

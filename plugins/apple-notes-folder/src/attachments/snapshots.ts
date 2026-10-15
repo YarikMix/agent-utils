@@ -9,6 +9,7 @@ import type { ImageGrant, VerifiedAttachment } from '../hosts/types.js';
 
 export const SHA256 = /^[a-f0-9]{64}$/;
 export const SNAPSHOT_NAME = /^[a-f0-9]{64}\.(png|jpg|gif|heic|webp)$/;
+export const PUBLICATION_TEMP_NAME = /^\.tmp-(?:([1-9][0-9]*)-)?[a-f0-9]{64}$/;
 const extensions: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/heic': 'heic', 'image/webp': 'webp' };
 const fail = () => new ToolError('IMAGE', 'Не удалось проверить закрытый снимок картинки.');
 
@@ -50,7 +51,8 @@ export async function readPrivateFile(path: string, limit: number): Promise<Buff
 /** The final name is visible only after the complete private file has been synced. */
 export async function publishPrivateFile(path: string, bytes: Uint8Array): Promise<void> {
   await privateDirectory(dirname(path));
-  const temporary = join(dirname(path), `.tmp-${randomBytes(32).toString('hex')}`);
+  // Keep standalone publishers identifiable even when no ticket mutex is held.
+  const temporary = join(dirname(path), `.tmp-${process.pid}-${randomBytes(32).toString('hex')}`);
   try {
     const fh = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
     try { await fh.writeFile(bytes); await fh.sync(); } finally { await fh.close(); }

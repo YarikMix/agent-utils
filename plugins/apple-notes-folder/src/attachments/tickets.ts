@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { ToolError } from '../errors.js';
 import { imageHrefs } from '../markdown.js';
 import type { AttachmentContext, Clock, Host, ImageGrant, RuntimePaths, TicketLease, VerifiedAttachment, WriteArgs, WriteToolName } from '../hosts/types.js';
-import { privateDirectory, publishPrivateFile, readPrivateFile, saveSnapshot, SHA256, SNAPSHOT_NAME, validSnapshotPath, verifySnapshot } from './snapshots.js';
+import { privateDirectory, publishPrivateFile, readPrivateFile, saveSnapshot, SHA256, SNAPSHOT_NAME, PUBLICATION_TEMP_NAME, validSnapshotPath, verifySnapshot } from './snapshots.js';
 
 const TICKET_TTL = 900000;
 const SNAPSHOT_TTL = 86400000;
@@ -187,7 +187,14 @@ export async function cleanupRuntime(paths: RuntimePaths, now: Clock = Date.now)
     }
     if (uncertain) return;
     for (const name of await readdir(join(root, 'snapshots'))) {
-      if (!SNAPSHOT_NAME.test(name)) continue;
+      const temporary = PUBLICATION_TEMP_NAME.exec(name);
+      if (!SNAPSHOT_NAME.test(name) && !temporary) continue;
+      if (temporary?.[1]) {
+        const pid = Number(temporary[1]);
+        if (!Number.isSafeInteger(pid) || ownerAlive(pid)) continue;
+      }
+      // Legacy temporaries have no PID; their production publishers held this same mutex.
+      // New standalone publishers are protected above, including ambiguous owner liveness.
       const path = join(root, 'snapshots', name);
       const st = await lstat(path);
       if (!protectedPaths.has(path) && st.isFile() && !st.isSymbolicLink() && st.uid === process.getuid!() &&

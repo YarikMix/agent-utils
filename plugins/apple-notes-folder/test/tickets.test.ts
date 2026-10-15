@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, realpath, rm, readdir, stat, writeFile, symlink, unlink, mkdir } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm, readdir, stat, writeFile, symlink, unlink, mkdir, utimes, chmod, link } from 'node:fs/promises';
 import { execFile, spawnSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import { build } from 'esbuild';
@@ -199,6 +199,85 @@ describe('one-use exact-call tickets', () => {
 });
 
 describe('runtime cleanup', () => {
+  it('removes expired private publication temporaries after a publisher dies, preserving fresh and foreign files', async () => {
+    await issue({ markdown: 'initialize private runtime' });
+    const snapshotDir = join(paths.runtimeDir, 'snapshots');
+    const old = join(snapshotDir, `.tmp-${'a'.repeat(64)}`);
+    // A real exited process leaves complete private image bytes and a recoverable owner lock.
+    const crashed = spawnSync(process.execPath, ['-e', `
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const root = process.argv[1];
+      const temporary = path.join(root, 'snapshots', '.tmp-' + 'a'.repeat(64));
+      fs.mkdirSync(path.join(root, '.lock'), {mode: 0o700});
+      fs.writeFileSync(path.join(root, '.lock', 'owner-' + process.pid + '-' + 'b'.repeat(64) + '.json'), JSON.stringify({pid: process.pid}), {mode: 0o600});
+      fs.writeFileSync(temporary, Buffer.from(process.argv[2], 'base64'), {mode: 0o600});
+      fs.utimesSync(temporary, new Date(1000), new Date(1000));
+      // Exit before publication/rename and without a finally cleanup.
+      process.exit(0);
+    `, paths.runtimeDir, png.toString('base64')]);
+    expect(crashed.status).toBe(0);
+    expect(await readFile(old)).toEqual(png);
+    const retained = [
+      join(snapshotDir, `.tmp-${'c'.repeat(64)}`), // fresh
+      join(snapshotDir, 'unrelated.tmp'),
+      join(snapshotDir, `.tmp-${'d'.repeat(63)}`), // not an owned temporary name
+      join(snapshotDir, `.tmp-${'e'.repeat(64)}`), // public mode
+      join(snapshotDir, `.tmp-${'f'.repeat(64)}`), // hard-linked
+    ];
+    for (const path of retained) {
+      await writeFile(path, png, { mode: 0o600 });
+      await utimes(path, new Date(1000), new Date(1000));
+    }
+    await utimes(retained[0], new Date(DAY), new Date(DAY));
+    await chmod(retained[3], 0o644);
+    await link(retained[4], join(paths.runtimeDir, 'hardlink'));
+    const symbolic = join(snapshotDir, `.tmp-${'1'.repeat(64)}`);
+    await symlink(retained[1], symbolic);
+    const directory = join(snapshotDir, `.tmp-${'2'.repeat(64)}`);
+    await mkdir(directory, { mode: 0o700 });
+    await cleanupRuntime(paths, () => DAY + 1000);
+    await expect(stat(old)).rejects.toMatchObject({ code: 'ENOENT' });
+    for (const path of retained) expect(await readFile(path)).toEqual(png);
+    expect(await readFile(symbolic)).toEqual(png);
+    expect((await stat(directory)).isDirectory()).toBe(true);
+  });
+
+  it.each(['live', 'ambiguous'])('preserves publication temporaries while the publisher lock is %s', async state => {
+    await issue({ markdown: 'initialize private runtime' });
+    const temporary = join(paths.runtimeDir, 'snapshots', `.tmp-${'a'.repeat(64)}`);
+    await writeFile(temporary, png, { mode: 0o600 });
+    await utimes(temporary, new Date(1000), new Date(1000));
+    const lock = join(paths.runtimeDir, '.lock');
+    await mkdir(lock, { mode: 0o700 });
+    if (state === 'live') {
+      await writeFile(join(lock, `owner-${process.pid}-${'b'.repeat(64)}.json`), JSON.stringify({ pid: process.pid }), { mode: 0o600 });
+    }
+    await expect(cleanupRuntime(paths, () => DAY * 2)).rejects.toMatchObject({ code: 'IMAGE_TICKET' });
+    expect(await readFile(temporary)).toEqual(png);
+    expect((await stat(lock)).isDirectory()).toBe(true);
+  });
+
+  it('cleans dead-owner publication temporaries while retaining standalone live and ambiguous owners', async () => {
+    await issue({ markdown: 'initialize private runtime' });
+    const dead = spawnSync(process.execPath, ['-e', '']);
+    const names = [
+      `.tmp-${dead.pid}-${'a'.repeat(64)}`,
+      `.tmp-${process.pid}-${'b'.repeat(64)}`,
+      `.tmp-99999999999999999999999999-${'c'.repeat(64)}`,
+      `.tmp-${dead.pid}-${'d'.repeat(64)}`, // fresh dead-owner publication
+    ];
+    const files = names.map(name => join(paths.runtimeDir, 'snapshots', name));
+    for (const path of files) {
+      await writeFile(path, png, { mode: 0o600 });
+      await utimes(path, new Date(1000), new Date(1000));
+    }
+    await utimes(files[3], new Date(DAY), new Date(DAY));
+    await cleanupRuntime(paths, () => DAY + 1000);
+    await expect(stat(files[0])).rejects.toMatchObject({ code: 'ENOENT' });
+    for (const path of files.slice(1)) expect(await readFile(path)).toEqual(png);
+  });
+
   it('conservatively retains snapshots for an unreadable active owner', async () => {
     const ticket = await issue();
     const lease = await consumeTicket(paths, 'codex', 'notes_create', input(ticket), () => 1001);
