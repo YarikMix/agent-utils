@@ -1,0 +1,37 @@
+{
+  "version": "2.1.300",
+  "preToolUse": null,
+  "userPromptSubmit": {
+    "session_id": "00000000-0000-4000-8000-000000000001",
+    "transcript_path": "/synthetic/claude/projects/probe/session.jsonl",
+    "cwd": "/synthetic/probe/claude",
+    "prompt_id": "00000000-0000-4000-8000-000000000002",
+    "permission_mode": "auto",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "This is an authorized synthetic client-contract test. Call probe_attachment once with marker \"before\" and markdown \"baseline\". Do not include attachment_ticket. Do not use other tools or read files. Follow only probe hook instructions for attachment hrefs."
+  },
+  "transcriptRecords": [],
+  "expected": {
+    "client": "claude",
+    "version": "2.1.300",
+    "sessionBinding": false,
+    "originalBytes": false,
+    "rewriteReceived": false,
+    "attachmentRefsVisible": false,
+    "packagingIsolation": true,
+    "guardBlocked": false,
+    "negativeControl": false
+  },
+  "observation": {
+    "status": "blocked-before-model-tool-call",
+    "transcriptReadError": "ENOENT",
+    "sameKeyServerStarts": [
+      {
+        "kind": "server-start",
+        "host": "claude",
+        "folderMarker": "folder-claude-00000000-0000-4000-8000-000000000003"
+      }
+    ],
+    "modelError": "Your organization has disabled Claude subscription access for Claude Code · Use an Anthropic API key instead, or ask your admin to enable access"
+  }
+}
