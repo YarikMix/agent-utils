@@ -1,91 +1,82 @@
 # Контракты клиентов Apple Notes: Task 1
 
-Дата: 2026-10-16. Claude Code **2.1.300**, Codex CLI **0.162.1**. **Gate не пройден; перед Task 2 требуется завершить исследование и вернуться к ревью спеки.** Production src/manifest не менялись.
+2026-10-16. Целевые версии: Claude Code **2.1.300**, Codex CLI **0.162.1**. **Общий gate не пройден: Claude model/tool flow заблокирован авторизацией. Task 2 не начинать.** Доступные проверки Codex выполнены; ниже реальные wire-поля, границы фаз и команды. Production src/manifest не менялись.
 
-## Подтверждённые результаты
+## Результаты
 
 | Проверка | Claude 2.1.300 | Codex 0.162.1 |
 |---|---|---|
-| Приём синтетического PNG | Image-блок принят, user replay получен | Диалог остановлен на folder trust |
-| Реальный UserPromptSubmit | Получен | Не наблюдался |
-| PreToolUse / session-transcript binding | Не проверено | Не проверено |
-| Исходные байты после замены source PNG | Не проверено | Не проверено |
-| updatedInput ticket получен сервером | Не проверено | Не проверено |
-| Скрытый href из additionalContext получен сервером | Не проверено | Не проверено |
-| Изоляция planned same-key упаковки при старте | **PASS: только host=claude** | Не проверено |
-| Guard shell / Code Mode | Не проверено / неприменимо | Не проверено / не проверено |
+| Приём synthetic user image | Stream JSON image принят/replayed | Один image и отдельный prompt приняты |
+| Session/transcript/tool-call binding | Не подтверждён | PASS: session_meta, turn_id, Pre/Post tool_use_id |
+| Сохранённые исходные bytes после замены source | Не подтверждены | PASS после image preparation, exact текущий message ID |
+| updatedInput ticket получен сервером | Не подтверждён | PASS: one-use marker, server receipt, exact Post call |
+| Href из additionalContext дошёл в server args | Не подтверждён | PASS, отсутствует в соответствующем user prompt |
+| Same-key упаковка при старте | PASS: только host=claude | PASS: только host=codex |
+| Обычный shell guard | Не подтверждён | PASS: direct exec_command call/result |
+| Code Mode guard | Неприменимо | PASS: outer call/result и echoed nested deny ID |
+| Before без ticket | Не снят | PASS, реальный server-call |
 
-`false` в verifier означает отсутствие требуемого доказательства. Ни auth blocker, ни отсутствие доверия не доказывают несовместимость вложений.
+Codex evaluator на текущем private scratch возвращает все capability=true и negativeControl=true. Общий CLI verifier возвращает exit 1: второго завершённого client report нет. Это не завершение Task 1 и не замена обязательной проверки Claude.
 
-## Окружение и команды
+## Установка и изоляция
 
 Claude native: `~/.local/bin/claude` → `~/.local/share/claude/versions/2.1.300`. Codex standalone: `~/.local/bin/codex` → `~/.codex/packages/standalone/current/bin/codex`.
 
-Отдельный `CLAUDE_CONFIG_DIR` явно не задавался, изолированный auth/config-root не создавался. Inherited env/settings values не читались и не выводились. Вывод об авторизации относится только к фактическим запускам, а не ко всем установкам Claude.
+`probe-host.mjs` — development-helper, один synthetic `probe_attachment({marker, markdown, attachment_ticket?})`, без Notes/сети/произвольных файловых аргументов. `prepare --client <host> --out <root>` создаёт `<root>/<host>` (каталоги0700, файлы0600), synthetic PNG из live-check, оба host manifests, root Codex `.mcp.json`, inline Claude MCP и явные разные hook-файлы. Отказывается использовать существующий host-каталог. `hook`, `server`, `verify` — остальные режимы. `codex-command.txt` содержит готовую команду с session-only source overrides и separator перед prompt.
 
-Development-helper `plugins/apple-notes-folder/scripts/probe-host.mjs` не обращается к Notes. Режимы: `prepare --client <claude|codex> --out <root>`, `hook --out <run> --host <host>`, `server --out <run> --host <host>`, `verify --out <root>`.
+Оба определения MCP используют ключ **apple-notes-folder** и разные server launch host/folder-marker. Реальный same-key Claude запуск выбрал только inline host=claude, Codex — только root host=codex. Диагностический ранний вариант с разными ключами стартовал в Claude оба сервера; это co-loading разных имён, а не несовместимость итоговой same-key схемы. Дополнительный split-root запуск также дал только Claude, но менять план на него не требуется.
 
-Из корня проекта:
+## Codex: source discovery и точные команды
 
-```sh
-node plugins/apple-notes-folder/scripts/probe-host.mjs prepare --client claude --out /private/tmp/apple-notes-contract-same-key-20261016
-node plugins/apple-notes-folder/scripts/probe-host.mjs prepare --client codex --out /private/tmp/apple-notes-contract-same-key-20261016
-node plugins/apple-notes-folder/scripts/probe-host.mjs verify --out /private/tmp/apple-notes-contract-same-key-20261016
-```
+Private root: `/private/tmp/apple-notes-task1-codex-final-awaiting-trust-20261016/codex`. Сначала controller подтвердил native Folder access после явного разрешения пользователя. Все три probe-hook затем просмотрены по одному: Source `Plugin - attachment-contract-probe@attachment-probe-local`, Node24.21.0 + reviewed helper с exact `--out` этого root и `--host codex`; trusted штатной клавишей `t`. Чужие hooks не менялись. Bypass не использовался.
 
-Команды выше показывают воспроизводимую итоговую подготовку. Фактический Codex trust-запуск был в предыдущем диагностическом root `/private/tmp/apple-notes-contract-20261016/codex`, same-key Codex ещё не запускался. `prepare` создаёт `<out>/<client>` с каталогами 0700, файлами 0600 и отказывается повторно использовать существующий client-каталог. Синтетический PNG 1×1 взят из `scripts/live-check.mjs`. Сырые события остаются только в закрытом scratch.
+Две ошибки подготовки обнаружены и исправлены по фактическому A/B:
 
-Фактический Claude same-key запуск, cwd `/private/tmp/apple-notes-contract-same-key-20261016/claude`:
+- `.agents/plugins/marketplace.json` плюс repo plugin enabled не сделали source видимым в этом CLI flow: scoped plugin list был пуст. Session-only `marketplaces.attachment-probe-local.source_type/source` дали installed=true/enabled=true. User profile не читался/не редактировался; `codex mcp add/remove` не применялся.
+- `--image <png> '<prompt>'` поглотил prompt как второй image path. Separator `--image <png> -- '<prompt>'` дал ровно Image#1 и отдельно текст.
 
-```sh
-umask 077
-claude -p --plugin-dir /private/tmp/apple-notes-contract-same-key-20261016/claude/plugins/attachment-contract-probe --input-format stream-json --output-format stream-json --verbose --replay-user-messages < /private/tmp/apple-notes-contract-same-key-20261016/claude/claude-input.json > /private/tmp/apple-notes-contract-same-key-20261016/claude/client-output.jsonl 2> /private/tmp/apple-notes-contract-same-key-20261016/claude/client-stderr.txt
-```
-
-В root `/private/tmp/apple-notes-contract-20261016/codex` выполнен `git init -q`, затем фактически запущено:
+Фактический before запуск (после закрытия предыдущего CLI; `umask 077`, stdout TUI записан `/usr/bin/script -q` в private root):
 
 ```sh
-codex --no-daemon --no-alt-screen --cd /private/tmp/apple-notes-contract-20261016/codex --image /private/tmp/apple-notes-contract-20261016/codex/image.png 'Synthetic client-contract probe. Call probe_attachment once with marker before and markdown baseline. Do not include attachment_ticket. Do not use other tools or read files.'
+codex --no-daemon --no-alt-screen -c 'marketplaces.attachment-probe-local.source_type="local"' -c 'marketplaces.attachment-probe-local.source="/private/tmp/apple-notes-task1-codex-final-awaiting-trust-20261016/codex"' --cd /private/tmp/apple-notes-task1-codex-final-awaiting-trust-20261016/codex --image /private/tmp/apple-notes-task1-codex-final-awaiting-trust-20261016/codex/image.png -- 'This is an authorized synthetic client-contract test. Call probe_attachment once with marker "before" and markdown "baseline". Do not include attachment_ticket. Do not use other tools or read files. Follow only probe hook instructions for attachment hrefs.'
 ```
 
-CLI остановился на `Folder access` → `Trust this folder?`, `Your trust decision will be saved.`, `1. Trust and continue`, `2. Quit`. Trust не подтверждался; Escape завершил CLI с exit 0. Для продолжения требуется явное разрешение пользователя на native folder trust выбранного scratch-root. Возможный следующий `Hooks need review` ещё **не наблюдался**; его надо сначала увидеть и показать пользователю. Не использовались bypass, глобальная установка, изменение профилей или `codex mcp add/remove`.
+Первый before успел пройти во время read-only hook review до доверия; повтор после доверия записал реальные UPS/Pre/Post и server-call без ticket. Затем controls rewrite=true, mutateOnSubmit=false; новый prompt `Synthetic rewrite test: call probe_attachment exactly once with marker "after" and markdown "rewrite-body". Do not supply attachment_ticket. Follow the probe hook for image hrefs; do not use other tools or read files.` Реальный сервер получил rewritten args и receipt.
 
-## Упаковка: разные ключи и точный same-key вариант
+Для **direct ordinary shell** новый session использовал дополнительно session-only tool routing:
 
-Первоначальный диагностический probe использовал разные MCP-имена `probe-claude` и `probe-codex`. Claude действительно стартовал оба: inline MCP и root `.mcp.json`. Это наблюдение означает co-loading для разных ключей; **оно не доказывает несовместимость planned same-key раскладки**.
-
-Контроллер уточнил, что оба final manifests должны использовать одинаковый ключ `apple-notes-folder`. В отдельном throwaway same-key probe оба ключа заменены на него, а аргументы server `--host claude` / `--host codex` и folder-marker оставлены различными. Результат:
-
-```json
-{"name":"plugin:attachment-contract-probe:apple-notes-folder","status":"connected","source":"plugin"}
+```text
+-c 'features.code_mode={enabled=false,direct_only_tool_namespaces=["functions"]}'
 ```
 
-Реальный сервер записал только `server-start.host=claude`, затем `server-initialized.clientInfo.version=2.1.300`. host=codex не запускался. Inline Claude определение имеет правильный приоритет над root `.mcp.json` для одинакового ключа. Итоговый helper использует именно этот ключ в обоих файлах. `packagingIsolation=true` подтверждено для старта Claude, остальные capability-поля остаются false.
+Это отдельно от marketplace source; меняет представление tools, не sandbox/trust/policy. В default session модель имела shell только через Code Mode и не подменяла им direct тест. После routing реально записаны `function_call name=exec_command`, hook deny и matching `function_call_output`. При Code Mode реально записаны `custom_tool_call name=exec`, nested Bash hook и matching outer output. Оба marker effects отсутствуют. Exact собственные команды сохранены в `guard-command.txt` / `code-guard-command.txt`; не трогают Notes.
 
-Также по разрешению контроллера проверен throwaway split-root `/private/tmp/apple-notes-contract-split-20261016/claude`: `.codex-plugin/` и root `.mcp.json` перенесены в соседний `codex-install-root/`. Та же Claude-команда с этим root дала только host=claude. Это вспомогательное наблюдение, а не необходимое исправление planned same-key схемы. Продуктовая раскладка не изменена.
+Все три собственных CLI session завершены Ctrl-D, exit0. Unrelated warnings (agent roles/два сторонних MCP) не исправлялись. Native UI auto-review дважды отклонял неоднозначно истолкованные клавиши до исполнения; после проверки текущего экрана выполнялась только read-only навигация, затем отдельное разрешённое доверие выбранным probe hooks. Обхода не было; ledger и точные причины — в private task report.
 
-## Реальные поля и момент доступности байтов
+## Наблюдённый Codex wire и строгая корреляция
 
-`test/fixtures/hosts/claude.json` содержит обезличенный **реальный** same-key `UserPromptSubmit`. Поля: `session_id`, `transcript_path`, `cwd`, `prompt_id`, `permission_mode: "auto"`, `hook_event_name: "UserPromptSubmit"`, `prompt` (только собственный синтетический текст). Пути/идентификаторы заменены фиктивными; поля не придуманы.
+Реальный `UserPromptSubmit`: session_id, turn_id, transcript_path, cwd, hook_event_name, model, permission_mode, prompt. `prompt_id` отсутствует. `PreToolUse`/`PostToolUse`: те же session/turn/path/cwd плюс canonical tool_name (`mcp__apple_notes_folder__probe_attachment` или `Bash`), tool_input, tool_use_id; Post имеет tool_response.
 
-В payload нет image/base64. При этом hook-вызове `transcript_path` дал `ENOENT`; `transcriptRecords=[]`, `preToolUse=null` честно отражают отсутствие наблюдения. User replay image-блока доступен stdout, но не доказывает его доступность production hook. Поздняя доступность исходных байтов и их сохранность после замены PNG пока не проверены. Helper принимает только inline bytes в пользовательских transcript records; assistant images и позднее чтение `localImage.path` не учитываются.
+MCP rewrite проверяется по одной цепочке: исходный Pre input `marker=after` **без ticket** → updatedInput с одноразовым `probe-after-<uuid>` и ticket `probe-v1` → ровно один server-call с exact args и receipt → ровно один Post с теми же session/turn/tool_use_id, rewritten tool_input и exact серверным receipt в tool_response. Receipt содержит фактический MCP requestId, helper issuance eventId и случайный serverReceiptId; сам helper-id успехом не считается. Receipt дополнительно должен присутствовать в host tool output того же turn. Duplicate marker, чужие Post call IDs и неизвестные/смешанные client versions отклоняются.
 
-Claude-модельный вызов завершился exit 1 с сообщением: `Your organization has disabled Claude subscription access for Claude Code · Use an Anthropic API key instead, or ask your admin to enable access`. Это auth blocker. Провайдерские настройки и ключи не читались, не копировались и не менялись.
+Host transcript: `session_meta.payload.id/cwd`; `response_item.payload.type=message`, role=user, payload.id; `internal_chat_message_metadata_passthrough.turn_id/content_item_kinds`; `metadata.retained_source.id.message_id/turn_id/role`. Изображение — `input_image.image_url=data:image/png;base64,...`, не только localImage.path. Старые user records, assistant bytes и другой turn не принимаются.
 
-Codex fixture намеренно не создан: реальных Codex hook/transcript-событий нет. Генерация схемы `codex app-server generate-json-schema --experimental --out /private/tmp/apple-notes-codex-schema` прошла, но схема `localImage.path` не является реальным событием и доказательством исходных байтов.
+Прямой shell: function_call.call_id совпадает с hook.tool_use_id; JSON arguments.cmd — exact guardCommand; function_call_output тот же call_id/turn содержит exact block reason/command. Code Mode: один current-turn custom_tool_call name=exec с exact JS guard; custom_tool_call_output тот же outer call_id/turn содержит block reason с **реальными nested session/turn/tool_use_id**. Исторический поиск строк не используется; output другого outer call или другой nested ID не проходит.
 
-## Продолжение после устранения blockers
+## Когда именно доступны bytes: два свежих mutation опыта
 
-1. Повторить свежий Claude image-запуск в штатно авторизованном provider-контуре; не копировать ключи и не обходить политики организации.
-2. После разрешения пользователя подтвердить native Codex folder trust для выбранного scratch-root. Отдельный hook-review сначала наблюдать и согласовать. Повторить с итоговым same-key helper.
-3. Начать с `controls.json` `{ "rewrite": false, "mutateOnSubmit": false }`, marker `before`. Получить реальный server-call без ticket; verifier обязан вернуть `rewriteReceived=false`, exit 1. Пока такой negative control не снят.
-4. Только в scratch включить `rewrite: true`; свежему image-запросу задать marker `after`, без ticket и скрытого href. Доказать input без ticket → hook updatedInput `probe-v1` → серверный `probe-v1`, а также hidden href из additionalContext в server markdown.
-5. В отдельном свежем прогоне `mutateOnSubmit: true` заменяет свой PNG при получении сообщения hook-интеграцией. Старые байты должны оставаться в host payload/transcript либо иметь ранний hash/snapshot. Предварительная тестовая копия и поздний path/hash недостаточны. Поддерживаемый helper разбор transcript нужно сверить с реальными событиями.
-6. Попросить обычный shell выполнить точное содержимое `guard-command.txt`, Codex Code Mode — `code-guard-command.txt`. Проверить hook deny и отсутствие эффектов. Helper принимает в качестве Code Mode evidence только outer `exec`/`functions.exec` с `tools.exec_command(`; это ожидаемый, ещё **не подтверждённый** на Codex формат. Иной формат требует наблюдения, не ослабления проверки.
-7. Verifier требует два отчёта, все capability-поля, отдельный `negativeControl`; читает только события, не ответ модели. Сохранить обезличенные реальные fixtures обоих клиентов и пройти gate до Task 2.
+**Ранний отрицательный:** controls mutateOnSubmit=true заменил свой source в UPS. В этот момент у нового turn ещё не было подготовленного image payload; позже exact current user record содержал `images.preparation_error` / `image content omitted because it could not be processed`. Это показывает UPS-before-image-preparation, а не окончательную несовместимость сохранённых байтов.
 
-## Проверки
+**После подготовки — PASS:** отдельный fresh `--image` session, controls rewrite=true, mutateOnSubmit=false, mutateBeforeTool=true. Та же source/routing команда с prompt `Fresh prepared-image mutation test. Call probe_attachment exactly once with marker "after" and markdown "prepared-image-body". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. Use the image attached to this new message.`
 
-`npm ci` с private scratch cache и разрешённой сетью: PASS (исходный sandbox ENOTFOUND не засчитан). `npm test`: 108/108; typecheck и verify-build PASS. Focused `node --test scripts/probe-host.test.mjs`: 4/4. Helper tests используют явно синтетические записи и не подменяют host fixtures. Verifier на неполных реальных данных возвращает ожидаемый exit 1.
+На PreToolUse хук подтвердил уникальный retained user image exact текущих session/turn/message ID с исходным inline PNG; заменил **только собственный source** и перечитал host transcript **после замены**. Exact тот же user message сохранил исходные inline bytes. Source SHA сменился с synthetic original `c414cd0e…` на replacement `8bc91d5a…`; хеши обеих host snapshots — original. Серверный after-call и Post связаны с этим же tool_use_id. Это сохранённый host payload после приёма/подготовки конкретного изображения, не предварительная копия теста и не позднее чтение source как provenance.
 
-Официальные [правила упаковки OpenAI](https://developers.openai.com/plugins/build/plugins) и [hooks](https://learn.chatgpt.com/docs/hooks) использовались для подготовки probe, а не вместо фактического gate.
+## Fixtures, evaluator и оставшийся Claude gate
+
+`test/fixtures/hosts/codex.json` содержит реальные обезличенные Pre/UPS/Post, user/tool transcript records трёх собственных synthetic sessions и helper event evidence. Пути/ID фиктивные с сохранёнными связями. AGENTS/environment/developer/assistant/reasoning/token records исключены. Обёртка fixture и expected — helper metadata; raw wire формы внутри взяты только из наблюдения. Evaluator намеренно привязан к наблюдавшейся **0.162.1**; неизвестные версии fail closed.
+
+Claude `test/fixtures/hosts/claude.json` остаётся честно неполным: реальный UPS, Pre=null/transcriptRecords=[]; на UPS transcript ещё ENOENT, bytes нет. Same-key startup только Claude подтверждён. Команда `claude -p --plugin-dir <own-probe> --input-format stream-json --output-format stream-json --verbose --replay-user-messages` с synthetic user image была принята, но model/tool-call завершился organization subscription access error. Отдельный CLAUDE_CONFIG_DIR не задавался, inherited env/settings values не читались. Это auth blocker конкретного запуска, не доказательство несовместимости вложений; нужен штатный авторизованный provider-контур и все обязательные real before/after/mutation/guard проверки Claude.
+
+Baseline однажды: npm ci/test108/typecheck/verify-build PASS. Focused helper tests: **24/24**, включая реальные Codex fixture replay и отрицательные искажения связей. RED/GREEN и точные команды/вывод — в task report. До реального Claude gate и scoped review не переходить к Task 2.
+
+Официальные источники для подготовки: [упаковка](https://developers.openai.com/plugins/build/plugins), [config-reference](https://learn.chatgpt.com/docs/config-file/config-reference), [hooks](https://learn.chatgpt.com/docs/hooks). Документация не заменяла наблюдения целевых версий.

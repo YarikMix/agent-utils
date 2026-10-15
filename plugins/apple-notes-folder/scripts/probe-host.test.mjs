@@ -138,3 +138,67 @@ test('mutation diagnostics name exactly the local submit event without asserting
   assert.equal(result.originalBytes, false);
   assert.match(result.unverified.originalBytes, /submit\/message\/attachment identity/);
 });
+test('guard reason echoes observed Codex session/turn/tool-use ids for outer result correlation', async () => {
+  const { out, config } = await syntheticRun('codex');
+  const payload = { hook_event_name: 'PreToolUse', session_id: 'synthetic-session', turn_id: 'synthetic-turn', tool_use_id: 'synthetic-tool-call', tool_name: 'Bash', tool_input: { command: config.codeGuardCommand } };
+  const result = await hook(out, 'codex', payload);
+  assert.equal(result.hookSpecificOutput.permissionDecisionReason, 'Synthetic probe guard marker [session=synthetic-session turn=synthetic-turn call=synthetic-tool-call]');
+});
+test('prepared-image mutation binds the observed current user message and rereads host bytes', async () => {
+  const { out } = await syntheticRun('codex');
+  const transcript = join(out, 'prepared-user.jsonl');
+  const records = [{ type: 'session_meta', payload: { id: 'observed-shape-session' } }, { type: 'response_item', payload: { type: 'message', id: 'observed-shape-message', role: 'user', content: [{ type: 'input_image', image_url: `data:image/png;base64,${PNG}` }], internal_chat_message_metadata_passthrough: { turn_id: 'observed-shape-turn', content_item_kinds: ['user.image'] } }, metadata: { retained_source: { id: { message_id: 'observed-shape-message', turn_id: 'observed-shape-turn', role: 'user' } } } }];
+  await writeFile(transcript, records.map(JSON.stringify).join('\n')+'\n');
+  await writeFile(join(out, 'controls.json'), JSON.stringify({ mutateBeforeTool: true }));
+  await hook(out, 'codex', { hook_event_name: 'PreToolUse', session_id: 'observed-shape-session', turn_id: 'observed-shape-turn', tool_use_id: 'observed-shape-call', transcript_path: transcript, tool_name: 'mcp__apple_notes_folder__probe_attachment', tool_input: { marker: 'after', markdown: 'test' } });
+  const entries=(await readFile(join(out,'events.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);
+  const mutation=entries.find(e=>e.kind==='mutation' && e.phase==='image-prepared-before-tool');
+  assert.equal(mutation?.imageMessageId,'observed-shape-message');
+  assert.equal(mutation?.toolUseId,'observed-shape-call');
+  assert.notDeepEqual(await readFile(join(out,'image.png')),Buffer.from(PNG,'base64'));
+});
+
+async function observedCodexReplay(mutate = () => {}) {
+  const {out} = await syntheticRun('codex');
+  const fixture = JSON.parse(await readFile(new URL('../test/fixtures/hosts/codex.json',import.meta.url),'utf8'));
+  const mapped = JSON.parse(JSON.stringify(fixture).replaceAll('/synthetic/probe/codex',out).replaceAll('/synthetic/codex/',out+'/'));
+  mutate(mapped);
+  await writeFile(join(out,'run.json'),JSON.stringify(mapped.run));
+  await appendFile(join(out,'events.jsonl'),mapped.events.map(JSON.stringify).join('\n')+'\n');
+  let session, records=[];
+  const saveSession=async()=>{if(session)await writeFile(join(out,`transcript-${session}.jsonl`),records.map(JSON.stringify).join('\n')+'\n');};
+  for(const record of mapped.transcriptRecords) {
+    if(record.type==='session_meta'){await saveSession();session=record.payload.id;records=[];}
+    records.push(record);
+  }
+  await saveSession();
+  return {out,fixture:mapped};
+}
+test('observed Codex 0.162.1 fixture proves exact-call rewrite, prepared image and both guard paths', async()=>{
+  const {out,fixture}=await observedCodexReplay();
+  const actual=await report(out);
+  for(const [key,value] of Object.entries(fixture.expected))assert.equal(actual[key],value,key);
+});
+for (const [name, mutate, rejected] of [
+  ['foreign PostToolUse call ids', f=>{for(const e of f.events)if(e.payload?.hook_event_name==='PostToolUse')e.payload.tool_use_id+='-foreign';}, 'rewriteReceived'],
+  ['replayed one-use server markers', f=>{f.events.push(...f.events.filter(e=>e.kind==='server-call'&&e.args.marker.startsWith('probe-after-')).map(e=>structuredClone(e)));}, 'rewriteReceived'],
+  ['mutation from a different session', f=>{for(const e of f.events)if(e.phase==='image-prepared-before-tool')e.session='foreign-session';}, 'originalBytes'],
+  ['mutation image message from another turn', f=>{for(const e of f.events)if(e.phase==='image-prepared-before-tool')e.imageMessageId='old-message';}, 'originalBytes'],
+  ['only the early UPS mutation', f=>{f.events=f.events.filter(e=>e.phase!=='image-prepared-before-tool');}, 'originalBytes'],
+  ['Code Mode result from another outer call', f=>{for(const r of f.transcriptRecords)if(r.payload?.type==='custom_tool_call_output')r.payload.call_id+='-foreign';}, 'codeModeBlocked'],
+  ['nested deny id differs from echoed Code Mode result', f=>{for(const e of f.events)if(e.payload?.tool_input?.command===f.run.codeGuardCommand)e.payload.tool_use_id+='-foreign';}, 'codeModeBlocked'],
+  ['mixed client versions', f=>{f.events.find(e=>e.clientInfo).clientInfo.version='0.162.2';}, 'rewriteReceived'],
+  ['unknown client version', f=>{for(const e of f.events)if(e.clientInfo)e.clientInfo.version='0.162.2';}, 'rewriteReceived'],
+]) {
+  test(`observed-fixture tamper rejects ${name}`,async()=>{
+    const {out}=await observedCodexReplay(mutate);
+    assert.equal((await report(out))[rejected],false);
+  });
+}
+test('prepare emits session-only source routing and an image/prompt separator',async()=>{
+  const {out}=await syntheticRun('codex');
+  const command=await readFile(join(out,'codex-command.txt'),'utf8');
+  assert.match(command,/marketplaces\.attachment-probe-local\.source_type/);
+  assert.match(command,/marketplaces\.attachment-probe-local\.source=/);
+  assert.ok(command.includes("'--image' ")&&command.includes(" '--' "));
+});

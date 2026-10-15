@@ -1,0 +1,3233 @@
+{
+  "version": "0.162.1",
+  "preToolUse": [
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000002",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PreToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "mcp__apple_notes_folder__probe_attachment",
+      "tool_input": {
+        "marker": "before",
+        "markdown": "baseline\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000004"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000005",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PreToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "mcp__apple_notes_folder__probe_attachment",
+      "tool_input": {
+        "marker": "after",
+        "markdown": "rewrite-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000006"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000007",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PreToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": ": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'"
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000008"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000009",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PreToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": ": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'"
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000010"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000011",
+      "turn_id": "00000000-0000-4000-8000-000000000012",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PreToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "mcp__apple_notes_folder__probe_attachment",
+      "tool_input": {
+        "marker": "after",
+        "markdown": "fresh-mutation-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000013"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000011",
+      "turn_id": "00000000-0000-4000-8000-000000000014",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PreToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": ": APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'"
+      },
+      "tool_use_id": "call_synthetic1"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000015",
+      "turn_id": "00000000-0000-4000-8000-000000000016",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000015.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PreToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "mcp__apple_notes_folder__probe_attachment",
+      "tool_input": {
+        "marker": "after",
+        "markdown": "prepared-image-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000017"
+    }
+  ],
+  "userPromptSubmit": [
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000002",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "UserPromptSubmit",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "prompt": "Repeat the synthetic baseline now that the reviewed probe hooks are trusted. Call probe_attachment exactly once with marker \"before\" and markdown \"baseline\". Do not supply attachment_ticket. Follow only the probe hook for image hrefs. No other tools or files."
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000005",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "UserPromptSubmit",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "prompt": "Synthetic rewrite test: call probe_attachment exactly once with marker \"after\" and markdown \"rewrite-body\". Do not supply attachment_ticket. Follow the probe hook for image hrefs; do not use other tools or read files."
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000007",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "UserPromptSubmit",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "prompt": "Synthetic Code Mode guard test. Execute exactly one Code Mode call containing await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"}); let any rejection propagate without catching or retrying. Do not use other tools or read files. This touches only the probe marker if the hook fails."
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000018",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "UserPromptSubmit",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "prompt": "Synthetic ordinary-shell guard test: use the direct shell exec_command tool exactly once, WITHOUT Code Mode/exec JavaScript wrapper, to run this exact command: : APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect' . Do not retry or use other tools. If direct shell is unavailable, report that without substituting a Code Mode wrapper."
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000009",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "UserPromptSubmit",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "prompt": "Repeat the synthetic Code Mode guard once using exactly: await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"}); Do not catch, retry, or use other tools."
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000011",
+      "turn_id": "00000000-0000-4000-8000-000000000012",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "UserPromptSubmit",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "prompt": "Fresh synthetic attachment mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"fresh-mutation-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. The attached image belongs to this new message."
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000011",
+      "turn_id": "00000000-0000-4000-8000-000000000014",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "UserPromptSubmit",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "prompt": "Synthetic ordinary-shell guard test: invoke the DIRECT exec_command tool once without Code Mode or JavaScript wrapper, with cmd exactly \": APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'\". Do not use other tools or substitute a wrapper if direct shell is unavailable."
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000015",
+      "turn_id": "00000000-0000-4000-8000-000000000016",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000015.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "UserPromptSubmit",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "prompt": "Fresh prepared-image mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"prepared-image-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. Use the image attached to this new message."
+    }
+  ],
+  "postToolUse": [
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000002",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PostToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "mcp__apple_notes_folder__probe_attachment",
+      "tool_input": {
+        "marker": "before",
+        "markdown": "baseline\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+      },
+      "tool_response": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":null}"
+          }
+        ]
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000004"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "turn_id": "00000000-0000-4000-8000-000000000005",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PostToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "mcp__apple_notes_folder__probe_attachment",
+      "tool_input": {
+        "marker": "probe-after-00000000-0000-4000-8000-000000000019",
+        "markdown": "rewrite-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+        "attachment_ticket": "probe-v1"
+      },
+      "tool_response": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":{\"accepted\":true,\"marker\":\"probe-after-00000000-0000-4000-8000-000000000019\",\"hookEventId\":\"00000000-0000-4000-8000-000000000020\",\"serverReceiptId\":\"00000000-0000-4000-8000-000000000021\",\"requestId\":4}}"
+          }
+        ]
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000006"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000011",
+      "turn_id": "00000000-0000-4000-8000-000000000012",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PostToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "mcp__apple_notes_folder__probe_attachment",
+      "tool_input": {
+        "marker": "probe-after-00000000-0000-4000-8000-000000000022",
+        "markdown": "fresh-mutation-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+        "attachment_ticket": "probe-v1"
+      },
+      "tool_response": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":{\"accepted\":true,\"marker\":\"probe-after-00000000-0000-4000-8000-000000000022\",\"hookEventId\":\"00000000-0000-4000-8000-000000000023\",\"serverReceiptId\":\"00000000-0000-4000-8000-000000000024\",\"requestId\":2}}"
+          }
+        ]
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000013"
+    },
+    {
+      "session_id": "00000000-0000-4000-8000-000000000015",
+      "turn_id": "00000000-0000-4000-8000-000000000016",
+      "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000015.jsonl",
+      "cwd": "/synthetic/probe/codex",
+      "hook_event_name": "PostToolUse",
+      "model": "gpt-6.1-sol",
+      "permission_mode": "default",
+      "tool_name": "mcp__apple_notes_folder__probe_attachment",
+      "tool_input": {
+        "marker": "probe-after-00000000-0000-4000-8000-000000000025",
+        "markdown": "prepared-image-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+        "attachment_ticket": "probe-v1"
+      },
+      "tool_response": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":{\"accepted\":true,\"marker\":\"probe-after-00000000-0000-4000-8000-000000000025\",\"hookEventId\":\"00000000-0000-4000-8000-000000000026\",\"serverReceiptId\":\"00000000-0000-4000-8000-000000000027\",\"requestId\":2}}"
+          }
+        ]
+      },
+      "tool_use_id": "exec-00000000-0000-4000-8000-000000000017"
+    }
+  ],
+  "transcriptRecords": [
+    {
+      "type": "session_meta",
+      "payload": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "cwd": "/synthetic/probe/codex",
+        "source": "cli",
+        "cli_version": "0.162.1"
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:23:28.884Z",
+      "ordinal": 9,
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "msg_00000000-0000-4000-8000-000000000028",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "<image name=[Image #1] path=\"/synthetic/probe/codex/image.png\">"
+          },
+          {
+            "type": "input_image",
+            "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+            "detail": "high"
+          },
+          {
+            "type": "input_text",
+            "text": "</image>"
+          },
+          {
+            "type": "input_text",
+            "text": "This is an authorized synthetic client-contract test. Call probe_attachment once with marker \"before\" and markdown \"baseline\". Do not include attachment_ticket. Do not use other tools or read files. Follow only probe hook instructions for attachment hrefs."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000029",
+          "create_time": 1792103008.884674,
+          "content_item_kinds": [
+            "user.text",
+            "user.image",
+            "user.text",
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "msg_00000000-0000-4000-8000-000000000028",
+            "turn_id": "00000000-0000-4000-8000-000000000029",
+            "role": "user"
+          },
+          "revision": "retained_00000000-0000-4000-8000-000000000030",
+          "complete": false
+        },
+        "client_authored": false,
+        "user_input_order": 0,
+        "mcp_attribution": {
+          "status": "none"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:23:33.736Z",
+      "ordinal": 13,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call",
+        "id": "ctc_synthetic2",
+        "status": "completed",
+        "call_id": "call_synthetic3",
+        "name": "exec",
+        "input": "const matches = ALL_TOOLS.filter(t => /probe_attachment$/.test(t.name));\nif (matches.length === 1) {\n  const result = await tools[matches[0].name]({marker:\"before\", markdown:\"baseline\"});\n  for (const content of result?.content ?? []) {\n    if (content.type === \"text\") text(content.text);\n  }\n} else {\n  text({error:\"probe_attachment unavailable\",matches:matches.map(t=>t.name)});\n}\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000029",
+          "create_time": 1792103012.0942218
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:23:37.809Z",
+      "ordinal": 16,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_00000000-0000-4000-8000-000000000031",
+        "call_id": "call_synthetic3",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 4.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":null}"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000029",
+          "create_time": 1792103017.809708
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000,
+        "mcp_attribution": {
+          "status": "complete",
+          "sources": [
+            {
+              "plugin_id": "attachment-contract-probe@attachment-probe-local",
+              "server_name": "apple-notes-folder",
+              "tool_name": "probe_attachment",
+              "first_turn_id": "00000000-0000-4000-8000-000000000029"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:28:52.476Z",
+      "ordinal": 28,
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "msg_00000000-0000-4000-8000-000000000032",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Repeat the synthetic baseline now that the reviewed probe hooks are trusted. Call probe_attachment exactly once with marker \"before\" and markdown \"baseline\". Do not supply attachment_ticket. Follow only the probe hook for image hrefs. No other tools or files."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000002",
+          "create_time": 1792103332.476511,
+          "content_item_kinds": [
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "msg_00000000-0000-4000-8000-000000000032",
+            "turn_id": "00000000-0000-4000-8000-000000000002",
+            "role": "user"
+          },
+          "revision": "retained_00000000-0000-4000-8000-000000000033",
+          "complete": true
+        },
+        "client_authored": false,
+        "user_input_order": 3,
+        "mcp_attribution": {
+          "status": "complete",
+          "sources": [
+            {
+              "plugin_id": "attachment-contract-probe@attachment-probe-local",
+              "server_name": "apple-notes-folder",
+              "tool_name": "probe_attachment",
+              "first_turn_id": "00000000-0000-4000-8000-000000000029"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:28:58.087Z",
+      "ordinal": 35,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call",
+        "id": "ctc_synthetic4",
+        "status": "completed",
+        "call_id": "call_synthetic5",
+        "name": "exec",
+        "input": "const matches = ALL_TOOLS.filter(t => /probe_attachment$/.test(t.name));\nif (matches.length === 1) {\n  const result = await tools[matches[0].name]({marker:\"before\", markdown:\"baseline\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"});\n  for (const content of result?.content ?? []) {\n    if (content.type === \"text\") text(content.text);\n  }\n} else {\n  text({error:\"probe_attachment unavailable\",matches:matches.map(t=>t.name)});\n}\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000002",
+          "create_time": 1792103336.330274
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:29:02.278Z",
+      "ordinal": 38,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_00000000-0000-4000-8000-000000000034",
+        "call_id": "call_synthetic5",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 4.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":null}"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000002",
+          "create_time": 1792103342.27874
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:30:05.917Z",
+      "ordinal": 48,
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "msg_00000000-0000-4000-8000-000000000035",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Synthetic rewrite test: call probe_attachment exactly once with marker \"after\" and markdown \"rewrite-body\". Do not supply attachment_ticket. Follow the probe hook for image hrefs; do not use other tools or read files."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000005",
+          "create_time": 1792103405.917533,
+          "content_item_kinds": [
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "msg_00000000-0000-4000-8000-000000000035",
+            "turn_id": "00000000-0000-4000-8000-000000000005",
+            "role": "user"
+          },
+          "revision": "retained_00000000-0000-4000-8000-000000000036",
+          "complete": true
+        },
+        "client_authored": false,
+        "user_input_order": 6,
+        "mcp_attribution": {
+          "status": "complete",
+          "sources": [
+            {
+              "plugin_id": "attachment-contract-probe@attachment-probe-local",
+              "server_name": "apple-notes-folder",
+              "tool_name": "probe_attachment",
+              "first_turn_id": "00000000-0000-4000-8000-000000000029"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:30:10.757Z",
+      "ordinal": 53,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call",
+        "id": "ctc_synthetic6",
+        "status": "completed",
+        "call_id": "call_synthetic7",
+        "name": "exec",
+        "input": "const matches = ALL_TOOLS.filter(t => /probe_attachment$/.test(t.name));\nif (matches.length === 1) {\n  const result = await tools[matches[0].name]({marker:\"after\", markdown:\"rewrite-body\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"});\n  for (const content of result?.content ?? []) {\n    if (content.type === \"text\") text(content.text);\n  }\n} else {\n  text({error:\"probe_attachment unavailable\",matches:matches.map(t=>t.name)});\n}\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000005",
+          "create_time": 1792103408.6845312
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:30:14.877Z",
+      "ordinal": 56,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_00000000-0000-4000-8000-000000000037",
+        "call_id": "call_synthetic7",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 4.1 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":{\"accepted\":true,\"marker\":\"probe-after-00000000-0000-4000-8000-000000000019\",\"hookEventId\":\"00000000-0000-4000-8000-000000000020\",\"serverReceiptId\":\"00000000-0000-4000-8000-000000000021\",\"requestId\":4}}"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000005",
+          "create_time": 1792103414.877016
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:31:37.653Z",
+      "ordinal": 68,
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "msg_00000000-0000-4000-8000-000000000038",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Synthetic Code Mode guard test. Execute exactly one Code Mode call containing await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"}); let any rejection propagate without catching or retrying. Do not use other tools or read files. This touches only the probe marker if the hook fails."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000007",
+          "create_time": 1792103497.652935,
+          "content_item_kinds": [
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "msg_00000000-0000-4000-8000-000000000038",
+            "turn_id": "00000000-0000-4000-8000-000000000007",
+            "role": "user"
+          },
+          "revision": "retained_00000000-0000-4000-8000-000000000039",
+          "complete": true
+        },
+        "client_authored": false,
+        "user_input_order": 9,
+        "mcp_attribution": {
+          "status": "complete",
+          "sources": [
+            {
+              "plugin_id": "attachment-contract-probe@attachment-probe-local",
+              "server_name": "apple-notes-folder",
+              "tool_name": "probe_attachment",
+              "first_turn_id": "00000000-0000-4000-8000-000000000029"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:31:41.912Z",
+      "ordinal": 75,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call",
+        "id": "ctc_synthetic8",
+        "status": "completed",
+        "call_id": "call_synthetic9",
+        "name": "exec",
+        "input": "await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"});\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000007",
+          "create_time": 1792103501.141091
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:31:42.279Z",
+      "ordinal": 77,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_00000000-0000-4000-8000-000000000040",
+        "call_id": "call_synthetic9",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script failed\nWall time 0.3 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "Script error:\nCommand blocked by PreToolUse hook: Synthetic probe guard marker. Command: : APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000007",
+          "create_time": 1792103502.279594
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:32:53.354Z",
+      "ordinal": 87,
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "msg_00000000-0000-4000-8000-000000000041",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Synthetic ordinary-shell guard test: use the direct shell exec_command tool exactly once, WITHOUT Code Mode/exec JavaScript wrapper, to run this exact command: : APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect' . Do not retry or use other tools. If direct shell is unavailable, report that without substituting a Code Mode wrapper."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000018",
+          "create_time": 1792103573.353976,
+          "content_item_kinds": [
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "msg_00000000-0000-4000-8000-000000000041",
+            "turn_id": "00000000-0000-4000-8000-000000000018",
+            "role": "user"
+          },
+          "revision": "retained_00000000-0000-4000-8000-000000000042",
+          "complete": true
+        },
+        "client_authored": false,
+        "user_input_order": 12,
+        "mcp_attribution": {
+          "status": "complete",
+          "sources": [
+            {
+              "plugin_id": "attachment-contract-probe@attachment-probe-local",
+              "server_name": "apple-notes-folder",
+              "tool_name": "probe_attachment",
+              "first_turn_id": "00000000-0000-4000-8000-000000000029"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:33:54.713Z",
+      "ordinal": 100,
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "msg_00000000-0000-4000-8000-000000000043",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Repeat the synthetic Code Mode guard once using exactly: await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"}); Do not catch, retry, or use other tools."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000009",
+          "create_time": 1792103634.713594,
+          "content_item_kinds": [
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "msg_00000000-0000-4000-8000-000000000043",
+            "turn_id": "00000000-0000-4000-8000-000000000009",
+            "role": "user"
+          },
+          "revision": "retained_00000000-0000-4000-8000-000000000044",
+          "complete": true
+        },
+        "client_authored": false,
+        "user_input_order": 14,
+        "mcp_attribution": {
+          "status": "complete",
+          "sources": [
+            {
+              "plugin_id": "attachment-contract-probe@attachment-probe-local",
+              "server_name": "apple-notes-folder",
+              "tool_name": "probe_attachment",
+              "first_turn_id": "00000000-0000-4000-8000-000000000029"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:33:58.336Z",
+      "ordinal": 105,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call",
+        "id": "ctc_synthetic10",
+        "status": "completed",
+        "call_id": "call_synthetic11",
+        "name": "exec",
+        "input": "await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"});\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000009",
+          "create_time": 1792103637.6494503
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:33:58.581Z",
+      "ordinal": 107,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_00000000-0000-4000-8000-000000000045",
+        "call_id": "call_synthetic11",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script failed\nWall time 0.2 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "Script error:\nCommand blocked by PreToolUse hook: Synthetic probe guard marker [session=00000000-0000-4000-8000-000000000001 turn=00000000-0000-4000-8000-000000000009 call=exec-00000000-0000-4000-8000-000000000010]. Command: : APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000009",
+          "create_time": 1792103638.581829
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000
+      }
+    },
+    {
+      "type": "session_meta",
+      "payload": {
+        "id": "00000000-0000-4000-8000-000000000011",
+        "cwd": "/synthetic/probe/codex",
+        "source": "cli",
+        "cli_version": "0.162.1"
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:35:15.953Z",
+      "ordinal": 9,
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "msg_00000000-0000-4000-8000-000000000046",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "<image name=[Image #1] path=\"/synthetic/probe/codex/image.png\">"
+          },
+          {
+            "type": "input_text",
+            "text": "image content omitted because it could not be processed"
+          },
+          {
+            "type": "input_text",
+            "text": "</image>"
+          },
+          {
+            "type": "input_text",
+            "text": "Fresh synthetic attachment mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"fresh-mutation-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. The attached image belongs to this new message."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000012",
+          "create_time": 1792103715.953065,
+          "content_item_kinds": [
+            "user.text",
+            "images.preparation_error",
+            "user.text",
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "msg_00000000-0000-4000-8000-000000000046",
+            "turn_id": "00000000-0000-4000-8000-000000000012",
+            "role": "user"
+          },
+          "revision": "retained_00000000-0000-4000-8000-000000000047",
+          "complete": false
+        },
+        "client_authored": false,
+        "user_input_order": 0,
+        "mcp_attribution": {
+          "status": "none"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:35:19.404Z",
+      "ordinal": 14,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call",
+        "id": "ctc_synthetic12",
+        "status": "completed",
+        "call_id": "call_synthetic13",
+        "name": "exec",
+        "input": "const matches = ALL_TOOLS.filter(x => /probe_attachment$/.test(x.name) || /probe_attachment/.test(x.name)); text(matches);\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000012",
+          "create_time": 1792103718.8815296
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:35:19.447Z",
+      "ordinal": 16,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_00000000-0000-4000-8000-000000000048",
+        "call_id": "call_synthetic13",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "[{\"name\":\"mcp__apple_notes_folder__probe_attachment\",\"description\":\"Record synthetic marker and markdown; no filesystem or Notes operation. This tool is part of plugin `attachment-contract-probe`.\\n\\nexec tool declaration:\\n```ts\\ndeclare const tools: { mcp__apple_notes_folder__probe_attachment(args: { attachment_ticket?: string; markdown: string; marker: string; }): Promise<CallToolResult>; };\\n```\"}]"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000012",
+          "create_time": 1792103719.447409
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:35:23.380Z",
+      "ordinal": 18,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call",
+        "id": "ctc_synthetic14",
+        "status": "completed",
+        "call_id": "call_synthetic15",
+        "name": "exec",
+        "input": "const result = await tools.mcp__apple_notes_folder__probe_attachment({marker:\"after\",markdown:\"fresh-mutation-body\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"}); for (const c of result.content ?? []) { if(c.type === \"text\") text(c.text); }\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000012",
+          "create_time": 1792103722.2196891
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:35:28.250Z",
+      "ordinal": 21,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_00000000-0000-4000-8000-000000000049",
+        "call_id": "call_synthetic15",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 4.9 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":{\"accepted\":true,\"marker\":\"probe-after-00000000-0000-4000-8000-000000000022\",\"hookEventId\":\"00000000-0000-4000-8000-000000000023\",\"serverReceiptId\":\"00000000-0000-4000-8000-000000000024\",\"requestId\":2}}"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000012",
+          "create_time": 1792103728.250962
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000,
+        "mcp_attribution": {
+          "status": "complete",
+          "sources": [
+            {
+              "plugin_id": "attachment-contract-probe@attachment-probe-local",
+              "server_name": "apple-notes-folder",
+              "tool_name": "probe_attachment",
+              "first_turn_id": "00000000-0000-4000-8000-000000000012"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:37:10.550Z",
+      "ordinal": 31,
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "msg_00000000-0000-4000-8000-000000000050",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Synthetic ordinary-shell guard test: invoke the DIRECT exec_command tool once without Code Mode or JavaScript wrapper, with cmd exactly \": APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'\". Do not use other tools or substitute a wrapper if direct shell is unavailable."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000014",
+          "create_time": 1792103830.550328,
+          "content_item_kinds": [
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "msg_00000000-0000-4000-8000-000000000050",
+            "turn_id": "00000000-0000-4000-8000-000000000014",
+            "role": "user"
+          },
+          "revision": "retained_00000000-0000-4000-8000-000000000051",
+          "complete": true
+        },
+        "client_authored": false,
+        "user_input_order": 3,
+        "mcp_attribution": {
+          "status": "complete",
+          "sources": [
+            {
+              "plugin_id": "attachment-contract-probe@attachment-probe-local",
+              "server_name": "apple-notes-folder",
+              "tool_name": "probe_attachment",
+              "first_turn_id": "00000000-0000-4000-8000-000000000012"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:37:14.376Z",
+      "ordinal": 38,
+      "type": "response_item",
+      "payload": {
+        "type": "function_call",
+        "id": "fc_synthetic16",
+        "name": "exec_command",
+        "arguments": "{\"cmd\":\": APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'\"}",
+        "call_id": "call_synthetic1",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000014",
+          "create_time": 1792103833.7556899
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "user_input_order": 5
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:37:14.646Z",
+      "ordinal": 40,
+      "type": "response_item",
+      "payload": {
+        "type": "function_call_output",
+        "id": "fco_00000000-0000-4000-8000-000000000052",
+        "call_id": "call_synthetic1",
+        "output": "Command blocked by PreToolUse hook: Synthetic probe guard marker [session=00000000-0000-4000-8000-000000000011 turn=00000000-0000-4000-8000-000000000014 call=call_synthetic1]. Command: : APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000014",
+          "create_time": 1792103834.646264
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000
+      }
+    },
+    {
+      "type": "session_meta",
+      "payload": {
+        "id": "00000000-0000-4000-8000-000000000015",
+        "cwd": "/synthetic/probe/codex",
+        "source": "cli",
+        "cli_version": "0.162.1"
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:39:31.387Z",
+      "ordinal": 9,
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "msg_00000000-0000-4000-8000-000000000053",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "<image name=[Image #1] path=\"/synthetic/probe/codex/image.png\">"
+          },
+          {
+            "type": "input_image",
+            "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+            "detail": "high"
+          },
+          {
+            "type": "input_text",
+            "text": "</image>"
+          },
+          {
+            "type": "input_text",
+            "text": "Fresh prepared-image mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"prepared-image-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. Use the image attached to this new message."
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000016",
+          "create_time": 1792103971.38751,
+          "content_item_kinds": [
+            "user.text",
+            "user.image",
+            "user.text",
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "msg_00000000-0000-4000-8000-000000000053",
+            "turn_id": "00000000-0000-4000-8000-000000000016",
+            "role": "user"
+          },
+          "revision": "retained_00000000-0000-4000-8000-000000000054",
+          "complete": false
+        },
+        "client_authored": false,
+        "user_input_order": 0,
+        "mcp_attribution": {
+          "status": "none"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:39:34.805Z",
+      "ordinal": 14,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call",
+        "id": "ctc_synthetic17",
+        "status": "completed",
+        "call_id": "call_synthetic18",
+        "name": "exec",
+        "input": "const matches = ALL_TOOLS.filter(x => /probe_attachment/.test(x.name));\ntext(matches);\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000016",
+          "create_time": 1792103974.3323228
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:39:34.954Z",
+      "ordinal": 16,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_00000000-0000-4000-8000-000000000055",
+        "call_id": "call_synthetic18",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "[{\"name\":\"mcp__apple_notes_folder__probe_attachment\",\"description\":\"Record synthetic marker and markdown; no filesystem or Notes operation. This tool is part of plugin `attachment-contract-probe`.\\n\\nexec tool declaration:\\n```ts\\ndeclare const tools: { mcp__apple_notes_folder__probe_attachment(args: { attachment_ticket?: string; markdown: string; marker: string; }): Promise<CallToolResult>; };\\n```\"}]"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000016",
+          "create_time": 1792103974.954064
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:39:39.020Z",
+      "ordinal": 18,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call",
+        "id": "ctc_synthetic19",
+        "status": "completed",
+        "call_id": "call_synthetic20",
+        "name": "exec",
+        "input": "const result = await tools.mcp__apple_notes_folder__probe_attachment({marker:\"after\", markdown:\"prepared-image-body\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"});\nfor (const item of result.content ?? []) {\n  if (item.type === \"text\") text(item.text);\n}\n",
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000016",
+          "create_time": 1792103977.9554327
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-15T22:39:43.702Z",
+      "ordinal": 21,
+      "type": "response_item",
+      "payload": {
+        "type": "custom_tool_call_output",
+        "id": "ctco_00000000-0000-4000-8000-000000000056",
+        "call_id": "call_synthetic20",
+        "output": [
+          {
+            "type": "input_text",
+            "text": "Script completed\nWall time 4.7 seconds\nOutput:\n"
+          },
+          {
+            "type": "input_text",
+            "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":{\"accepted\":true,\"marker\":\"probe-after-00000000-0000-4000-8000-000000000025\",\"hookEventId\":\"00000000-0000-4000-8000-000000000026\",\"serverReceiptId\":\"00000000-0000-4000-8000-000000000027\",\"requestId\":2}}"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "00000000-0000-4000-8000-000000000016",
+          "create_time": 1792103983.70216
+        }
+      },
+      "metadata": {
+        "client_authored": false,
+        "fallback_token_limit_override": 12000,
+        "mcp_attribution": {
+          "status": "complete",
+          "sources": [
+            {
+              "plugin_id": "attachment-contract-probe@attachment-probe-local",
+              "server_name": "apple-notes-folder",
+              "tool_name": "probe_attachment",
+              "first_turn_id": "00000000-0000-4000-8000-000000000016"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "expected": {
+    "client": "codex",
+    "version": "0.162.1",
+    "sessionBinding": true,
+    "originalBytes": true,
+    "rewriteReceived": true,
+    "attachmentRefsVisible": true,
+    "packagingIsolation": true,
+    "guardBlocked": true,
+    "codeModeBlocked": true,
+    "negativeControl": true
+  },
+  "run": {
+    "client": "codex",
+    "guardCommand": ": APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'",
+    "codeGuardCommand": ": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'",
+    "nonce": "00000000-0000-4000-8000-000000000057",
+    "href": "probe-attachment://00000000-0000-4000-8000-000000000003/image.png",
+    "pngSha256": "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+  },
+  "events": [
+    {
+      "at": 1792100117673,
+      "kind": "prepared",
+      "client": "codex",
+      "pngSha256": "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+    },
+    {
+      "at": 1792103006315,
+      "kind": "server-start",
+      "host": "codex",
+      "folderMarker": "folder-codex-00000000-0000-4000-8000-000000000057"
+    },
+    {
+      "at": 1792103006333,
+      "kind": "server-initialized",
+      "host": "codex",
+      "clientInfo": {
+        "name": "codex-mcp-client",
+        "title": "Codex",
+        "version": "0.162.1"
+      }
+    },
+    {
+      "at": 1792103017517,
+      "kind": "server-call",
+      "host": "codex",
+      "diagnosticReceipt": null,
+      "folderMarker": "folder-codex-00000000-0000-4000-8000-000000000057",
+      "clientInfo": {
+        "name": "codex-mcp-client",
+        "title": "Codex",
+        "version": "0.162.1"
+      },
+      "args": {
+        "marker": "before",
+        "markdown": "baseline"
+      },
+      "requestId": 2
+    },
+    {
+      "at": 1792103332221,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000058",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000002",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "UserPromptSubmit",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "prompt": "Repeat the synthetic baseline now that the reviewed probe hooks are trusted. Call probe_attachment exactly once with marker \"before\" and markdown \"baseline\". Do not supply attachment_ticket. Follow only the probe hook for image hrefs. No other tools or files."
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "UserPromptSubmit",
+          "additionalContext": "For the synthetic probe, markdown MUST include ![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png). Never supply attachment_ticket yourself."
+        }
+      }
+    },
+    {
+      "at": 1792103338131,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000059",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000002",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PreToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "mcp__apple_notes_folder__probe_attachment",
+        "tool_input": {
+          "marker": "before",
+          "markdown": "baseline\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000004"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:28:52.476Z",
+          "ordinal": 28,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000032",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Repeat the synthetic baseline now that the reviewed probe hooks are trusted. Call probe_attachment exactly once with marker \"before\" and markdown \"baseline\". Do not supply attachment_ticket. Follow only the probe hook for image hrefs. No other tools or files."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000002",
+              "create_time": 1792103332.476511,
+              "content_item_kinds": [
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000032",
+                "turn_id": "00000000-0000-4000-8000-000000000002",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000033",
+              "complete": true
+            },
+            "client_authored": false,
+            "user_input_order": 3,
+            "mcp_attribution": {
+              "status": "complete",
+              "sources": [
+                {
+                  "plugin_id": "attachment-contract-probe@attachment-probe-local",
+                  "server_name": "apple-notes-folder",
+                  "tool_name": "probe_attachment",
+                  "first_turn_id": "00000000-0000-4000-8000-000000000029"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:28:58.087Z",
+          "ordinal": 35,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic4",
+            "status": "completed",
+            "call_id": "call_synthetic5",
+            "name": "exec",
+            "input": "const matches = ALL_TOOLS.filter(t => /probe_attachment$/.test(t.name));\nif (matches.length === 1) {\n  const result = await tools[matches[0].name]({marker:\"before\", markdown:\"baseline\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"});\n  for (const content of result?.content ?? []) {\n    if (content.type === \"text\") text(content.text);\n  }\n} else {\n  text({error:\"probe_attachment unavailable\",matches:matches.map(t=>t.name)});\n}\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000002",
+              "create_time": 1792103336.330274
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {}
+    },
+    {
+      "at": 1792103342052,
+      "kind": "server-call",
+      "host": "codex",
+      "diagnosticReceipt": null,
+      "folderMarker": "folder-codex-00000000-0000-4000-8000-000000000057",
+      "clientInfo": {
+        "name": "codex-mcp-client",
+        "title": "Codex",
+        "version": "0.162.1"
+      },
+      "args": {
+        "marker": "before",
+        "markdown": "baseline\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+      },
+      "requestId": 3
+    },
+    {
+      "at": 1792103342083,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000060",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000002",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PostToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "mcp__apple_notes_folder__probe_attachment",
+        "tool_input": {
+          "marker": "before",
+          "markdown": "baseline\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+        },
+        "tool_response": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":null}"
+            }
+          ]
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000004"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:28:52.476Z",
+          "ordinal": 28,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000032",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Repeat the synthetic baseline now that the reviewed probe hooks are trusted. Call probe_attachment exactly once with marker \"before\" and markdown \"baseline\". Do not supply attachment_ticket. Follow only the probe hook for image hrefs. No other tools or files."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000002",
+              "create_time": 1792103332.476511,
+              "content_item_kinds": [
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000032",
+                "turn_id": "00000000-0000-4000-8000-000000000002",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000033",
+              "complete": true
+            },
+            "client_authored": false,
+            "user_input_order": 3,
+            "mcp_attribution": {
+              "status": "complete",
+              "sources": [
+                {
+                  "plugin_id": "attachment-contract-probe@attachment-probe-local",
+                  "server_name": "apple-notes-folder",
+                  "tool_name": "probe_attachment",
+                  "first_turn_id": "00000000-0000-4000-8000-000000000029"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:28:58.087Z",
+          "ordinal": 35,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic4",
+            "status": "completed",
+            "call_id": "call_synthetic5",
+            "name": "exec",
+            "input": "const matches = ALL_TOOLS.filter(t => /probe_attachment$/.test(t.name));\nif (matches.length === 1) {\n  const result = await tools[matches[0].name]({marker:\"before\", markdown:\"baseline\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"});\n  for (const content of result?.content ?? []) {\n    if (content.type === \"text\") text(content.text);\n  }\n} else {\n  text({error:\"probe_attachment unavailable\",matches:matches.map(t=>t.name)});\n}\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000002",
+              "create_time": 1792103336.330274
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {}
+    },
+    {
+      "at": 1792103405714,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000061",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000005",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "UserPromptSubmit",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "prompt": "Synthetic rewrite test: call probe_attachment exactly once with marker \"after\" and markdown \"rewrite-body\". Do not supply attachment_ticket. Follow the probe hook for image hrefs; do not use other tools or read files."
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "UserPromptSubmit",
+          "additionalContext": "For the synthetic probe, markdown MUST include ![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png). Never supply attachment_ticket yourself."
+        }
+      }
+    },
+    {
+      "at": 1792103410800,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000020",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000005",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PreToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "mcp__apple_notes_folder__probe_attachment",
+        "tool_input": {
+          "marker": "after",
+          "markdown": "rewrite-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000006"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:30:05.917Z",
+          "ordinal": 48,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000035",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Synthetic rewrite test: call probe_attachment exactly once with marker \"after\" and markdown \"rewrite-body\". Do not supply attachment_ticket. Follow the probe hook for image hrefs; do not use other tools or read files."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000005",
+              "create_time": 1792103405.917533,
+              "content_item_kinds": [
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000035",
+                "turn_id": "00000000-0000-4000-8000-000000000005",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000036",
+              "complete": true
+            },
+            "client_authored": false,
+            "user_input_order": 6,
+            "mcp_attribution": {
+              "status": "complete",
+              "sources": [
+                {
+                  "plugin_id": "attachment-contract-probe@attachment-probe-local",
+                  "server_name": "apple-notes-folder",
+                  "tool_name": "probe_attachment",
+                  "first_turn_id": "00000000-0000-4000-8000-000000000029"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:30:10.757Z",
+          "ordinal": 53,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic6",
+            "status": "completed",
+            "call_id": "call_synthetic7",
+            "name": "exec",
+            "input": "const matches = ALL_TOOLS.filter(t => /probe_attachment$/.test(t.name));\nif (matches.length === 1) {\n  const result = await tools[matches[0].name]({marker:\"after\", markdown:\"rewrite-body\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"});\n  for (const content of result?.content ?? []) {\n    if (content.type === \"text\") text(content.text);\n  }\n} else {\n  text({error:\"probe_attachment unavailable\",matches:matches.map(t=>t.name)});\n}\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000005",
+              "create_time": 1792103408.6845312
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "permissionDecision": "allow",
+          "updatedInput": {
+            "marker": "probe-after-00000000-0000-4000-8000-000000000019",
+            "markdown": "rewrite-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+            "attachment_ticket": "probe-v1"
+          }
+        }
+      }
+    },
+    {
+      "at": 1792103414644,
+      "kind": "server-call",
+      "host": "codex",
+      "diagnosticReceipt": {
+        "accepted": true,
+        "marker": "probe-after-00000000-0000-4000-8000-000000000019",
+        "hookEventId": "00000000-0000-4000-8000-000000000020",
+        "serverReceiptId": "00000000-0000-4000-8000-000000000021",
+        "requestId": 4
+      },
+      "folderMarker": "folder-codex-00000000-0000-4000-8000-000000000057",
+      "clientInfo": {
+        "name": "codex-mcp-client",
+        "title": "Codex",
+        "version": "0.162.1"
+      },
+      "args": {
+        "marker": "probe-after-00000000-0000-4000-8000-000000000019",
+        "markdown": "rewrite-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+        "attachment_ticket": "probe-v1"
+      },
+      "requestId": 4
+    },
+    {
+      "at": 1792103414683,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000062",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000005",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PostToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "mcp__apple_notes_folder__probe_attachment",
+        "tool_input": {
+          "marker": "probe-after-00000000-0000-4000-8000-000000000019",
+          "markdown": "rewrite-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+          "attachment_ticket": "probe-v1"
+        },
+        "tool_response": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":{\"accepted\":true,\"marker\":\"probe-after-00000000-0000-4000-8000-000000000019\",\"hookEventId\":\"00000000-0000-4000-8000-000000000020\",\"serverReceiptId\":\"00000000-0000-4000-8000-000000000021\",\"requestId\":4}}"
+            }
+          ]
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000006"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:30:05.917Z",
+          "ordinal": 48,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000035",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Synthetic rewrite test: call probe_attachment exactly once with marker \"after\" and markdown \"rewrite-body\". Do not supply attachment_ticket. Follow the probe hook for image hrefs; do not use other tools or read files."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000005",
+              "create_time": 1792103405.917533,
+              "content_item_kinds": [
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000035",
+                "turn_id": "00000000-0000-4000-8000-000000000005",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000036",
+              "complete": true
+            },
+            "client_authored": false,
+            "user_input_order": 6,
+            "mcp_attribution": {
+              "status": "complete",
+              "sources": [
+                {
+                  "plugin_id": "attachment-contract-probe@attachment-probe-local",
+                  "server_name": "apple-notes-folder",
+                  "tool_name": "probe_attachment",
+                  "first_turn_id": "00000000-0000-4000-8000-000000000029"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:30:10.757Z",
+          "ordinal": 53,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic6",
+            "status": "completed",
+            "call_id": "call_synthetic7",
+            "name": "exec",
+            "input": "const matches = ALL_TOOLS.filter(t => /probe_attachment$/.test(t.name));\nif (matches.length === 1) {\n  const result = await tools[matches[0].name]({marker:\"after\", markdown:\"rewrite-body\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"});\n  for (const content of result?.content ?? []) {\n    if (content.type === \"text\") text(content.text);\n  }\n} else {\n  text({error:\"probe_attachment unavailable\",matches:matches.map(t=>t.name)});\n}\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000005",
+              "create_time": 1792103408.6845312
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {}
+    },
+    {
+      "at": 1792103497399,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000063",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000007",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "UserPromptSubmit",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "prompt": "Synthetic Code Mode guard test. Execute exactly one Code Mode call containing await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"}); let any rejection propagate without catching or retrying. Do not use other tools or read files. This touches only the probe marker if the hook fails."
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "UserPromptSubmit",
+          "additionalContext": "For the synthetic probe, markdown MUST include ![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png). Never supply attachment_ticket yourself."
+        }
+      }
+    },
+    {
+      "at": 1792103501961,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000064",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000007",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PreToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": ": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'"
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000008"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:31:37.653Z",
+          "ordinal": 68,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000038",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Synthetic Code Mode guard test. Execute exactly one Code Mode call containing await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"}); let any rejection propagate without catching or retrying. Do not use other tools or read files. This touches only the probe marker if the hook fails."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000007",
+              "create_time": 1792103497.652935,
+              "content_item_kinds": [
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000038",
+                "turn_id": "00000000-0000-4000-8000-000000000007",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000039",
+              "complete": true
+            },
+            "client_authored": false,
+            "user_input_order": 9,
+            "mcp_attribution": {
+              "status": "complete",
+              "sources": [
+                {
+                  "plugin_id": "attachment-contract-probe@attachment-probe-local",
+                  "server_name": "apple-notes-folder",
+                  "tool_name": "probe_attachment",
+                  "first_turn_id": "00000000-0000-4000-8000-000000000029"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:31:41.912Z",
+          "ordinal": 75,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic8",
+            "status": "completed",
+            "call_id": "call_synthetic9",
+            "name": "exec",
+            "input": "await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"});\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000007",
+              "create_time": 1792103501.141091
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "permissionDecision": "deny",
+          "permissionDecisionReason": "Synthetic probe guard marker"
+        }
+      }
+    },
+    {
+      "at": 1792103573123,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000065",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000018",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "UserPromptSubmit",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "prompt": "Synthetic ordinary-shell guard test: use the direct shell exec_command tool exactly once, WITHOUT Code Mode/exec JavaScript wrapper, to run this exact command: : APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect' . Do not retry or use other tools. If direct shell is unavailable, report that without substituting a Code Mode wrapper."
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "UserPromptSubmit",
+          "additionalContext": "For the synthetic probe, markdown MUST include ![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png). Never supply attachment_ticket yourself."
+        }
+      }
+    },
+    {
+      "at": 1792103634458,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000066",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000009",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "UserPromptSubmit",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "prompt": "Repeat the synthetic Code Mode guard once using exactly: await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"}); Do not catch, retry, or use other tools."
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "UserPromptSubmit",
+          "additionalContext": "For the synthetic probe, markdown MUST include ![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png). Never supply attachment_ticket yourself."
+        }
+      }
+    },
+    {
+      "at": 1792103638386,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000067",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000001",
+        "turn_id": "00000000-0000-4000-8000-000000000009",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000001.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PreToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": ": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'"
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000010"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000001",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:33:54.713Z",
+          "ordinal": 100,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000043",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Repeat the synthetic Code Mode guard once using exactly: await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"}); Do not catch, retry, or use other tools."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000009",
+              "create_time": 1792103634.713594,
+              "content_item_kinds": [
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000043",
+                "turn_id": "00000000-0000-4000-8000-000000000009",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000044",
+              "complete": true
+            },
+            "client_authored": false,
+            "user_input_order": 14,
+            "mcp_attribution": {
+              "status": "complete",
+              "sources": [
+                {
+                  "plugin_id": "attachment-contract-probe@attachment-probe-local",
+                  "server_name": "apple-notes-folder",
+                  "tool_name": "probe_attachment",
+                  "first_turn_id": "00000000-0000-4000-8000-000000000029"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:33:58.336Z",
+          "ordinal": 105,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic10",
+            "status": "completed",
+            "call_id": "call_synthetic11",
+            "name": "exec",
+            "input": "await tools.exec_command({\"cmd\":\": APPLE_NOTES_PROBE_GUARD_CODE; touch '/synthetic/probe/codex/code-guard-effect'\"});\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000009",
+              "create_time": 1792103637.6494503
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "permissionDecision": "deny",
+          "permissionDecisionReason": "Synthetic probe guard marker [session=00000000-0000-4000-8000-000000000001 turn=00000000-0000-4000-8000-000000000009 call=exec-00000000-0000-4000-8000-000000000010]"
+        }
+      }
+    },
+    {
+      "at": 1792103713152,
+      "kind": "server-start",
+      "host": "codex",
+      "folderMarker": "folder-codex-00000000-0000-4000-8000-000000000057"
+    },
+    {
+      "at": 1792103713160,
+      "kind": "server-initialized",
+      "host": "codex",
+      "clientInfo": {
+        "name": "codex-mcp-client",
+        "title": "Codex",
+        "version": "0.162.1"
+      }
+    },
+    {
+      "at": 1792103715667,
+      "kind": "mutation",
+      "host": "codex",
+      "submitEventId": "00000000-0000-4000-8000-000000000068",
+      "session": "00000000-0000-4000-8000-000000000011",
+      "promptId": null,
+      "attachmentBindingVerified": false,
+      "unboundImageHashes": [],
+      "replacementSha256": "735242d2afe6c5382bada69d1b1f2db443e63fef2b518e404679574d670d2f21"
+    },
+    {
+      "at": 1792103715668,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000068",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000011",
+        "turn_id": "00000000-0000-4000-8000-000000000012",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "UserPromptSubmit",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "prompt": "Fresh synthetic attachment mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"fresh-mutation-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. The attached image belongs to this new message."
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000011",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        }
+      ],
+      "unboundImageHashes": [],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "UserPromptSubmit",
+          "additionalContext": "For the synthetic probe, markdown MUST include ![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png). Never supply attachment_ticket yourself."
+        }
+      }
+    },
+    {
+      "at": 1792103723420,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000023",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000011",
+        "turn_id": "00000000-0000-4000-8000-000000000012",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PreToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "mcp__apple_notes_folder__probe_attachment",
+        "tool_input": {
+          "marker": "after",
+          "markdown": "fresh-mutation-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000013"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000011",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:35:15.953Z",
+          "ordinal": 9,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000046",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "<image name=[Image #1] path=\"/synthetic/probe/codex/image.png\">"
+              },
+              {
+                "type": "input_text",
+                "text": "image content omitted because it could not be processed"
+              },
+              {
+                "type": "input_text",
+                "text": "</image>"
+              },
+              {
+                "type": "input_text",
+                "text": "Fresh synthetic attachment mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"fresh-mutation-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. The attached image belongs to this new message."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000012",
+              "create_time": 1792103715.953065,
+              "content_item_kinds": [
+                "user.text",
+                "images.preparation_error",
+                "user.text",
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000046",
+                "turn_id": "00000000-0000-4000-8000-000000000012",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000047",
+              "complete": false
+            },
+            "client_authored": false,
+            "user_input_order": 0,
+            "mcp_attribution": {
+              "status": "none"
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:35:19.404Z",
+          "ordinal": 14,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic12",
+            "status": "completed",
+            "call_id": "call_synthetic13",
+            "name": "exec",
+            "input": "const matches = ALL_TOOLS.filter(x => /probe_attachment$/.test(x.name) || /probe_attachment/.test(x.name)); text(matches);\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000012",
+              "create_time": 1792103718.8815296
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:35:19.447Z",
+          "ordinal": 16,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call_output",
+            "id": "ctco_00000000-0000-4000-8000-000000000048",
+            "call_id": "call_synthetic13",
+            "output": [
+              {
+                "type": "input_text",
+                "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+              },
+              {
+                "type": "input_text",
+                "text": "[{\"name\":\"mcp__apple_notes_folder__probe_attachment\",\"description\":\"Record synthetic marker and markdown; no filesystem or Notes operation. This tool is part of plugin `attachment-contract-probe`.\\n\\nexec tool declaration:\\n```ts\\ndeclare const tools: { mcp__apple_notes_folder__probe_attachment(args: { attachment_ticket?: string; markdown: string; marker: string; }): Promise<CallToolResult>; };\\n```\"}]"
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000012",
+              "create_time": 1792103719.447409
+            }
+          },
+          "metadata": {
+            "client_authored": false,
+            "fallback_token_limit_override": 12000
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:35:23.380Z",
+          "ordinal": 18,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic14",
+            "status": "completed",
+            "call_id": "call_synthetic15",
+            "name": "exec",
+            "input": "const result = await tools.mcp__apple_notes_folder__probe_attachment({marker:\"after\",markdown:\"fresh-mutation-body\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"}); for (const c of result.content ?? []) { if(c.type === \"text\") text(c.text); }\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000012",
+              "create_time": 1792103722.2196891
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "permissionDecision": "allow",
+          "updatedInput": {
+            "marker": "probe-after-00000000-0000-4000-8000-000000000022",
+            "markdown": "fresh-mutation-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+            "attachment_ticket": "probe-v1"
+          }
+        }
+      }
+    },
+    {
+      "at": 1792103727906,
+      "kind": "server-call",
+      "host": "codex",
+      "diagnosticReceipt": {
+        "accepted": true,
+        "marker": "probe-after-00000000-0000-4000-8000-000000000022",
+        "hookEventId": "00000000-0000-4000-8000-000000000023",
+        "serverReceiptId": "00000000-0000-4000-8000-000000000024",
+        "requestId": 2
+      },
+      "folderMarker": "folder-codex-00000000-0000-4000-8000-000000000057",
+      "clientInfo": {
+        "name": "codex-mcp-client",
+        "title": "Codex",
+        "version": "0.162.1"
+      },
+      "args": {
+        "marker": "probe-after-00000000-0000-4000-8000-000000000022",
+        "markdown": "fresh-mutation-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+        "attachment_ticket": "probe-v1"
+      },
+      "requestId": 2
+    },
+    {
+      "at": 1792103727944,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000069",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000011",
+        "turn_id": "00000000-0000-4000-8000-000000000012",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PostToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "mcp__apple_notes_folder__probe_attachment",
+        "tool_input": {
+          "marker": "probe-after-00000000-0000-4000-8000-000000000022",
+          "markdown": "fresh-mutation-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+          "attachment_ticket": "probe-v1"
+        },
+        "tool_response": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":{\"accepted\":true,\"marker\":\"probe-after-00000000-0000-4000-8000-000000000022\",\"hookEventId\":\"00000000-0000-4000-8000-000000000023\",\"serverReceiptId\":\"00000000-0000-4000-8000-000000000024\",\"requestId\":2}}"
+            }
+          ]
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000013"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000011",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:35:15.953Z",
+          "ordinal": 9,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000046",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "<image name=[Image #1] path=\"/synthetic/probe/codex/image.png\">"
+              },
+              {
+                "type": "input_text",
+                "text": "image content omitted because it could not be processed"
+              },
+              {
+                "type": "input_text",
+                "text": "</image>"
+              },
+              {
+                "type": "input_text",
+                "text": "Fresh synthetic attachment mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"fresh-mutation-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. The attached image belongs to this new message."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000012",
+              "create_time": 1792103715.953065,
+              "content_item_kinds": [
+                "user.text",
+                "images.preparation_error",
+                "user.text",
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000046",
+                "turn_id": "00000000-0000-4000-8000-000000000012",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000047",
+              "complete": false
+            },
+            "client_authored": false,
+            "user_input_order": 0,
+            "mcp_attribution": {
+              "status": "none"
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:35:19.404Z",
+          "ordinal": 14,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic12",
+            "status": "completed",
+            "call_id": "call_synthetic13",
+            "name": "exec",
+            "input": "const matches = ALL_TOOLS.filter(x => /probe_attachment$/.test(x.name) || /probe_attachment/.test(x.name)); text(matches);\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000012",
+              "create_time": 1792103718.8815296
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:35:19.447Z",
+          "ordinal": 16,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call_output",
+            "id": "ctco_00000000-0000-4000-8000-000000000048",
+            "call_id": "call_synthetic13",
+            "output": [
+              {
+                "type": "input_text",
+                "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+              },
+              {
+                "type": "input_text",
+                "text": "[{\"name\":\"mcp__apple_notes_folder__probe_attachment\",\"description\":\"Record synthetic marker and markdown; no filesystem or Notes operation. This tool is part of plugin `attachment-contract-probe`.\\n\\nexec tool declaration:\\n```ts\\ndeclare const tools: { mcp__apple_notes_folder__probe_attachment(args: { attachment_ticket?: string; markdown: string; marker: string; }): Promise<CallToolResult>; };\\n```\"}]"
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000012",
+              "create_time": 1792103719.447409
+            }
+          },
+          "metadata": {
+            "client_authored": false,
+            "fallback_token_limit_override": 12000
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:35:23.380Z",
+          "ordinal": 18,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic14",
+            "status": "completed",
+            "call_id": "call_synthetic15",
+            "name": "exec",
+            "input": "const result = await tools.mcp__apple_notes_folder__probe_attachment({marker:\"after\",markdown:\"fresh-mutation-body\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"}); for (const c of result.content ?? []) { if(c.type === \"text\") text(c.text); }\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000012",
+              "create_time": 1792103722.2196891
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [],
+      "output": {}
+    },
+    {
+      "at": 1792103830300,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000070",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000011",
+        "turn_id": "00000000-0000-4000-8000-000000000014",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "UserPromptSubmit",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "prompt": "Synthetic ordinary-shell guard test: invoke the DIRECT exec_command tool once without Code Mode or JavaScript wrapper, with cmd exactly \": APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'\". Do not use other tools or substitute a wrapper if direct shell is unavailable."
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000011",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        }
+      ],
+      "unboundImageHashes": [],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "UserPromptSubmit",
+          "additionalContext": "For the synthetic probe, markdown MUST include ![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png). Never supply attachment_ticket yourself."
+        }
+      }
+    },
+    {
+      "at": 1792103834418,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000071",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000011",
+        "turn_id": "00000000-0000-4000-8000-000000000014",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000011.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PreToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": ": APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'"
+        },
+        "tool_use_id": "call_synthetic1"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000011",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:37:10.550Z",
+          "ordinal": 31,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000050",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Synthetic ordinary-shell guard test: invoke the DIRECT exec_command tool once without Code Mode or JavaScript wrapper, with cmd exactly \": APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'\". Do not use other tools or substitute a wrapper if direct shell is unavailable."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000014",
+              "create_time": 1792103830.550328,
+              "content_item_kinds": [
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000050",
+                "turn_id": "00000000-0000-4000-8000-000000000014",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000051",
+              "complete": true
+            },
+            "client_authored": false,
+            "user_input_order": 3,
+            "mcp_attribution": {
+              "status": "complete",
+              "sources": [
+                {
+                  "plugin_id": "attachment-contract-probe@attachment-probe-local",
+                  "server_name": "apple-notes-folder",
+                  "tool_name": "probe_attachment",
+                  "first_turn_id": "00000000-0000-4000-8000-000000000012"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:37:14.376Z",
+          "ordinal": 38,
+          "type": "response_item",
+          "payload": {
+            "type": "function_call",
+            "id": "fc_synthetic16",
+            "name": "exec_command",
+            "arguments": "{\"cmd\":\": APPLE_NOTES_PROBE_GUARD; touch '/synthetic/probe/codex/guard-effect'\"}",
+            "call_id": "call_synthetic1",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000014",
+              "create_time": 1792103833.7556899
+            }
+          },
+          "metadata": {
+            "client_authored": false,
+            "user_input_order": 5
+          }
+        }
+      ],
+      "unboundImageHashes": [],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "permissionDecision": "deny",
+          "permissionDecisionReason": "Synthetic probe guard marker [session=00000000-0000-4000-8000-000000000011 turn=00000000-0000-4000-8000-000000000014 call=call_synthetic1]"
+        }
+      }
+    },
+    {
+      "at": 1792103968708,
+      "kind": "server-start",
+      "host": "codex",
+      "folderMarker": "folder-codex-00000000-0000-4000-8000-000000000057"
+    },
+    {
+      "at": 1792103968714,
+      "kind": "server-initialized",
+      "host": "codex",
+      "clientInfo": {
+        "name": "codex-mcp-client",
+        "title": "Codex",
+        "version": "0.162.1"
+      }
+    },
+    {
+      "at": 1792103971126,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000072",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000015",
+        "turn_id": "00000000-0000-4000-8000-000000000016",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000015.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "UserPromptSubmit",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "prompt": "Fresh prepared-image mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"prepared-image-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. Use the image attached to this new message."
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000015",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        }
+      ],
+      "unboundImageHashes": [],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "UserPromptSubmit",
+          "additionalContext": "For the synthetic probe, markdown MUST include ![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png). Never supply attachment_ticket yourself."
+        }
+      }
+    },
+    {
+      "at": 1792103979091,
+      "kind": "mutation",
+      "phase": "image-prepared-before-tool",
+      "host": "codex",
+      "preToolEventId": "00000000-0000-4000-8000-000000000026",
+      "session": "00000000-0000-4000-8000-000000000015",
+      "turnId": "00000000-0000-4000-8000-000000000016",
+      "toolUseId": "exec-00000000-0000-4000-8000-000000000017",
+      "imageMessageId": "msg_00000000-0000-4000-8000-000000000053",
+      "beforeImageRecord": {
+        "timestamp": "2026-10-15T22:39:31.387Z",
+        "ordinal": 9,
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "id": "msg_00000000-0000-4000-8000-000000000053",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<image name=[Image #1] path=\"/synthetic/probe/codex/image.png\">"
+            },
+            {
+              "type": "input_image",
+              "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+              "detail": "high"
+            },
+            {
+              "type": "input_text",
+              "text": "</image>"
+            },
+            {
+              "type": "input_text",
+              "text": "Fresh prepared-image mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"prepared-image-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. Use the image attached to this new message."
+            }
+          ],
+          "internal_chat_message_metadata_passthrough": {
+            "turn_id": "00000000-0000-4000-8000-000000000016",
+            "create_time": 1792103971.38751,
+            "content_item_kinds": [
+              "user.text",
+              "user.image",
+              "user.text",
+              "user.text"
+            ]
+          }
+        },
+        "metadata": {
+          "retained_source": {
+            "id": {
+              "message_id": "msg_00000000-0000-4000-8000-000000000053",
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "role": "user"
+            },
+            "revision": "retained_00000000-0000-4000-8000-000000000054",
+            "complete": false
+          },
+          "client_authored": false,
+          "user_input_order": 0,
+          "mcp_attribution": {
+            "status": "none"
+          }
+        }
+      },
+      "afterImageRecord": {
+        "timestamp": "2026-10-15T22:39:31.387Z",
+        "ordinal": 9,
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "id": "msg_00000000-0000-4000-8000-000000000053",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "<image name=[Image #1] path=\"/synthetic/probe/codex/image.png\">"
+            },
+            {
+              "type": "input_image",
+              "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+              "detail": "high"
+            },
+            {
+              "type": "input_text",
+              "text": "</image>"
+            },
+            {
+              "type": "input_text",
+              "text": "Fresh prepared-image mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"prepared-image-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. Use the image attached to this new message."
+            }
+          ],
+          "internal_chat_message_metadata_passthrough": {
+            "turn_id": "00000000-0000-4000-8000-000000000016",
+            "create_time": 1792103971.38751,
+            "content_item_kinds": [
+              "user.text",
+              "user.image",
+              "user.text",
+              "user.text"
+            ]
+          }
+        },
+        "metadata": {
+          "retained_source": {
+            "id": {
+              "message_id": "msg_00000000-0000-4000-8000-000000000053",
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "role": "user"
+            },
+            "revision": "retained_00000000-0000-4000-8000-000000000054",
+            "complete": false
+          },
+          "client_authored": false,
+          "user_input_order": 0,
+          "mcp_attribution": {
+            "status": "none"
+          }
+        }
+      },
+      "sourceBeforeSha256": "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77",
+      "replacementSha256": "8bc91d5a7cf7a3b8ad96449a4675738a8aee0a9e86b51bcd9b0f479bb4939eaa"
+    },
+    {
+      "at": 1792103979092,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000026",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000015",
+        "turn_id": "00000000-0000-4000-8000-000000000016",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000015.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PreToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "mcp__apple_notes_folder__probe_attachment",
+        "tool_input": {
+          "marker": "after",
+          "markdown": "prepared-image-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)"
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000017"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000015",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:39:31.387Z",
+          "ordinal": 9,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000053",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "<image name=[Image #1] path=\"/synthetic/probe/codex/image.png\">"
+              },
+              {
+                "type": "input_image",
+                "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+                "detail": "high"
+              },
+              {
+                "type": "input_text",
+                "text": "</image>"
+              },
+              {
+                "type": "input_text",
+                "text": "Fresh prepared-image mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"prepared-image-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. Use the image attached to this new message."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "create_time": 1792103971.38751,
+              "content_item_kinds": [
+                "user.text",
+                "user.image",
+                "user.text",
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000053",
+                "turn_id": "00000000-0000-4000-8000-000000000016",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000054",
+              "complete": false
+            },
+            "client_authored": false,
+            "user_input_order": 0,
+            "mcp_attribution": {
+              "status": "none"
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:39:34.805Z",
+          "ordinal": 14,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic17",
+            "status": "completed",
+            "call_id": "call_synthetic18",
+            "name": "exec",
+            "input": "const matches = ALL_TOOLS.filter(x => /probe_attachment/.test(x.name));\ntext(matches);\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "create_time": 1792103974.3323228
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:39:34.954Z",
+          "ordinal": 16,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call_output",
+            "id": "ctco_00000000-0000-4000-8000-000000000055",
+            "call_id": "call_synthetic18",
+            "output": [
+              {
+                "type": "input_text",
+                "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+              },
+              {
+                "type": "input_text",
+                "text": "[{\"name\":\"mcp__apple_notes_folder__probe_attachment\",\"description\":\"Record synthetic marker and markdown; no filesystem or Notes operation. This tool is part of plugin `attachment-contract-probe`.\\n\\nexec tool declaration:\\n```ts\\ndeclare const tools: { mcp__apple_notes_folder__probe_attachment(args: { attachment_ticket?: string; markdown: string; marker: string; }): Promise<CallToolResult>; };\\n```\"}]"
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "create_time": 1792103974.954064
+            }
+          },
+          "metadata": {
+            "client_authored": false,
+            "fallback_token_limit_override": 12000
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:39:39.020Z",
+          "ordinal": 18,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic19",
+            "status": "completed",
+            "call_id": "call_synthetic20",
+            "name": "exec",
+            "input": "const result = await tools.mcp__apple_notes_folder__probe_attachment({marker:\"after\", markdown:\"prepared-image-body\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"});\nfor (const item of result.content ?? []) {\n  if (item.type === \"text\") text(item.text);\n}\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "create_time": 1792103977.9554327
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "permissionDecision": "allow",
+          "updatedInput": {
+            "marker": "probe-after-00000000-0000-4000-8000-000000000025",
+            "markdown": "prepared-image-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+            "attachment_ticket": "probe-v1"
+          }
+        }
+      }
+    },
+    {
+      "at": 1792103983155,
+      "kind": "server-call",
+      "host": "codex",
+      "diagnosticReceipt": {
+        "accepted": true,
+        "marker": "probe-after-00000000-0000-4000-8000-000000000025",
+        "hookEventId": "00000000-0000-4000-8000-000000000026",
+        "serverReceiptId": "00000000-0000-4000-8000-000000000027",
+        "requestId": 2
+      },
+      "folderMarker": "folder-codex-00000000-0000-4000-8000-000000000057",
+      "clientInfo": {
+        "name": "codex-mcp-client",
+        "title": "Codex",
+        "version": "0.162.1"
+      },
+      "args": {
+        "marker": "probe-after-00000000-0000-4000-8000-000000000025",
+        "markdown": "prepared-image-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+        "attachment_ticket": "probe-v1"
+      },
+      "requestId": 2
+    },
+    {
+      "at": 1792103983273,
+      "kind": "hook",
+      "eventId": "00000000-0000-4000-8000-000000000073",
+      "host": "codex",
+      "payload": {
+        "session_id": "00000000-0000-4000-8000-000000000015",
+        "turn_id": "00000000-0000-4000-8000-000000000016",
+        "transcript_path": "/synthetic/codex/transcript-00000000-0000-4000-8000-000000000015.jsonl",
+        "cwd": "/synthetic/probe/codex",
+        "hook_event_name": "PostToolUse",
+        "model": "gpt-6.1-sol",
+        "permission_mode": "default",
+        "tool_name": "mcp__apple_notes_folder__probe_attachment",
+        "tool_input": {
+          "marker": "probe-after-00000000-0000-4000-8000-000000000025",
+          "markdown": "prepared-image-body\n\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)",
+          "attachment_ticket": "probe-v1"
+        },
+        "tool_response": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"status\":\"synthetic-probe-recorded\",\"diagnosticReceipt\":{\"accepted\":true,\"marker\":\"probe-after-00000000-0000-4000-8000-000000000025\",\"hookEventId\":\"00000000-0000-4000-8000-000000000026\",\"serverReceiptId\":\"00000000-0000-4000-8000-000000000027\",\"requestId\":2}}"
+            }
+          ]
+        },
+        "tool_use_id": "exec-00000000-0000-4000-8000-000000000017"
+      },
+      "records": [
+        {
+          "type": "session_meta",
+          "payload": {
+            "id": "00000000-0000-4000-8000-000000000015",
+            "cwd": "/synthetic/probe/codex",
+            "source": "cli",
+            "cli_version": "0.162.1"
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:39:31.387Z",
+          "ordinal": 9,
+          "type": "response_item",
+          "payload": {
+            "type": "message",
+            "id": "msg_00000000-0000-4000-8000-000000000053",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "<image name=[Image #1] path=\"/synthetic/probe/codex/image.png\">"
+              },
+              {
+                "type": "input_image",
+                "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+                "detail": "high"
+              },
+              {
+                "type": "input_text",
+                "text": "</image>"
+              },
+              {
+                "type": "input_text",
+                "text": "Fresh prepared-image mutation test. Call probe_attachment exactly once with marker \"after\" and markdown \"prepared-image-body\". Do not supply attachment_ticket or read files. Follow only the probe hook for image hrefs. Use the image attached to this new message."
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "create_time": 1792103971.38751,
+              "content_item_kinds": [
+                "user.text",
+                "user.image",
+                "user.text",
+                "user.text"
+              ]
+            }
+          },
+          "metadata": {
+            "retained_source": {
+              "id": {
+                "message_id": "msg_00000000-0000-4000-8000-000000000053",
+                "turn_id": "00000000-0000-4000-8000-000000000016",
+                "role": "user"
+              },
+              "revision": "retained_00000000-0000-4000-8000-000000000054",
+              "complete": false
+            },
+            "client_authored": false,
+            "user_input_order": 0,
+            "mcp_attribution": {
+              "status": "none"
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:39:34.805Z",
+          "ordinal": 14,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic17",
+            "status": "completed",
+            "call_id": "call_synthetic18",
+            "name": "exec",
+            "input": "const matches = ALL_TOOLS.filter(x => /probe_attachment/.test(x.name));\ntext(matches);\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "create_time": 1792103974.3323228
+            }
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:39:34.954Z",
+          "ordinal": 16,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call_output",
+            "id": "ctco_00000000-0000-4000-8000-000000000055",
+            "call_id": "call_synthetic18",
+            "output": [
+              {
+                "type": "input_text",
+                "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+              },
+              {
+                "type": "input_text",
+                "text": "[{\"name\":\"mcp__apple_notes_folder__probe_attachment\",\"description\":\"Record synthetic marker and markdown; no filesystem or Notes operation. This tool is part of plugin `attachment-contract-probe`.\\n\\nexec tool declaration:\\n```ts\\ndeclare const tools: { mcp__apple_notes_folder__probe_attachment(args: { attachment_ticket?: string; markdown: string; marker: string; }): Promise<CallToolResult>; };\\n```\"}]"
+              }
+            ],
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "create_time": 1792103974.954064
+            }
+          },
+          "metadata": {
+            "client_authored": false,
+            "fallback_token_limit_override": 12000
+          }
+        },
+        {
+          "timestamp": "2026-10-15T22:39:39.020Z",
+          "ordinal": 18,
+          "type": "response_item",
+          "payload": {
+            "type": "custom_tool_call",
+            "id": "ctc_synthetic19",
+            "status": "completed",
+            "call_id": "call_synthetic20",
+            "name": "exec",
+            "input": "const result = await tools.mcp__apple_notes_folder__probe_attachment({marker:\"after\", markdown:\"prepared-image-body\\n\\n![](probe-attachment://00000000-0000-4000-8000-000000000003/image.png)\"});\nfor (const item of result.content ?? []) {\n  if (item.type === \"text\") text(item.text);\n}\n",
+            "internal_chat_message_metadata_passthrough": {
+              "turn_id": "00000000-0000-4000-8000-000000000016",
+              "create_time": 1792103977.9554327
+            }
+          }
+        }
+      ],
+      "unboundImageHashes": [
+        "c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77"
+      ],
+      "output": {}
+    }
+  ],
+  "observation": {
+    "source": "Real Codex CLI 0.162.1 synthetic sessions; all client raw wire shapes observed",
+    "omissions": "AGENTS/environment/developer/assistant/reasoning/token messages omitted; only own synthetic user/tool records retained",
+    "mutationPhases": [
+      "UserPromptSubmit before image preparation: negative",
+      "PreToolUse after current image preparation: preserved inline PNG after source replacement"
+    ],
+    "sourceRouting": "session-only marketplaces.attachment-probe-local source_type/source",
+    "toolRouting": "session-only features.code_mode={enabled:false,direct_only_tool_namespaces:[functions]} for direct shell; default routing for Code Mode"
+  }
+}
