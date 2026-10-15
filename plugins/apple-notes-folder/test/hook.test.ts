@@ -4,7 +4,7 @@ import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { shouldDeny, hookOutput, DENY_REASON } from '../src/hook.js';
+import { shouldDeny, hookOutput, runHook, DENY_REASON } from '../src/hook.js';
 
 const DENY = [
   `osascript -e 'tell application "Notes" to get name of every note'`,
@@ -102,5 +102,22 @@ describe('dist/hook.js', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+
+describe('async shell composition', () => {
+  const paths = { configFile: null, runtimeDir: '/unused/runtime' };
+  it.each(['claude', 'codex'] as const)('%s denies normalized shell before attachment parsing', async host => {
+    const raw = { hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: DENY[0] }, transcript_path: '/nonexistent' };
+    expect(JSON.parse(await runHook(host, JSON.stringify(raw), paths))).toEqual(DENY_JSON);
+  });
+  it('preserves Claude Monitor and never treats Code Mode JavaScript as shell command', async () => {
+    expect(JSON.parse(await runHook('claude', JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Monitor', tool_input: { command: DENY[0] } }), paths))).toEqual(DENY_JSON);
+    expect(await runHook('codex', JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'exec', tool_input: { code: DENY[0], command: DENY[0] } }), paths)).toBe('');
+  });
+  it('ignores invalid JSON and unrelated events', async () => {
+    expect(await runHook('codex', 'invalid', paths)).toBe('');
+    expect(await runHook('claude', JSON.stringify({ hook_event_name: 'PostToolUse', tool_name: 'Bash', tool_input: { command: DENY[0] } }), paths)).toBe('');
   });
 });
