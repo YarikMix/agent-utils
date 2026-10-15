@@ -24,6 +24,7 @@ export class ToolError extends Error {
 }
 
 export const CONFIGURE_HINT = '/plugin configure apple-notes-folder@yarikmix-plugins';
+export const CODEX_CONFIGURE_HINT = '$apple-notes-folder:setup';
 
 export const MESSAGES = {
   OUTSIDE: 'Заметка вне разрешённой папки.',
