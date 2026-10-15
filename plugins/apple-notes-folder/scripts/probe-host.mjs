@@ -27,7 +27,7 @@ export async function prepare(client, root) {
   const out = join(root, client);
   await mkdir(out, { mode: 0o700 }); // Refuse reuse: one private run per host.
   const plugin = join(out, 'plugins', 'attachment-contract-probe');
-  for (const dir of [join(out, 'plugins'), plugin, join(plugin, '.claude-plugin'), join(plugin, '.codex-plugin'), join(plugin, 'hooks'), join(out, '.agents'), join(out, '.agents/plugins'), join(out, '.codex')]) {
+  for (const dir of [join(out, 'plugins'), plugin, join(plugin, '.claude-plugin'), join(plugin, '.codex-plugin'), join(plugin, 'hooks'), join(out, 'markers'), join(out, '.agents'), join(out, '.agents/plugins'), join(out, '.codex')]) {
     await mkdir(dir, { mode: 0o700 });
   }
   const config = { client, guardCommand: `: APPLE_NOTES_PROBE_GUARD; touch ${quote(join(out, 'guard-effect'))}`, codeGuardCommand: `: APPLE_NOTES_PROBE_GUARD_CODE; touch ${quote(join(out, 'code-guard-effect'))}`, nonce: randomUUID(), href: `probe-attachment://${randomUUID()}/image.png`, pngSha256: sha(Buffer.from(PNG, 'base64')) };
@@ -77,6 +77,7 @@ async function transcript(payload) {
 }
 export async function hook(out, host, payload) {
   const config = await json(join(out, 'run.json'));
+  const eventId = randomUUID(); // Helper identity, never presented as a host call/message id.
   const controls = await json(join(out, 'controls.json'));
   let records = [], transcriptError;
   try { records = await transcript(payload); } catch (e) { transcriptError = e.code ?? e.message; }
@@ -89,17 +90,36 @@ export async function hook(out, host, payload) {
     // Mutation is after the host accepted the user message, not a test-side pre-copy.
     if (controls.mutateOnSubmit) {
       await writeFile(join(out, 'image.png'), Buffer.from('synthetic replacement; deliberately no longer PNG'), { mode: 0o600 });
-      await log(out, { kind: 'mutation', host, session: payload.session_id, originalInlineBytes: imageHashes.includes(config.pngSha256), replacementSha256: sha(await readFile(join(out, 'image.png'))) });
+      await log(out, { kind: 'mutation', host, submitEventId: eventId, session: payload.session_id, promptId: payload.prompt_id ?? null, attachmentBindingVerified: false, unboundImageHashes: imageHashes, replacementSha256: sha(await readFile(join(out, 'image.png'))) });
     }
   }
-  if (event === 'PreToolUse' && /probe_attachment$/.test(payload.tool_name ?? '') && controls.rewrite) {
-    output = { hookSpecificOutput: { hookEventName: event, permissionDecision: 'allow', updatedInput: { ...input, attachment_ticket: 'probe-v1' } } };
+  if (event === 'PreToolUse' && /probe_attachment$/.test(payload.tool_name ?? '') && controls.rewrite && input.marker === 'after' && !input.attachment_ticket) {
+    const marker = `probe-after-${randomUUID()}`;
+    await save(join(out, 'markers', `${marker}.json`), { eventId, host, originalInput: input, rawHookPayload: payload });
+    output = { hookSpecificOutput: { hookEventName: event, permissionDecision: 'allow', updatedInput: { ...input, marker, attachment_ticket: 'probe-v1' } } };
   }
   if (event === 'PreToolUse' && payload.tool_name === 'Bash' && [config.guardCommand, config.codeGuardCommand].includes(input.command)) {
     output = { hookSpecificOutput: { hookEventName: event, permissionDecision: 'deny', permissionDecisionReason: 'Synthetic probe guard marker' } };
   }
-  await log(out, { kind: 'hook', host, payload, records, transcriptError, imageHashes, output });
+  await log(out, { kind: 'hook', eventId, host, payload, records, transcriptError, unboundImageHashes: imageHashes, output });
   return output;
+}
+
+// Diagnostic only: one server request may consume a helper-issued marker once.
+// This receipt does NOT prove that the same host call received updatedInput.
+export async function consumeMarker(out, host, marker, requestId) {
+  if (!/^probe-after-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(marker)) return null;
+  try {
+    const issued = await json(join(out, 'markers', `${marker}.json`));
+    if (issued.host !== host) return { accepted: false, reason: 'foreign-host' };
+    const receipt = { accepted: true, marker, hookEventId: issued.eventId, serverReceiptId: randomUUID(), requestId };
+    await save(join(out, 'markers', `${marker}.consumed.json`), receipt);
+    return receipt;
+  } catch (e) {
+    if (e.code === 'EEXIST') return { accepted: false, reason: 'marker-already-used' };
+    if (e.code === 'ENOENT') return { accepted: false, reason: 'marker-not-issued' };
+    throw e;
+  }
 }
 
 async function server(out, host) {
@@ -109,8 +129,9 @@ async function server(out, host) {
   const config = await json(join(out, 'run.json'));
   const mcp = new McpServer({ name: `probe-${host}`, version: '1.0.0' });
   mcp.registerTool('probe_attachment', { description: 'Record synthetic marker and markdown; no filesystem or Notes operation', inputSchema: { marker: z.string(), markdown: z.string(), attachment_ticket: z.string().optional() } }, async (args, extra) => {
-    await log(out, { kind: 'server-call', host, folderMarker: `folder-${host}-${config.nonce}`, clientInfo: mcp.server.getClientVersion(), args, requestId: extra.requestId });
-    return { content: [{ type: 'text', text: 'Synthetic probe recorded.' }] };
+    const diagnosticReceipt = await consumeMarker(out, host, args.marker, extra.requestId);
+    await log(out, { kind: 'server-call', host, diagnosticReceipt, folderMarker: `folder-${host}-${config.nonce}`, clientInfo: mcp.server.getClientVersion(), args, requestId: extra.requestId });
+    return { ...(diagnosticReceipt?.accepted === false ? { isError: true } : {}), content: [{ type: 'text', text: JSON.stringify({ status: 'synthetic-probe-recorded', diagnosticReceipt }) }] };
   });
   await log(out, { kind: 'server-start', host, folderMarker: `folder-${host}-${config.nonce}` });
   mcp.server.oninitialized = () => { log(out, { kind: 'server-initialized', host, clientInfo: mcp.server.getClientVersion() }).catch((e) => { console.error(e.message); process.exitCode = 1; }); };
@@ -120,27 +141,30 @@ async function server(out, host) {
 export async function report(out) {
   const config = await json(join(out, 'run.json'));
   const all = await events(out);
-  const hooks = all.filter((e) => e.kind === 'hook' && e.host === config.client);
   const calls = all.filter((e) => e.kind === 'server-call' && e.host === config.client);
-  const pre = hooks.filter((e) => e.payload.hook_event_name === 'PreToolUse' && /probe_attachment$/.test(e.payload.tool_name ?? ''));
-  const submits = hooks.filter((e) => e.payload.hook_event_name === 'UserPromptSubmit');
-  const after = calls.find((e) => e.args.marker === 'after');
-  const rewrite = pre.find((e) => e.payload.tool_input?.marker === 'after' && !e.payload.tool_input.attachment_ticket && e.output.hookSpecificOutput?.updatedInput?.attachment_ticket === 'probe-v1');
-  const binding = pre.find((e) => e.payload.session_id && e.payload.transcript_path && submits.some((s) => s.payload.session_id === e.payload.session_id) && e.records.some((r) => (r.type === 'user' && r.sessionId === e.payload.session_id) || (r.type === 'session_meta' && r.payload?.id === e.payload.session_id)));
-  const guard = hooks.filter((e) => e.output.hookSpecificOutput?.permissionDecision === 'deny' && e.payload.tool_name === 'Bash');
-  const effectAbsent = async (file) => stat(join(out, file)).then(() => false, (e) => e.code === 'ENOENT');
-  // Code Mode must leave its real function_call/tool response in the host transcript.
-  const codeGuard = guard.find((e) => e.payload.tool_input?.command === config.codeGuardCommand && e.records.some((r) => r.type === 'response_item' && r.payload?.type === 'function_call' && /^(?:functions\.)?exec$/.test(r.payload.name ?? '') && String(r.payload.arguments).includes('tools.exec_command(') && String(r.payload.arguments).includes('APPLE_NOTES_PROBE_GUARD_CODE')));
+  // No Pre/PostToolUse or attachment identity contract has been observed yet.
+  // Do not combine unrelated raw fields, hashes, or historical transcript text.
+  // Future positive adapters must cite real session/message/tool/outer/nested ids
+  // and match the one-use marker + server receipt to that exact host call.
+  const unverified = {
+    sessionBinding: 'No observed host session/transcript/tool-call identity adapter',
+    originalBytes: 'No observed mutation submit/message/attachment identity adapter',
+    rewriteReceived: 'No observed exact hook-call/server-receipt/PostToolUse identity adapter',
+    attachmentRefsVisible: 'No observed submit-to-exact-server-call identity adapter',
+    guardBlocked: 'No observed shell call/deny/result identity adapter',
+    ...(config.client === 'codex' ? { codeModeBlocked: 'No observed current outer/nested Code Mode call/deny/result identity adapter' } : {}),
+  };
   return {
     client: config.client,
     version: all.find((e) => e.host === config.client && e.clientInfo?.version)?.clientInfo.version ?? null,
-    sessionBinding: Boolean(binding),
-    originalBytes: all.some((m) => m.kind === 'mutation' && m.replacementSha256 !== config.pngSha256 && hooks.some((e) => e.payload.session_id === m.session && e.imageHashes.includes(config.pngSha256) && (e.payload.hook_event_name === 'UserPromptSubmit' || e.at >= m.at))),
-    rewriteReceived: Boolean(after?.args.attachment_ticket === 'probe-v1' && rewrite && after.at >= rewrite.at && after.args.markdown === rewrite.payload.tool_input.markdown),
-    attachmentRefsVisible: Boolean(after?.args.markdown.includes(config.href) && submits.some((e) => typeof e.payload.prompt === 'string' && e.payload.session_id === rewrite?.payload.session_id && !e.payload.prompt.includes(config.href))),
+    sessionBinding: false,
+    originalBytes: false,
+    rewriteReceived: false,
+    attachmentRefsVisible: false,
     packagingIsolation: all.some((e) => e.kind === 'server-initialized' && e.host === config.client) && !all.some((e) => e.host && e.host !== config.client),
-    guardBlocked: guard.some((e) => e.payload.tool_input?.command === config.guardCommand) && await effectAbsent('guard-effect'),
-    ...(config.client === 'codex' ? { codeModeBlocked: Boolean(codeGuard) && await effectAbsent('code-guard-effect') } : {}),
+    guardBlocked: false,
+    ...(config.client === 'codex' ? { codeModeBlocked: false } : {}),
+    unverified,
     negativeControl: calls.some((e) => e.args.marker === 'before' && !e.args.attachment_ticket),
   };
 }
