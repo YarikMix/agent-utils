@@ -8,6 +8,7 @@ export type ErrorCode =
   | 'TIMEOUT_WRITE'
   | 'IMAGE'
   | 'IMAGE_REF'
+  | 'IMAGE_PROVENANCE'
   | 'ATTACHMENTS'
   | 'LISTS'
   | 'TRUNCATED'

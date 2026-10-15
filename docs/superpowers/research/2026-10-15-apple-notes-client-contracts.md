@@ -80,3 +80,57 @@ Claude `test/fixtures/hosts/claude.json` остаётся честно непо�
 Baseline однажды: npm ci/test108/typecheck/verify-build PASS. Focused helper tests: **24/24**, включая реальные Codex fixture replay и отрицательные искажения связей. RED/GREEN и точные команды/вывод — в task report. До реального Claude gate и scoped review не переходить к Task 2.
 
 Официальные источники для подготовки: [упаковка](https://developers.openai.com/plugins/build/plugins), [config-reference](https://learn.chatgpt.com/docs/config-file/config-reference), [hooks](https://learn.chatgpt.com/docs/hooks). Документация не заменяла наблюдения целевых версий.
+
+## Task 3: поддержанные исходные вложения (2026-10-16)
+
+В соответствии с [согласованным дополнением](../specs/2026-10-16-apple-notes-claude-unavailable-amendment.md)
+отсутствие аккаунта Claude больше не блокирует реализацию. Исторический результат
+двухклиентского gate выше не превращается в PASS.
+
+Оба адаптера нормализуют только raw `UserPromptSubmit` для session-context и
+`PreToolUse`/`PostToolUse` с `tool_use_id` для tool-context. Host фиксирует сам
+адаптер. Читается только точный абсолютный `transcript_path` из hook, без поиска
+сессий, произвольных корней и чтения путей картинок. Непустые session/path/call
+проверяются до чтения; сессия сверяется с host transcript.
+
+Поддержанные исходные формы:
+
+- **Codex, реальное наблюдение 0.162.1:** один `session_meta.payload.id`,
+  `response_item.payload.type=message/role=user`, `input_image.image_url` с
+  inline `data:image/...;base64,...`. Для изображения сверяются message/turn/role
+  из `metadata.retained_source.id`, `payload.id`,
+  `internal_chat_message_metadata_passthrough.turn_id/content_item_kinds`.
+  Поддержаны также более ранние пользовательские изображения **этой сессии**;
+  Task 1 probe требовал текущий turn для своего опыта, production grant включает
+  ранее присланные пользователем изображения текущего диалога по спецификации.
+  Реальные `images.preparation_error` и объявленное изображение без inline bytes
+  дают `IMAGE_PROVENANCE`, а не разрешение пути. Mutation session из fixture
+  читается по исходным host bytes после замены source.
+- **Claude, дополнительное реальное наблюдение после authfailed:** по точному
+  transcript path из собственного synthetic probe events файл появился позже
+  UPS. В нём сохранён `type=user`, `sessionId`, `uuid`, `isSidechain=false`,
+  `message.role=user`, `content[].type=image`,
+  `source={type:base64,media_type:image/png,data:...}` с исходным probe PNG.
+  Отдельная sanitized fixture `claude-authfailed-transcript.json` сохраняет
+  только реальные user records; исходная неполная `claude.json` не изменена.
+  Это подтверждает сохранение user bytes в данном authfailed запуске,
+  **не** полный model/tool/rewrite/guard flow Claude. Последний остаётся NOT RUN.
+  Ненаблюдённые Claude tool envelopes и meta/sidechain отрицательные варианты
+  в тестах явно обозначены documented/synthetic structural cases.
+
+Для каждой формы проверяются canonical base64, размер до декодирования (до 10 МБ)
+и сигнатуры PNG/JPEG/GIF/HEIC/WebP с совпадением MIME. SHA-256 и
+`attachment:<sha256>` вычисляются по сохранённым исходным байтам. Наблюдённые
+image records обоих host не имеют надёжных per-image path metadata:
+`aliases=[]`. Codex `<image ... path=...>` с kind `user.text` и отдельный Claude
+`isMeta/turnCompanion` текст `[Image: source: ...]` не дают aliases. Произвольное
+упоминание пути, включая пробелы/кириллицу, тоже не даёт alias.
+
+`view_image`, generated/screenshot tool results, assistant images, Claude
+meta/turnCompanion/sidechain records исключены. Рекурсивного поиска картинок
+внутри tool results нет. Наблюдённого file/hash snapshot wire-контракта нет:
+path-only `localImage` отвергается независимо от существования, подмены байтов
+или symlink. При наличии inline bytes такой путь вообще не читается.
+Повреждённый/оборванный JSONL, чужая/неоднозначная сессия, неизвестная форма
+вложения дают `IMAGE_PROVENANCE` с причиной без текста сообщения/base64.
+Совместимость с другими версиями клиентов здесь не заявляется.
