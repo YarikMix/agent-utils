@@ -2,9 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import { lstat, mkdir, readdir, rename, rmdir, unlink, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { ToolError } from '../errors.js';
+import { ToolError, reportAttachmentCleanupFailure } from '../errors.js';
 import { imageHrefs } from '../markdown.js';
-import type { AttachmentContext, Clock, Host, ImageGrant, RuntimePaths, TicketLease, VerifiedAttachment, WriteArgs, WriteToolName } from '../hosts/types.js';
+import type { AttachmentContext, Clock, Host, ImageGrant, PreparedImages, RuntimePaths, TicketLease, VerifiedAttachment, WriteArgs, WriteToolName } from '../hosts/types.js';
 import { privateDirectory, publishPrivateFile, readPrivateFile, saveSnapshot, SHA256, SNAPSHOT_NAME, PUBLICATION_TEMP_NAME, validSnapshotPath, verifySnapshot } from './snapshots.js';
 
 const TICKET_TTL = 900000;
@@ -151,7 +151,7 @@ export async function consumeTicket(paths: RuntimePaths, host: Host, name: Write
       for (const grant of manifest.images) await verifySnapshot(root, grant);
       return { images: manifest.images, release };
     } catch (error) {
-      await release();
+      try { await release(); } catch { reportAttachmentCleanupFailure(); }
       throw error;
     }
   });
@@ -201,4 +201,23 @@ export async function cleanupRuntime(paths: RuntimePaths, now: Clock = Date.now)
           (st.mode & 0o777) === 0o600 && st.nlink === 1 && timestamp - st.mtimeMs >= SNAPSHOT_TTL) await remove(path);
     }
   });
+}
+
+/** Resolve only verified grants; text-only calls never consume a ticket or read a file. */
+export function makeImagePreparer(host: Host, paths: RuntimePaths, now: Clock = Date.now): (name: WriteToolName, args: WriteArgs) => Promise<PreparedImages> {
+  return async (name, args) => {
+    if (!imageHrefs(args.markdown).length) return { resolve: async () => { throw fail(); }, release: async () => {} };
+    const lease = await consumeTicket(paths, host, name, args, now);
+    try {
+      const urls = new Map<string, string>();
+      for (const grant of lease.images) urls.set(grant.href, await verifySnapshot(paths.runtimeDir, grant));
+      return {
+        resolve: async href => { const url = urls.get(href); if (!url) throw fail(); return url; },
+        release: lease.release,
+      };
+    } catch (error) {
+      try { await lease.release(); } catch { reportAttachmentCleanupFailure(); }
+      throw error;
+    }
+  };
 }

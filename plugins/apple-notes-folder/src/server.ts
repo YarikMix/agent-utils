@@ -1,17 +1,26 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { toToolResult } from './errors.js';
-import { imageSrc } from './images.js';
+import { homedir } from 'node:os';
+import { makeImagePreparer } from './attachments/tickets.js';
+import { readFolder } from './hosts/config.js';
+import { configurationHint, hostPaths, parseHost } from './hosts/paths.js';
 import { makeOsascriptRunner } from './runner.js';
-import { configuredFolder, makeScopeProvider } from './scope.js';
+import { makeScopeProvider } from './scope.js';
 import { makeTools } from './tools.js';
 
-const run = makeOsascriptRunner();
-const getScope = makeScopeProvider(configuredFolder(process.env), run);
+const host = parseHost(process.argv.slice(2));
+const hint = configurationHint(host);
+const paths = hostPaths(host, process.env, homedir());
+const run = makeOsascriptRunner(undefined, hint);
+// Capture configuration once. A malformed config remains a tool-level error until restart.
+let getScope: ReturnType<typeof makeScopeProvider>;
+try { getScope = makeScopeProvider(await readFolder(host, process.env, homedir()), run, hint); }
+catch (error) { getScope = async () => { throw error; }; }
 
 const server = new McpServer({ name: 'apple-notes-folder', version: '1.1.0' });
 
-for (const tool of makeTools({ getScope, run, imageSrc: (p) => imageSrc(p) })) {
+for (const tool of makeTools({ getScope, run, prepareImages: makeImagePreparer(host, paths) })) {
   server.registerTool(
     tool.name,
     { description: tool.description, inputSchema: tool.shape, annotations: tool.annotations },

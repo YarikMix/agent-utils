@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mapOsaFailure, makeOsascriptRunner, OSA_TIMEOUT_MS } from '../src/runner.js';
-import { MESSAGES, attachmentsMessage } from '../src/errors.js';
+import { MESSAGES, CODEX_CONFIGURE_HINT, attachmentsMessage } from '../src/errors.js';
 
 describe('mapOsaFailure', () => {
   it('разбирает коды APN из stderr', () => {
@@ -69,4 +69,12 @@ describe('makeOsascriptRunner', () => {
       cb(new Error('exit 1'), '', 'Error: APN:OUTSIDE');
     await expect(makeOsascriptRunner(exec)('S', [], { write: true })).rejects.toMatchObject({ code: 'OUTSIDE' });
   });
+});
+
+it('FOLDER_GONE uses the selected host setup hint in direct mapping and runner', async () => {
+  const direct = mapOsaFailure({}, 'APN:FOLDER_GONE', true, CODEX_CONFIGURE_HINT);
+  expect(direct.message).toContain('$apple-notes-folder:setup');
+  expect(direct.message).not.toContain('/plugin configure');
+  const exec = (_f: string, _a: string[], _o: object, cb: (e: Error, out: string, err: string) => void) => cb(new Error('gone'), '', 'APN:FOLDER_GONE');
+  await expect(makeOsascriptRunner(exec, CODEX_CONFIGURE_HINT)('SCRIPT', [], { write: false })).rejects.toMatchObject({ code: 'CONFIG', message: direct.message });
 });

@@ -1,10 +1,26 @@
-import { describe, it, expect } from 'vitest';
-import { readFile } from 'node:fs/promises';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { readFile, mkdtemp, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { issueTicket, makeImagePreparer } from '../src/attachments/tickets.js';
+import type { WriteArgs, WriteToolName } from '../src/hosts/types.js';
 import { makeTools } from '../src/tools.js';
 import { SCRIPTS } from '../src/scripts.js';
 import { MESSAGES, ToolError, attachmentsMessage } from '../src/errors.js';
 import { titleHtml, MAX_MARKDOWN_CHARS, TRUNCATION_MARKER_PREFIX } from '../src/markdown.js';
 import type { Runner } from '../src/runner.js';
+
+const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
+let runtimeDir: string;
+beforeEach(async () => { runtimeDir = await realpath(await mkdtemp(join(tmpdir(), 'notes-tools-'))); });
+afterEach(async () => { vi.restoreAllMocks(); await rm(runtimeDir, { recursive: true, force: true }); });
+const prepareImages = (name: WriteToolName, args: WriteArgs) => makeImagePreparer('codex', { configFile: null, runtimeDir })(name, args);
+async function authorized(name: WriteToolName, args: WriteArgs, hrefs: string[]) {
+  const attachment_ticket = await issueTicket({ configFile: null, runtimeDir }, { host: 'codex', sessionId: 'session', callId: 'call', transcriptPath: '' }, name, args,
+    hrefs.map(href => ({ href, aliases: [], bytes: PNG, sha256: createHash('sha256').update(PNG).digest('hex') })));
+  return { ...args, attachment_ticket };
+}
 
 interface FakeNote {
   name: string;
@@ -96,21 +112,17 @@ function setup() {
     P1: { name: 'С картинками', body: WITH_IMAGES, folder: 'F1', modified: '2026-09-05T00:00:00.000Z', attachments: 2 },
     X1: { name: 'Секретная', body: '<div><h1>Секретная</h1></div><div>про кота тоже</div>', folder: 'F2', modified: '2026-09-03T00:00:00.000Z' },
   });
-  const loaded: string[] = [];
   const tools = makeTools({
     getScope: async () => ({ folderId: 'F1', folderName: 'Разрешённая' }),
     run: fake.run,
-    imageSrc: async (p) => {
-      loaded.push(p);
-      return 'file:///private/tmp/claude-1/real.png';
-    },
+    prepareImages,
   });
   const tool = (name: string) => {
     const t = tools.find((x) => x.name === name);
     if (!t) throw new Error(`нет инструмента ${name}`);
     return t.handler;
   };
-  return { ...fake, tools, tool, loaded };
+  return { ...fake, tools, tool };
 }
 
 describe('набор инструментов', () => {
@@ -129,7 +141,7 @@ describe('набор инструментов', () => {
       expect(d[name]).toContain('вложения');
       expect(d[name]).toContain('списк');
     }
-    for (const name of ['notes_create', 'notes_append', 'notes_update']) expect(d[name]).toContain('/private/tmp/claude-<uid>/');
+    for (const name of ['notes_create', 'notes_append', 'notes_update']) expect(d[name]).toContain('вложени');
     expect(d.notes_read).toContain('Вложений в заметке');
   });
 
@@ -224,7 +236,7 @@ describe('граница папки', () => {
         throw new ToolError('CONFIG', 'Не задана папка Заметок.');
       },
       run: fake.run,
-      imageSrc: async () => 'file:///x',
+      prepareImages,
     });
     await expect(tools[0].handler({ limit: 50, offset: 0 })).rejects.toMatchObject({ code: 'CONFIG' });
     expect(fake.calls.length).toBe(0);
@@ -233,14 +245,14 @@ describe('граница папки', () => {
 
 describe('запись', () => {
   it('notes_create: заголовок, текст и картинка из файла', async () => {
-    const { tool, notes, loaded, calls } = setup();
+    const { tool, notes, calls } = setup();
     const { id } = JSON.parse(
-      await tool('notes_create')({ title: 'Новая', markdown: 'текст\n\n![](/private/tmp/claude-1/a.png)' }),
+      await tool('notes_create')(await authorized('notes_create', { title: 'Новая', markdown: 'текст\n\n![](/private/tmp/claude-1/a.png)' }, ['/private/tmp/claude-1/a.png'])),
     );
     expect(notes[id].folder).toBe('F1');
     expect(notes[id].body.startsWith(titleHtml('Новая'))).toBe(true);
-    expect(notes[id].body).toContain('<img src="file:///private/tmp/claude-1/real.png">');
-    expect(loaded).toEqual(['/private/tmp/claude-1/a.png']);
+    expect(notes[id].body).toContain('<img src="file://');
+    expect(notes[id].body).toContain('/snapshots/');
     expect(calls.at(-1)?.write).toBe(true);
   });
 
@@ -289,7 +301,7 @@ describe('запись', () => {
     const tools = makeTools({
       getScope: async () => ({ folderId: 'F1', folderName: 'Разрешённая' }),
       run: fake.run,
-      imageSrc: async () => 'file:///private/tmp/claude-1/real.png',
+      prepareImages,
     });
     const tool = (name: string) => tools.find((t) => t.name === name)!.handler;
 
@@ -308,12 +320,11 @@ describe('запись', () => {
   });
 
   it('notes_append и notes_update без вложений — картинка из пути уходит в тело как file://', async () => {
-    const { tool, notes, loaded } = setup();
-    await tool('notes_append')({ id: 'N1', markdown: '![](/private/tmp/claude-1/a.png)' });
-    expect(notes.N1.body).toContain('<img src="file:///private/tmp/claude-1/real.png">');
-    await tool('notes_update')({ id: 'N2', markdown: '# Вторая\n\n![](/private/tmp/claude-1/b.png)' });
-    expect(notes.N2.body).toContain('<img src="file:///private/tmp/claude-1/real.png">');
-    expect(loaded).toEqual(['/private/tmp/claude-1/a.png', '/private/tmp/claude-1/b.png']);
+    const { tool, notes } = setup();
+    await tool('notes_append')(await authorized('notes_append', { id: 'N1', markdown: '![](/private/tmp/claude-1/a.png)' }, ['/private/tmp/claude-1/a.png']));
+    expect(notes.N1.body).toContain('<img src="file://');
+    await tool('notes_update')(await authorized('notes_update', { id: 'N2', markdown: '# Вторая\n\n![](/private/tmp/claude-1/b.png)' }, ['/private/tmp/claude-1/b.png']));
+    expect(notes.N2.body).toContain('<img src="file://');
   });
 
   it('notes_update: заглушка note-image во входе — ошибка до записи', async () => {
@@ -360,4 +371,64 @@ describe('запись', () => {
     await tool('notes_delete')({ id: 'N2' });
     expect(calls.map((c) => c.write)).toEqual([false, true]);
   });
+});
+
+describe('prepareImages lifecycle', () => {
+  it.each(['notes_create', 'notes_append', 'notes_update'] as const)('%s passes whole args exactly once and releases after failure', async name => {
+    const args = { title: 'Title', id: 'N1', markdown: 'text', attachment_ticket: 'a'.repeat(64) };
+    const error = new ToolError('TIMEOUT_WRITE', MESSAGES.TIMEOUT_WRITE);
+    const release = vi.fn(async () => { throw new Error('PRIVATE_PATH ticket note bytes'); });
+    const prepare = vi.fn(async () => ({ resolve: async () => { throw new Error('unexpected image'); }, release }));
+    const diagnostic = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const run: Runner = async () => { throw error; };
+    const handler = makeTools({ getScope: async () => ({ folderId: 'F1', folderName: 'F' }), run, prepareImages: prepare }).find(t => t.name === name)!.handler;
+    await expect(handler(args)).rejects.toBe(error);
+    expect(prepare).toHaveBeenCalledExactlyOnceWith(name, args);
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(diagnostic.mock.calls.flat().join('')).toBe('apple-notes-folder: attachment cleanup failed; retained for later cleanup.\n');
+  });
+
+  it('cleanup failure preserves confirmed Notes success', async () => {
+    const release = vi.fn(async () => { throw new Error('PRIVATE_PATH'); });
+    const diagnostic = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const fake = fakeNotes({});
+    const handler = makeTools({ getScope: async () => ({ folderId: 'F1', folderName: 'F' }), run: fake.run,
+      prepareImages: async () => ({ resolve: async () => '', release }) }).find(t => t.name === 'notes_create')!.handler;
+    expect(JSON.parse(await handler({ title: 'T', markdown: 'text' }))).toEqual({ id: 'NEW1' });
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(diagnostic.mock.calls.flat().join('')).not.toContain('PRIVATE_PATH');
+  });
+
+  it('pure IMAGE_REF and TRUNCATED checks precede ticket consumption', async () => {
+    const prepare = vi.fn(prepareImages);
+    const fake = fakeNotes({});
+    const tools = makeTools({ getScope: async () => ({ folderId: 'F1', folderName: 'F' }), run: fake.run, prepareImages: prepare });
+    for (const name of ['notes_create', 'notes_append', 'notes_update']) {
+      await expect(tools.find(t => t.name === name)!.handler({ title: 'T', id: 'N1', markdown: '![](note-image:1)' })).rejects.toMatchObject({ code: 'IMAGE_REF' });
+    }
+    await expect(tools.find(t => t.name === 'notes_update')!.handler({ id: 'N1', markdown: TRUNCATION_MARKER_PREFIX })).rejects.toMatchObject({ code: 'TRUNCATED' });
+    expect(prepare).not.toHaveBeenCalled();
+    expect(fake.calls).toHaveLength(0);
+  });
+});
+
+it('append and update preserve locked-note refusals', async () => {
+  const { tool, notes } = setup();
+  const before = notes.L1.body;
+  for (const name of ['notes_append', 'notes_update']) await expect(tool(name)({ id: 'L1', markdown: 'new text' })).rejects.toMatchObject({ code: 'LOCKED' });
+  expect(notes.L1.body).toBe(before);
+});
+
+it('conversion failure releases prepared images before any NotesService call', async () => {
+  const failure = new ToolError('IMAGE', 'invalid second image');
+  const release = vi.fn(async () => {});
+  const getScope = vi.fn(async () => ({ folderId: 'F1', folderName: 'F' }));
+  const resolve = vi.fn(async (href: string) => { if (href === 'second') throw failure; return 'file:///verified.png'; });
+  const fake = fakeNotes({});
+  const handler = makeTools({ getScope, run: fake.run, prepareImages: async () => ({ resolve, release }) }).find(t => t.name === 'notes_create')!.handler;
+  await expect(handler({ title: 'T', markdown: '![](first) ![](second)' })).rejects.toBe(failure);
+  expect(resolve).toHaveBeenCalledTimes(2);
+  expect(getScope).not.toHaveBeenCalled();
+  expect(fake.calls).toHaveLength(0);
+  expect(release).toHaveBeenCalledTimes(1);
 });

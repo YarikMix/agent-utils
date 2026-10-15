@@ -55,3 +55,9 @@ export function toToolResult(e: unknown): { isError: true; content: [{ type: 'te
     e instanceof ToolError ? e.message : `Внутренняя ошибка: ${e instanceof Error ? e.message : String(e)}`;
   return { isError: true, content: [{ type: 'text', text }] };
 }
+
+/** Fixed diagnostic: never include note content, image bytes, tickets or user paths. */
+export function reportAttachmentCleanupFailure(): void {
+  try { process.stderr.write('apple-notes-folder: attachment cleanup failed; retained for later cleanup.\n'); }
+  catch { /* A broken diagnostic channel cannot change an already completed Notes operation. */ }
+}
