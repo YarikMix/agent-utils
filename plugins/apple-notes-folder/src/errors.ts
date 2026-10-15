@@ -9,6 +9,7 @@ export type ErrorCode =
   | 'IMAGE'
   | 'IMAGE_REF'
   | 'IMAGE_PROVENANCE'
+  | 'IMAGE_TICKET'
   | 'ATTACHMENTS'
   | 'LISTS'
   | 'TRUNCATED'

@@ -62,14 +62,23 @@ export function makeResolver(load: (path: string) => Promise<string>): ImageReso
   };
 }
 
-export async function markdownToHtml(md: string, resolve: ImageResolver): Promise<string> {
+function imageTokens(md: string) {
   const marked = new Marked({ gfm: true });
   const tokens = marked.lexer(md);
 
-  const hrefs: string[] = [];
+  const hrefs = new Set<string>();
   marked.walkTokens(tokens, (t) => {
-    if (t.type === 'image') hrefs.push((t as Tokens.Image).href);
+    if (t.type === 'image') hrefs.add((t as Tokens.Image).href);
   });
+  return { marked, tokens, hrefs: [...hrefs] };
+}
+
+export function imageHrefs(markdown: string): string[] {
+  return imageTokens(markdown).hrefs;
+}
+
+export async function markdownToHtml(md: string, resolve: ImageResolver): Promise<string> {
+  const { marked, tokens, hrefs } = imageTokens(md);
   const srcs = new Map<string, string>();
   for (const href of hrefs) if (!srcs.has(href)) srcs.set(href, await resolve(href));
 

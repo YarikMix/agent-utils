@@ -23,6 +23,13 @@ export function sniffImageMime(head: Buffer): string | null {
   return null;
 }
 
+export function validateImageBytes(bytes: Uint8Array): void {
+  if (bytes.byteLength > MAX_IMAGE_BYTES) throw new ToolError('IMAGE', 'Картинка больше 10 МБ.');
+  if (!sniffImageMime(Buffer.from(bytes.subarray(0, 16)))) {
+    throw new ToolError('IMAGE', 'Формат картинки не PNG, JPEG, GIF, HEIC или WebP.');
+  }
+}
+
 /**
  * Проверяет файл картинки и возвращает file://-URL его realpath для <img src> в HTML заметки:
  * так Заметки копируют файл в заметку и показывают картинку (data:-URI они показывают битой плашкой «Файл»).

@@ -3,7 +3,7 @@ import { mkdtemp, writeFile, symlink, rm, mkdir, truncate, realpath } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { imageSrc, sniffImageMime, MAX_IMAGE_BYTES, defaultImageRoot } from '../src/images.js';
+import { imageSrc, sniffImageMime, MAX_IMAGE_BYTES, defaultImageRoot, validateImageBytes } from '../src/images.js';
 
 // Подмена node:fs/promises целиком (Vitest не даёт spyOn на именованный экспорт ESM-модуля —
 // "Module namespace is not configurable"). realpathHolder.impl по умолчанию — настоящий realpath;
@@ -54,6 +54,20 @@ describe('sniffImageMime', () => {
     expect(sniffImageMime(WEBP)).toBe('image/webp');
     expect(sniffImageMime(HEIC)).toBe('image/heic');
     expect(sniffImageMime(Buffer.from('просто текст'))).toBeNull();
+  });
+});
+
+describe('validateImageBytes', () => {
+  it('accepts all five supported signatures', () => {
+    for (const bytes of [PNG, JPEG, GIF, WEBP, HEIC]) expect(() => validateImageBytes(bytes)).not.toThrow();
+  });
+  it('accepts exactly 10 MiB and refuses oversized or unknown bytes', () => {
+    const limit = Buffer.alloc(MAX_IMAGE_BYTES);
+    PNG.copy(limit);
+    expect(() => validateImageBytes(limit)).not.toThrow();
+    for (const bytes of [Buffer.alloc(MAX_IMAGE_BYTES + 1), Buffer.from('text'), Buffer.alloc(0)]) {
+      expect(() => validateImageBytes(bytes)).toThrow(expect.objectContaining({ code: 'IMAGE' }));
+    }
   });
 });
 
