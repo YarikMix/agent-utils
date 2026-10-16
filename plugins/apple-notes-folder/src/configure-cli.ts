@@ -1,4 +1,5 @@
 import { homedir } from 'node:os';
+import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ToolError } from './errors.js';
@@ -13,7 +14,7 @@ export async function runConfigureCli(argv: string[], env: NodeJS.ProcessEnv, ho
   return 'Папка настроена. Перезапустите MCP-сервер Apple Notes.';
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(resolve(process.argv[1]))).href) {
   runConfigureCli(process.argv.slice(2), process.env, homedir(), makeOsascriptRunner()).then(
     (status) => { console.log(status); },
     (error: unknown) => {

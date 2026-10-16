@@ -1,3 +1,4 @@
+import { VERSION } from './version.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { toToolResult } from './errors.js';
@@ -18,7 +19,7 @@ let getScope: ReturnType<typeof makeScopeProvider>;
 try { getScope = makeScopeProvider(await readFolder(host, process.env, homedir()), run, hint); }
 catch (error) { getScope = async () => { throw error; }; }
 
-const server = new McpServer({ name: 'apple-notes-folder', version: '1.1.0' });
+const server = new McpServer({ name: 'apple-notes-folder', version: VERSION });
 
 for (const tool of makeTools({ getScope, run, prepareImages: makeImagePreparer(host, paths) })) {
   server.registerTool(

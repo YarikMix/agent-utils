@@ -1,7 +1,7 @@
 /** Общие параметры esbuild для сборки и для её проверки. */
 export function buildOptions(outdir) {
   return {
-    entryPoints: { server: 'src/server.ts', hook: 'src/hook-cli.ts' },
+    entryPoints: { server: 'src/server.ts', hook: 'src/hook-cli.ts', configure: 'src/configure-cli.ts' },
     outdir,
     bundle: true,
     platform: 'node',

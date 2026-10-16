@@ -20,7 +20,7 @@
 ## Установка
 
 ```text
-/plugin marketplace add YarikMix/claude-plugins
+/plugin marketplace add YarikMix/agent-utils
 /plugin install selectel-ops@yarikmix-plugins
 ```
 
@@ -46,7 +46,7 @@ python3 ~/.claude/plugins/marketplaces/yarikmix-plugins/plugins/selectel-ops/ski
 Requires Python 3.8+. Optional: `pyyaml` (to read `clouds.yaml`) and `python-openstackclient`.
 
 ```text
-/plugin marketplace add YarikMix/claude-plugins
+/plugin marketplace add YarikMix/agent-utils
 /plugin install selectel-ops@yarikmix-plugins
 ```
 
