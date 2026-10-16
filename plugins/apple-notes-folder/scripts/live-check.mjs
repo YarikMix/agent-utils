@@ -6,8 +6,8 @@
  * LIVE_BIG_QUERY — запрос для замера поиска (по умолчанию «а»).
  */
 import { execFile } from 'node:child_process';
-import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { chmod, mkdir, mkdtemp, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { randomBytes, createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { build } from 'esbuild';
@@ -16,6 +16,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+import { CLEANUP, SETUP_ACCOUNT, SETUP_STEP, newFixtureJournal, setupFixtures, recoverPending, cleanupSpec } from './live-check-fixtures.mjs';
 
 const exec = promisify(execFile);
 const jxa = async (script, ...args) =>
@@ -29,7 +31,7 @@ if (argv.length !== 2 || argv[0] !== '--client' || !['claude', 'codex'].includes
 const HOST = argv[1];
 const ROOT = await realpath(await mkdtemp(join(tmpdir(), `apple-notes-live-${HOST}-`)));
 await chmod(ROOT, 0o700);
-const SUFFIX = Date.now().toString(36);
+const SUFFIX = `${Date.now().toString(36)}-${randomBytes(12).toString('hex')}`;
 const ALLOWED = `anf-live-allowed-${SUFFIX}`;
 const FOREIGN = `anf-live-foreign-${SUFFIX}`;
 const SUB = `anf-live-sub-${SUFFIX}`;
@@ -45,14 +47,6 @@ const PNG = Buffer.from(
   'base64',
 );
 
-const SETUP = `function run(argv) {
-  var app = Application('Notes'), acc = app.defaultAccount();
-  function mk(parent, name) { parent.folders.push(app.Folder({ name: name })); return parent.folders.byName(name); }
-  var allowed = mk(acc, argv[0]), foreign = mk(acc, argv[1]), sub = mk(allowed, argv[2]);
-  foreign.notes.push(app.Note({ body: '<div><h1>Чужая</h1></div><div>' + argv[3] + '</div>' }));
-  sub.notes.push(app.Note({ body: '<div><h1>Во вложенной</h1></div><div>' + argv[3] + '</div>' }));
-  return JSON.stringify({ allowed: allowed.id(), foreign: foreign.id(), sub: sub.id(), foreignNote: foreign.notes[0].id(), subNote: sub.notes[0].id() });
-}`;
 // Counts alone also accept broken data:image/png;base64,(null). Compare decoded bytes below.
 const NOTE_STATE = `function run(argv) {
   var n = Application('Notes').notes.byId(argv[0]), ids = n.attachments.id(), seen = {}, k = 0;
@@ -67,29 +61,6 @@ const NOTE_CONTAINER = `function run(argv) {
 // Удаление папки целиком iCloud откатывает при следующей синхронизации (папка возвращается вместе с заметками),
 // а вложенная папка после удаления родителя остаётся сиротой. Поэтому: сначала заметки, потом вложенная папка,
 // потом остальные; acc.folders видит и вложенные папки.
-const CLEANUP = `function run(argv) {
-  var app = Application('Notes'), acc = app.defaultAccount(), spec = JSON.parse(argv[0]), done = [], retained = [];
-  function known(collection, id) { try { var item = collection.byId(id); item.id(); return item; } catch(e) { if(Number(e.errorNumber) === -1728) return null; throw e; } }
-  // Validate every exact created ID before deleting anything. Unknown members are never deleted.
-  for (var i = 0; i < spec.notes.length; i++) {
-    var t = spec.notes[i], n = known(app.notes, t.id);
-    if (n && (n.name() !== t.title || n.container().id() !== t.folder)) throw Error('Own note identity mismatch');
-  }
-  for (var i = 0; i < spec.notes.length; i++) {
-    var t = spec.notes[i], n = known(app.notes, t.id);
-    if (n) { if(n.name() !== t.title || n.container().id() !== t.folder) throw Error('Own note changed'); n.delete(); done.push(t.id); }
-  }
-  for (var i = 0; i < spec.folders.length; i++) {
-    var t = spec.folders[i], f = known(acc.folders, t.id);
-    if (!f) continue;
-    if (f.name() !== t.name) throw Error('Own folder identity mismatch');
-    var childIds = f.folders.id(), active = [];
-    for (var j = 0; j < childIds.length; j++) if (known(acc.folders, childIds[j])) active.push(childIds[j]);
-    if (f.notes.id().length || active.length) { retained.push(t.id); continue; }
-    f.delete(); done.push(t.id);
-  }
-  return JSON.stringify({ removedKnownIds: done, unexpectedRetained: retained });
-}`;
 const LEFTOVER = `function run(argv) {
   var names = Application('Notes').defaultAccount().folders.name(), out = [];
   for (var i = 0; i < names.length; i++) if (argv.indexOf(names[i]) >= 0) out.push(names[i]);
@@ -105,11 +76,15 @@ function check(label, ok, detail = '') {
 const clients = [];
 let fixtureIds;
 const ownedNotes = new Map();
-function cleanupSpec() {
-  return { notes: [...ownedNotes.values()], folders: fixtureIds ? [
-    { id: fixtureIds.sub, name: SUB }, { id: fixtureIds.allowed, name: ALLOWED }, { id: fixtureIds.foreign, name: FOREIGN },
-  ] : [] };
-}
+const journal = newFixtureJournal();
+const JOURNAL = join(ROOT, 'setup-journal.json');
+const persistJournal = async () => {
+  await writeFile(`${JOURNAL}.tmp`, JSON.stringify(journal), { mode: 0o600 });
+  await rename(`${JOURNAL}.tmp`, JOURNAL);
+};
+const setupRun = async (action, target) => JSON.parse(await jxa(
+  action === 'account' ? SETUP_ACCOUNT : SETUP_STEP, action, JSON.stringify(target ?? {}),
+));
 async function noteState(id) {
   const state = JSON.parse(await jxa(NOTE_STATE, id));
   state.imageBytesMatch = state.sources.length === 1 && /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(state.sources[0])
@@ -165,7 +140,7 @@ try {
   // Пробел и кириллица в имени — как у скриншотов; в HTML уходит file://-URL с процентным кодированием.
   const png = `${IMG_DIR}/снимок экрана 1.png`;
   await writeFile(png, PNG, { mode: 0o600 });
-  const ids = JSON.parse(await jxa(SETUP, ALLOWED, FOREIGN, SUB, SECRET));
+  const ids = await setupFixtures(journal, setupRun, persistJournal, { allowed: ALLOWED, foreign: FOREIGN, sub: SUB }, SECRET);
   fixtureIds = ids;
   ownedNotes.set(ids.foreignNote, { id: ids.foreignNote, title: 'Чужая', folder: ids.foreign });
   ownedNotes.set(ids.subNote, { id: ids.subNote, title: 'Во вложенной', folder: ids.sub });
@@ -342,7 +317,12 @@ try {
   }
 } finally {
   for (const client of clients) await client.close().catch(() => {});
-  const removed = await jxa(CLEANUP, JSON.stringify(cleanupSpec())).catch((e) => { check('cleanup exact IDs', false, e.message); return 'ошибка удаления'; });
+  if (journal.pending) {
+    try { await recoverPending(journal, setupRun, persistJournal); }
+    catch (error) { check('setup recovery unresolved; journal retained', false, error.message); }
+  }
+  console.log(`Own setup journal: ${JSON.stringify(journal)}`);
+  const removed = await jxa(CLEANUP, JSON.stringify(cleanupSpec(journal, ownedNotes))).catch((e) => { check('cleanup exact IDs', false, e.message); return 'ошибка удаления'; });
   console.log(`Удалены тестовые папки: ${removed}`);
   // Синхронизация iCloud может вернуть папку через несколько секунд — проверить и удалить ещё раз.
   for (let round = 1; round <= 3; round++) {
@@ -352,13 +332,14 @@ try {
     catch (error) { check('проверка cleanup при ожидании iCloud', false, error.message); break; }
     if (!left.length) break;
     console.log(`Тестовые папки вернулись (${round}): ${JSON.stringify(left)} — проверяю только известные IDs`);
-    await jxa(CLEANUP, JSON.stringify(cleanupSpec())).catch((e) => check('cleanup retry exact IDs', false, e.message));
+    await jxa(CLEANUP, JSON.stringify(cleanupSpec(journal, ownedNotes))).catch((e) => check('cleanup retry exact IDs', false, e.message));
   }
   try {
     const left = JSON.parse(await jxa(LEFTOVER, SUB, ALLOWED, FOREIGN));
     check('не осталось тестовых папок', left.length === 0, JSON.stringify(left));
   } catch (error) { check('проверка cleanup', false, error.message); }
-  await rm(ROOT, { recursive: true, force: true });
+  if (journal.complete && !journal.pending && results.every(result => result.ok)) await rm(ROOT, { recursive: true, force: true });
+  else console.error(`Recovery journal retained: ${JOURNAL}`);
 }
 
 const failed = results.filter((r) => !r.ok);
