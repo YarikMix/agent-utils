@@ -2,8 +2,9 @@
   "mcpServers": {
     "apple-notes-folder": {
       "command": "node",
+      "cwd": ".",
       "args": [
-        "${PLUGIN_ROOT}/dist/server.js",
+        "./dist/server.js",
         "--client",
         "codex"
       ]

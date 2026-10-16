@@ -1,9 +1,10 @@
 import { afterEach, expect, it } from 'vitest';
-import { cp, lstat, mkdtemp, readdir, readFile, realpath, rm, symlink } from 'node:fs/promises';
+import { cp, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { createInterface } from 'node:readline';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
@@ -56,6 +57,71 @@ const claudeCatalogBaseline = [
 const temporary: string[] = [];
 afterEach(async () => { for (const dir of temporary.splice(0)) await rm(dir, { recursive: true, force: true }); });
 
+// This regression targets the legacy loader in exactly Codex 0.162.1.
+// Missing/other CLI versions skip only this host integration; artifact tests still run.
+const cliEnv = { PATH: process.env.PATH ?? '' };
+const codexVersion = spawnSync('codex', ['--version'], { encoding: 'utf8', env: cliEnv }).stdout?.trim();
+it.skipIf(codexVersion !== 'codex-cli 0.162.1')('Codex 0.162.1 starts seven production tools from its dependency-free installed cache', async () => {
+  const dir = await realpath(await mkdtemp(join(tmpdir(), 'apple-notes-codex-install-'))); temporary.push(dir);
+  const source = join(dir, 'marketplace');
+  const project = join(dir, 'unrelated-project');
+  const env = { ...cliEnv, CODEX_HOME: join(dir, 'codex-profile') };
+  await mkdir(env.CODEX_HOME);
+  await mkdir(join(source, '.agents/plugins'), { recursive: true });
+  await mkdir(project);
+  await writeFile(join(source, '.agents/plugins/marketplace.json'), await readFile(join(root, '.agents/plugins/marketplace.json')));
+  await cp(plugin, join(source, 'plugins/apple-notes-folder'), { recursive: true,
+    filter: path => !path.split('/').includes('node_modules') });
+  for (const args of [['plugin', 'marketplace', 'add', source, '--json'], ['plugin', 'add', 'apple-notes-folder@yarikmix-plugins', '--json']]) {
+    const result = spawnSync('codex', args, { cwd: project, env, encoding: 'utf8', timeout: 20_000 });
+    expect(result.status, result.stderr).toBe(0);
+  }
+  const cache = join(env.CODEX_HOME, 'plugins/cache/yarikmix-plugins/apple-notes-folder/2.0.0');
+  expect(await lstat(join(cache, 'node_modules')).catch(() => null)).toBe(null);
+  // Removing the marketplace's plugin copy proves startup uses the installed cache.
+  await rm(join(source, 'plugins'), { recursive: true });
+  const child = spawn('codex', ['app-server', '--stdio'], { cwd: project, env, stdio: ['pipe', 'pipe', 'pipe'] });
+  let stderr = '';
+  child.stderr.on('data', chunk => { stderr += String(chunk); });
+  const lines = createInterface({ input: child.stdout });
+  const pending = new Map<number, { resolve: (value: any) => void; reject: (error: Error) => void }>();
+  lines.on('line', line => { const response = JSON.parse(line); if (response.id !== undefined) pending.get(response.id)?.resolve(response); });
+  child.once('exit', () => { for (const request of pending.values()) request.reject(new Error(`Codex app-server exited: ${stderr}`)); });
+  const request = async (id: number, method: string, params: object) => {
+    let timer: ReturnType<typeof setTimeout>;
+    try {
+      return await new Promise<any>((resolve, reject) => {
+        pending.set(id, { resolve, reject });
+        timer = setTimeout(() => reject(new Error(`Codex ${method} timed out: ${stderr}`)), 20_000);
+        child.stdin.write(JSON.stringify({ id, method, params }) + '\n');
+      });
+    } finally { clearTimeout(timer!); pending.delete(id); }
+  };
+  try {
+    const init = await request(1, 'initialize', { clientInfo: { name: 'apple-notes-packaging-test', version: '1' }, capabilities: { experimentalApi: true } });
+    expect(init.error).toBeUndefined();
+    child.stdin.write('{"method":"initialized"}\n');
+    // No thread/turn/model request: this inventory endpoint starts MCP directly.
+    const result = await request(2, 'mcpServerStatus/list', { serverName: 'apple-notes-folder' });
+    expect(result.error).toBeUndefined();
+    expect(result.result.data).toHaveLength(1);
+    const server = result.result.data[0];
+    expect(server.toolsError).toBeNull();
+    expect(server.serverInfo).toMatchObject({ name: 'apple-notes-folder', version: '2.0.0' });
+    expect(Object.keys(server.tools).sort()).toEqual(['notes_append', 'notes_create', 'notes_delete', 'notes_list', 'notes_read', 'notes_search', 'notes_update']);
+    expect(stderr).not.toMatch(/MODULE_NOT_FOUND|responses_websocket|api\.openai\.com/);
+  } finally {
+    lines.close();
+    if (child.exitCode === null && child.signalCode === null) {
+      await new Promise<void>(resolve => {
+        const timer = setTimeout(() => child.kill('SIGKILL'), 5_000);
+        child.once('exit', () => { clearTimeout(timer); resolve(); });
+        child.kill();
+      });
+    }
+  }
+}, 60_000);
+
 it('keeps eight release versions and unrelated Claude catalog behavior', async () => {
   const pkg = await json(join(plugin, 'package.json'));
   const lock = await json(join(plugin, 'package-lock.json'));
@@ -85,7 +151,7 @@ it('resolves copied installation without node_modules or a build', async () => {
   expect(claude.hooks).toBe('./hooks/claude.json');
   expect(await lstat(join(cache, 'hooks/hooks.json')).catch(() => null)).toBe(null);
   const mcp = await json(join(cache, codex.mcpServers));
-  expect(mcp.mcpServers['apple-notes-folder']).toEqual({ command: 'node', args: ['${PLUGIN_ROOT}/dist/server.js', '--client', 'codex'] });
+  expect(mcp.mcpServers['apple-notes-folder']).toEqual({ command: 'node', cwd: '.', args: ['./dist/server.js', '--client', 'codex'] });
   expect(claude.mcpServers['apple-notes-folder']).toEqual({ command: 'node', args: ['${CLAUDE_PLUGIN_ROOT}/dist/server.js', '--client', 'claude'], env: { NOTES_FOLDER: '${user_config.folder}' } });
   for (const host of ['claude', 'codex']) {
     const hooks = await json(join(cache, host === 'claude' ? claude.hooks : codex.hooks));
