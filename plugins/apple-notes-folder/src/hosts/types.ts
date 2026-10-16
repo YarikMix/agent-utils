@@ -1,0 +1,10 @@
+export type Host = 'claude' | 'codex';
+export type WriteToolName = 'notes_create' | 'notes_append' | 'notes_update';
+export type WriteArgs = { markdown: string; title?: string; id?: string; attachment_ticket?: string };
+export type RuntimePaths = { configFile: string | null; runtimeDir: string };
+export type AttachmentContext = { host: Host; sessionId: string; callId: string; transcriptPath: string };
+export type VerifiedAttachment = { href: string; aliases: string[]; bytes: Uint8Array; sha256: string };
+export type ImageGrant = { href: string; snapshotPath: string; sha256: string };
+export type TicketLease = { images: ImageGrant[]; release: () => Promise<void> };
+export type PreparedImages = { snapshotPaths: string[]; resolve: (href: string) => Promise<string>; release: () => Promise<void> };
+export type Clock = () => number;

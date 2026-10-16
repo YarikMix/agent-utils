@@ -1,0 +1,19 @@
+{
+  "name": "apple-notes-folder",
+  "version": "2.0.0",
+  "description": "Apple Notes в границах одной выбранной папки",
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/",
+  "hooks": "./hooks/codex.json",
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/setup/SKILL.md"
+    }
+  },
+  "interface": {
+    "displayName": "Apple Notes Folder",
+    "shortDescription": "Заметки в одной выбранной папке Apple Notes",
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  }
+}

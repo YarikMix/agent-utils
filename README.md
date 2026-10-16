@@ -1,19 +1,31 @@
-# claude-plugins
+# agent-utils
 
-Личный маркетплейс плагинов для [Claude Code](https://claude.com/claude-code).
+Плагины для Claude Code и Codex. Apple Notes работает в обоих клиентах;
+Selectel и TypeScript LSP предназначены для Claude Code.
 
 ## Подключение
 
-```text
-/plugin marketplace add YarikMix/claude-plugins
+```sh
+claude plugin marketplace add YarikMix/agent-utils
+claude plugin install apple-notes-folder@yarikmix-plugins
+
+codex plugin marketplace add YarikMix/agent-utils
+codex plugin add apple-notes-folder@yarikmix-plugins
 ```
 
-Маркетплейс ставится на уровне пользователя и работает в любом репозитории.
+Добавление каталога ещё не устанавливает плагин: выполните и команду установки.
+Настройка папки Apple Notes независима в каждом клиенте:
+Claude — `/plugin configure apple-notes-folder@yarikmix-plugins`,
+Codex — `$apple-notes-folder:setup`.
 
 ## Плагины
 
-| Плагин | Что делает | Установка |
+| Плагин | Возможности | Клиенты |
 |---|---|---|
-| [typescript-native-lsp](plugins/typescript-native-lsp/README.md) | языковой сервер TypeScript 7 через `tsc --lsp` | `/plugin install typescript-native-lsp@yarikmix-plugins` |
-| [selectel-ops](plugins/selectel-ops/README.md) | скилл для работы с облаком Selectel: доступ, API, DNS, стык с Pulumi и Ansible | `/plugin install selectel-ops@yarikmix-plugins` |
-| [apple-notes-folder](plugins/apple-notes-folder/README.md) | MCP-сервер Apple Notes в границах одной папки: чтение, поиск, правка, картинки | `/plugin install apple-notes-folder@yarikmix-plugins` |
+| [apple-notes-folder](plugins/apple-notes-folder/README.md) | Apple Notes в одной папке: чтение, поиск, правка, картинки | Claude Code, Codex |
+| [typescript-native-lsp](plugins/typescript-native-lsp/README.md) | TypeScript 7 через `tsc --lsp` | Claude Code |
+| [selectel-ops](plugins/selectel-ops/README.md) | облако Selectel: доступ, API, DNS, Pulumi и Ansible | Claude Code |
+
+Apple Notes 2.0.0 принимает картинки только из подтверждённых пользовательских
+вложений текущего диалога; произвольные пути и scratchpad больше не разрешены.
+`dist/` включён в плагин: установка не требует npm или сборки.

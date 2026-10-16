@@ -1,3 +1,7 @@
+import { attachmentHook } from './attachment-hook.js';
+import { object } from './hosts/attachments.js';
+import type { Clock, Host, RuntimePaths } from './hosts/types.js';
+
 const SCRIPTING = /osascript|applescript|jxa|scriptingbridge/i;
 // Упоминание "Notes" как имя приложения в кавычках (одинарных/двойных/обратных, кавычка может быть
 // экранирована обратным слэшем перед закрывающей), с необязательным путём перед именем и необязательным
@@ -31,4 +35,18 @@ export function hookOutput(input: string): string {
   return JSON.stringify({
     hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: DENY_REASON },
   });
+}
+
+/** Shell protection runs before any attachment parsing or transcript I/O. */
+export async function runHook(host: Host, input: string, paths: RuntimePaths, now: Clock = Date.now): Promise<string> {
+  let raw: unknown;
+  try { raw = JSON.parse(input); } catch { return ''; }
+  const call = object(raw);
+  if (!call) return '';
+  if ((call.hook_event_name === undefined || call.hook_event_name === 'PreToolUse') &&
+      (call.tool_name === 'Bash' || (host === 'claude' && call.tool_name === 'Monitor'))) {
+    const shellOutput = hookOutput(input);
+    if (shellOutput) return shellOutput;
+  }
+  return attachmentHook(host, raw, paths, now);
 }

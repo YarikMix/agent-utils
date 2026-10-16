@@ -1,14 +1,15 @@
 import { z } from 'zod';
-import { MESSAGES, ToolError } from './errors.js';
-import { MAX_MARKDOWN_CHARS, TRUNCATION_MARKER_PREFIX, htmlToMarkdown, makeResolver, markdownToHtml, titleHtml } from './markdown.js';
+import { MESSAGES, ToolError, reportAttachmentCleanupFailure } from './errors.js';
+import { MAX_MARKDOWN_CHARS, TRUNCATION_MARKER_PREFIX, htmlToMarkdown, imageHrefs, markdownToHtml, titleHtml } from './markdown.js';
 import { NotesService, type NoteSummary } from './notes.js';
 import type { Runner } from './runner.js';
 import type { Scope } from './scope.js';
+import type { PreparedImages, WriteArgs, WriteToolName } from './hosts/types.js';
 
 export interface ToolDeps {
   getScope: () => Promise<Scope>;
   run: Runner;
-  imageSrc: (path: string) => Promise<string>;
+  prepareImages: (name: WriteToolName, args: WriteArgs) => Promise<PreparedImages>;
 }
 
 export interface ToolDef {
@@ -21,7 +22,7 @@ export interface ToolDef {
 
 const SCOPE_NOTE = 'Работает только с одной разрешённой папкой Apple Notes; другие папки недоступны.';
 const IMAGES_HELP =
-  'Картинка: ![подпись](/абсолютный/путь) — только файлы из /private/tmp/claude-<uid>/ (картинки, вставленные в промпт Claude Code, и scratchpad сессии); PNG, JPEG, GIF, HEIC или WebP до 10 МБ; в заметке она становится вложением. Путь с пробелами — в угловых скобках: ![](<путь>).';
+  'Картинка: ![подпись](attachment:...) — только подтверждённые пользовательские вложения текущего диалога; PNG, JPEG, GIF, HEIC или WebP до 10 МБ. Хук добавляет одноразовый attachment_ticket; в заметке картинка становится вложением. Произвольные пути к файлам не принимаются.';
 const ATTACHMENTS_RULE =
   'У заметки с вложениями (картинками, файлами) — отказ: Заметки портят вложения при любом изменении текста. Такую заметку можно только читать и удалять; новый текст и картинки — в новую заметку.';
 const LISTS_RULE =
@@ -37,9 +38,25 @@ const byModifiedDesc = (a: NoteSummary, b: NoteSummary) => b.modified.localeComp
 const json = (v: unknown) => JSON.stringify(v, null, 2);
 
 export function makeTools(deps: ToolDeps): ToolDef[] {
-  const service = async () => new NotesService(deps.run, (await deps.getScope()).folderId);
+  const service = async (snapshotPaths: readonly string[] = []) => new NotesService(deps.run, (await deps.getScope()).folderId, snapshotPaths);
   const noteId = z.string().min(1).describe('id заметки из notes_list или notes_search');
-  const newImages = () => makeResolver(deps.imageSrc);
+  const attachmentTicket = z.string().regex(/^[a-f0-9]{64}$/).optional();
+  const write = async (name: WriteToolName, args: WriteArgs, operation: (html: string, snapshotPaths: string[]) => Promise<string>) => {
+    if (name === 'notes_update' && args.markdown.includes(TRUNCATION_MARKER_PREFIX)) {
+      throw new ToolError('TRUNCATED', MESSAGES.TRUNCATED);
+    }
+    for (const href of imageHrefs(args.markdown)) {
+      if (/^note-image:\d+$/.test(href)) throw new ToolError('IMAGE_REF', `Ссылка ${href} не соответствует ни одной картинке заметки.`);
+    }
+    const images = await deps.prepareImages(name, args);
+    try {
+      const html = await markdownToHtml(args.markdown, images.resolve);
+      return await operation(html, images.snapshotPaths);
+    } finally {
+      // Cleanup must never turn a confirmed write into a retry or hide TIMEOUT_WRITE.
+      try { await images.release(); } catch { reportAttachmentCleanupFailure(); }
+    }
+  };
 
   return [
     {
@@ -82,35 +99,32 @@ export function makeTools(deps: ToolDeps): ToolDef[] {
     {
       name: 'notes_create',
       description: `Новая заметка в папке. title — заголовок, markdown — текст. ${IMAGES_HELP} ${SCOPE_NOTE}`,
-      shape: { title: z.string().min(1), markdown: z.string() },
+      shape: { title: z.string().min(1), markdown: z.string(), attachment_ticket: attachmentTicket },
       annotations: {},
-      handler: async ({ title, markdown }: { title: string; markdown: string }) => {
-        const html = titleHtml(title) + (await markdownToHtml(markdown, newImages()));
-        return json({ id: await (await service()).create(html) });
-      },
+      handler: async (args: WriteArgs & { title: string }) =>
+        write('notes_create', args, async (html, snapshots) => json({ id: await (await service(snapshots)).create(titleHtml(args.title) + html) })),
     },
     {
       name: 'notes_append',
       description: `Дописать Markdown в конец заметки. ${FORMATTING_NOTE} ${ATTACHMENTS_RULE} ${LISTS_RULE} ${IMAGES_HELP} ${SCOPE_NOTE}`,
-      shape: { id: noteId, markdown: z.string().min(1) },
+      shape: { id: noteId, markdown: z.string().min(1), attachment_ticket: attachmentTicket },
       annotations: {},
-      handler: async ({ id, markdown }: { id: string; markdown: string }) => {
-        const html = await markdownToHtml(markdown, newImages());
-        await (await service()).append(id, html);
-        return json({ id });
-      },
+      handler: async (args: WriteArgs & { id: string }) =>
+        write('notes_append', args, async (html, snapshots) => {
+          await (await service(snapshots)).append(args.id, html);
+          return json({ id: args.id });
+        }),
     },
     {
       name: 'notes_update',
       description: `Заменить текст заметки целиком — в формате notes_read, с заголовком первой строкой. ${FORMATTING_NOTE} ${ATTACHMENTS_RULE} ${LISTS_RULE} Заглушки ![…](note-image:N) во входе не принимаются. ${IMAGES_HELP} ${SCOPE_NOTE}`,
-      shape: { id: noteId, markdown: z.string().min(1) },
+      shape: { id: noteId, markdown: z.string().min(1), attachment_ticket: attachmentTicket },
       annotations: { destructiveHint: true },
-      handler: async ({ id, markdown }: { id: string; markdown: string }) => {
-        if (markdown.includes(TRUNCATION_MARKER_PREFIX)) throw new ToolError('TRUNCATED', MESSAGES.TRUNCATED);
-        const html = await markdownToHtml(markdown, newImages());
-        await (await service()).update(id, html);
-        return json({ id });
-      },
+      handler: async (args: WriteArgs & { id: string }) =>
+        write('notes_update', args, async (html, snapshots) => {
+          await (await service(snapshots)).update(args.id, html);
+          return json({ id: args.id });
+        }),
     },
     {
       name: 'notes_delete',

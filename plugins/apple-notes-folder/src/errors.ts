@@ -8,6 +8,9 @@ export type ErrorCode =
   | 'TIMEOUT_WRITE'
   | 'IMAGE'
   | 'IMAGE_REF'
+  | 'IMAGE_PROVENANCE'
+  | 'IMAGE_TICKET'
+  | 'IMAGE_RUNTIME_LOCK'
   | 'ATTACHMENTS'
   | 'LISTS'
   | 'TRUNCATED'
@@ -24,8 +27,10 @@ export class ToolError extends Error {
 }
 
 export const CONFIGURE_HINT = '/plugin configure apple-notes-folder@yarikmix-plugins';
+export const CODEX_CONFIGURE_HINT = '$apple-notes-folder:setup';
 
 export const MESSAGES = {
+  IMAGE_RUNTIME_LOCK: 'Хранилище картинок занято или его lock требует проверки. Если отказ сохраняется после завершения записи, следуйте разделу восстановления lock в README плагина. Текстовые операции доступны.',
   OUTSIDE: 'Заметка вне разрешённой папки.',
   NOT_FOUND: 'Заметка не найдена: неверный id или заметка удалена.',
   LOCKED: 'Заметка защищена паролем — сервер её не читает и не меняет.',
@@ -51,4 +56,10 @@ export function toToolResult(e: unknown): { isError: true; content: [{ type: 'te
   const text =
     e instanceof ToolError ? e.message : `Внутренняя ошибка: ${e instanceof Error ? e.message : String(e)}`;
   return { isError: true, content: [{ type: 'text', text }] };
+}
+
+/** Fixed diagnostic: never include note content, image bytes, tickets or user paths. */
+export function reportAttachmentCleanupFailure(): void {
+  try { process.stderr.write('apple-notes-folder: attachment cleanup failed; retained for later cleanup.\n'); }
+  catch { /* A broken diagnostic channel cannot change an already completed Notes operation. */ }
 }

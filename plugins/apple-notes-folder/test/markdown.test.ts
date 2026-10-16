@@ -6,6 +6,7 @@ import {
   makeResolver,
   titleHtml,
   MAX_MARKDOWN_CHARS,
+  imageHrefs,
 } from '../src/markdown.js';
 
 const noLoad = async (p: string): Promise<string> => {
@@ -23,6 +24,17 @@ const WITH_IMAGES =
   '<div><h1>Т</h1></div><div>до</div>' +
   '<div><img src="data:image/png;base64,AAAA"></div><div>между</div>' +
   '<div><img src="data:image/png;base64,BBBB"></div>';
+
+describe('imageHrefs', () => {
+  it('uses the same marked traversal as rendering, including references and nested images', async () => {
+    const md = '> ![a][ref]\n\n- [![b](two)](url)\n- ![again][ref]\n\n[ref]: <one with spaces>\n\n`![](ignored)`\n\n```\n![](ignored-code)\n```\n\n<img src="ignored-html">';
+    const hrefs = imageHrefs(md);
+    expect(hrefs).toEqual(['one with spaces', 'two']);
+    const resolved: string[] = [];
+    await markdownToHtml(md, async href => { resolved.push(href); return 'file:///verified'; });
+    expect(resolved).toEqual(hrefs);
+  });
+});
 
 describe('htmlToMarkdown', () => {
   it('переводит оформление Заметок в Markdown', () => {

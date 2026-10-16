@@ -1,0 +1,92 @@
+{
+  "version": "0.163.0",
+  "provenance": "Actual own Codex 0.163.0 READY/image dialogue. Session metadata projected to observed id/cli_version; the first two observed user-role messages retain their exact block order, kinds and image bytes. Text and identity values are explicitly redacted consistently; no synthetic fields or missing identity bindings were added. This is an actual-derived replay, not a Task1 pinned probe fixture.",
+  "transcriptRecords": [
+    {
+      "type": "session_meta",
+      "payload": {
+        "id": "redacted-identity-1",
+        "cli_version": "0.163.0"
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "redacted-identity-2",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "[redacted observed input_text]"
+          },
+          {
+            "type": "input_text",
+            "text": "[redacted observed input_text]"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "redacted-identity-3",
+          "create_time": 1792133079.969536,
+          "content_item_kinds": [
+            "agents_md.instructions",
+            "environments.environment_context"
+          ]
+        }
+      }
+    },
+    {
+      "type": "response_item",
+      "payload": {
+        "type": "message",
+        "id": "redacted-identity-4",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "[redacted observed input_text]"
+          },
+          {
+            "type": "input_image",
+            "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAABgCAYAAADVenpJAAABJElEQVR4nO3SQRHAIBAEQZTkjcRoQlNE4IC4YK/q+jEKpsd8v9O5vZ7WjfSAdOkB6QAoMAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASA9IB0CBCQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAekA6AApMAAAAAAAAAAAAAAAAAAAAAACAS/0CTrdFqiiU7wAAAABJRU5ErkJggg==",
+            "detail": "high"
+          },
+          {
+            "type": "input_text",
+            "text": "[redacted observed input_text]"
+          },
+          {
+            "type": "input_text",
+            "text": "[redacted observed input_text]"
+          }
+        ],
+        "internal_chat_message_metadata_passthrough": {
+          "turn_id": "redacted-identity-3",
+          "create_time": 1792133080.580583,
+          "content_item_kinds": [
+            "user.text",
+            "user.image",
+            "user.text",
+            "user.text"
+          ]
+        }
+      },
+      "metadata": {
+        "retained_source": {
+          "id": {
+            "message_id": "redacted-identity-4",
+            "turn_id": "redacted-identity-3",
+            "role": "user"
+          },
+          "revision": "redacted-identity-5",
+          "complete": false
+        },
+        "client_authored": false,
+        "user_input_order": 0,
+        "mcp_attribution": {
+          "status": "none"
+        }
+      }
+    }
+  ]
+}

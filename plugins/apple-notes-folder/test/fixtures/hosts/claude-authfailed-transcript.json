@@ -1,0 +1,75 @@
+{
+  "observation": {
+    "status": "real-user-bytes-preserved-after-authfailed",
+    "fullModelToolFlow": "NOT RUN — authorization failed",
+    "source": "Exact transcript path from own synthetic probe events; only user records retained; IDs and paths sanitized"
+  },
+  "transcriptRecords": [
+    {
+      "parentUuid": "00000000-0000-4000-8000-000000000003",
+      "isSidechain": false,
+      "promptId": "00000000-0000-4000-8000-000000000002",
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "image",
+            "source": {
+              "type": "base64",
+              "media_type": "image/png",
+              "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+            }
+          },
+          {
+            "type": "text",
+            "text": "This is an authorized synthetic client-contract test. Call probe_attachment once with marker \"before\" and markdown \"baseline\". Do not include attachment_ticket. Do not use other tools or read files. Follow only probe hook instructions for attachment hrefs."
+          }
+        ]
+      },
+      "uuid": "00000000-0000-4000-8000-000000000004",
+      "timestamp": "2026-10-15T21:23:43.448Z",
+      "imagePasteIds": [
+        1
+      ],
+      "permissionMode": "auto",
+      "promptSource": "sdk",
+      "turnOrigin": "sdk",
+      "turnPosition": {
+        "promptIndex": 0,
+        "turnIndex": 1
+      },
+      "userType": "external",
+      "entrypoint": "sdk-cli",
+      "cwd": "/synthetic/probe/claude",
+      "sessionId": "00000000-0000-4000-8000-000000000001",
+      "version": "2.1.300",
+      "gitBranch": "HEAD"
+    },
+    {
+      "parentUuid": "00000000-0000-4000-8000-000000000005",
+      "isSidechain": false,
+      "promptId": "00000000-0000-4000-8000-000000000002",
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "[Image: source: /synthetic/claude/images/00000000-0000-4000-8000-000000000001/images/1.png]"
+          }
+        ]
+      },
+      "isMeta": true,
+      "turnCompanion": true,
+      "uuid": "00000000-0000-4000-8000-000000000006",
+      "timestamp": "2026-10-15T21:23:43.448Z",
+      "userType": "external",
+      "entrypoint": "sdk-cli",
+      "cwd": "/synthetic/probe/claude",
+      "sessionId": "00000000-0000-4000-8000-000000000001",
+      "version": "2.1.300",
+      "gitBranch": "HEAD"
+    }
+  ]
+}

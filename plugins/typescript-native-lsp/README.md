@@ -18,7 +18,7 @@ tsc --version
 ## Установка
 
 ```text
-/plugin marketplace add YarikMix/claude-plugins
+/plugin marketplace add YarikMix/agent-utils
 /plugin install typescript-native-lsp@yarikmix-plugins
 ```
 
@@ -29,7 +29,7 @@ tsc --version
 Requires TypeScript 7+ installed globally (`npm install -g typescript@7`; `tsc --version` must print `Version 7.x`).
 
 ```text
-/plugin marketplace add YarikMix/claude-plugins
+/plugin marketplace add YarikMix/agent-utils
 /plugin install typescript-native-lsp@yarikmix-plugins
 ```
 

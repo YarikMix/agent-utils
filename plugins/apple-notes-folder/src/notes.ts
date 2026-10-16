@@ -31,6 +31,7 @@ export class NotesService {
   constructor(
     private readonly run: Runner,
     private readonly folderId: string,
+    private readonly snapshotPaths: readonly string[] = [],
   ) {}
 
   private async call<T>(script: string, args: string[], write: boolean): Promise<T> {
@@ -50,16 +51,16 @@ export class NotesService {
   }
 
   async create(html: string): Promise<string> {
-    const r = await withHtmlFile(html, (p) => this.call<{ id: string }>(SCRIPTS.createNote, [p], true));
+    const r = await withHtmlFile(html, (p) => this.call<{ id: string }>(SCRIPTS.createNote, [p, JSON.stringify(this.snapshotPaths)], true));
     return r.id;
   }
 
   async append(id: string, html: string): Promise<void> {
-    await withHtmlFile(html, (p) => this.call(SCRIPTS.appendNote, [id, p], true));
+    await withHtmlFile(html, (p) => this.call(SCRIPTS.appendNote, [id, p, JSON.stringify(this.snapshotPaths)], true));
   }
 
   async update(id: string, html: string): Promise<void> {
-    await withHtmlFile(html, (p) => this.call(SCRIPTS.updateNote, [id, p], true));
+    await withHtmlFile(html, (p) => this.call(SCRIPTS.updateNote, [id, p, JSON.stringify(this.snapshotPaths)], true));
   }
 
   async delete(id: string): Promise<void> {

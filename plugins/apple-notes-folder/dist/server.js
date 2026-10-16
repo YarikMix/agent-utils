@@ -410,11 +410,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants);
+          this.rhs = optimizeExpr(this.rhs, names, constants2);
         return this;
       }
       get names() {
@@ -431,10 +431,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants);
+        this.rhs = optimizeExpr(this.rhs, names, constants2);
         return this;
       }
       get names() {
@@ -495,8 +495,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants) {
-        this.code = optimizeExpr(this.code, names, constants);
+      optimizeNames(names, constants2) {
+        this.code = optimizeExpr(this.code, names, constants2);
         return this;
       }
       get names() {
@@ -525,12 +525,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
           const n = nodes[i];
-          if (n.optimizeNames(names, constants))
+          if (n.optimizeNames(names, constants2))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i, 1);
@@ -583,12 +583,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         var _a;
-        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
-        if (!(super.optimizeNames(names, constants) || this.else))
+        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants2);
+        if (!(super.optimizeNames(names, constants2) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants);
+        this.condition = optimizeExpr(this.condition, names, constants2);
         return this;
       }
       get names() {
@@ -611,10 +611,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants2) {
+        if (!super.optimizeNames(names, constants2))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants);
+        this.iteration = optimizeExpr(this.iteration, names, constants2);
         return this;
       }
       get names() {
@@ -650,10 +650,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants2) {
+        if (!super.optimizeNames(names, constants2))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants);
+        this.iterable = optimizeExpr(this.iterable, names, constants2);
         return this;
       }
       get names() {
@@ -695,11 +695,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         var _a, _b;
-        super.optimizeNames(names, constants);
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants);
+        super.optimizeNames(names, constants2);
+        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants2);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants2);
         return this;
       }
       get names() {
@@ -1000,7 +1000,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants) {
+    function optimizeExpr(expr, names, constants2) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1015,14 +1015,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants[n.str];
+        const c = constants2[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e) {
-        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants[c.str] !== void 0);
+        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants2[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -2984,7 +2984,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve.call(this, root, ref);
+      let _sch = resolve2.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -3011,7 +3011,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve(root, ref) {
+    function resolve2(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3227,28 +3227,28 @@ var require_utils = __commonJS({
       for (let i = left.length; i < parts.length; i++) expanded.push(parts[i]);
       return compressIPv6ZeroRun(expanded);
     }
-    function normalizeIPv6(host) {
-      const bracketed = host[0] === "[" && host[host.length - 1] === "]";
-      const hasBracket = host[0] === "[" || host[host.length - 1] === "]";
-      if (hasBracket && !bracketed) return { host, isIPV6: false, error: true };
-      let input = bracketed ? host.slice(1, -1) : host;
+    function normalizeIPv6(host2) {
+      const bracketed = host2[0] === "[" && host2[host2.length - 1] === "]";
+      const hasBracket = host2[0] === "[" || host2[host2.length - 1] === "]";
+      if (hasBracket && !bracketed) return { host: host2, isIPV6: false, error: true };
+      let input = bracketed ? host2.slice(1, -1) : host2;
       if (bracketed && isIPvFuture(input)) {
         input = input.toLowerCase();
         return { host: `[${input}]`, escapedHost: input, isIPV6: false, isIPVFuture: true };
       }
       if (findToken(input, ":") < 2) {
-        return { host, isIPV6: false, error: bracketed };
+        return { host: host2, isIPV6: false, error: bracketed };
       }
       let zoneIdentifier = "";
       const zoneSeparator = input.indexOf("%");
       if (zoneSeparator !== -1) {
         const separatorLength = input.slice(zoneSeparator, zoneSeparator + 3).toLowerCase() === "%25" ? 3 : 1;
         zoneIdentifier = input.slice(zoneSeparator + separatorLength);
-        if (!isZoneIdentifier(zoneIdentifier)) return { host, isIPV6: false, error: true };
+        if (!isZoneIdentifier(zoneIdentifier)) return { host: host2, isIPV6: false, error: true };
         input = input.slice(0, zoneSeparator);
       }
       const address = normalizeIPv6Address(input);
-      if (address === void 0) return { host, isIPV6: false, error: true };
+      if (address === void 0) return { host: host2, isIPV6: false, error: true };
       return {
         host: address + (zoneIdentifier ? "%" + zoneIdentifier : ""),
         escapedHost: address + (zoneIdentifier ? "%25" + zoneIdentifier : ""),
@@ -3340,10 +3340,10 @@ var require_utils = __commonJS({
     var HOST_DELIMS = { "@": "%40", "/": "%2F", "?": "%3F", "#": "%23", ":": "%3A" };
     var HOST_DELIM_RE = /[@/?#:]/g;
     var HOST_DELIM_NO_COLON_RE = /[@/?#]/g;
-    function reescapeHostDelimiters(host, isIP) {
+    function reescapeHostDelimiters(host2, isIP) {
       const re2 = isIP ? HOST_DELIM_NO_COLON_RE : HOST_DELIM_RE;
       re2.lastIndex = 0;
-      return host.replace(re2, (ch) => HOST_DELIMS[ch]);
+      return host2.replace(re2, (ch) => HOST_DELIMS[ch]);
     }
     function normalizePercentEncoding(input, decodeUnreserved = false) {
       if (input.indexOf("%") === -1) {
@@ -3559,20 +3559,20 @@ var require_utils = __commonJS({
         uriTokens.push("@");
       }
       if (component.host !== void 0) {
-        let host = component.host;
-        if (!isIPv4(host)) {
-          let ipV6res = normalizeIPv6(host);
+        let host2 = component.host;
+        if (!isIPv4(host2)) {
+          let ipV6res = normalizeIPv6(host2);
           if (ipV6res.isIPV6 !== true && ipV6res.isIPVFuture !== true) {
-            host = normalizePercentEncoding(host, true);
-            ipV6res = normalizeIPv6(host);
+            host2 = normalizePercentEncoding(host2, true);
+            ipV6res = normalizeIPv6(host2);
           }
           if (ipV6res.isIPV6 === true || ipV6res.isIPVFuture === true) {
-            host = `[${ipV6res.escapedHost}]`;
+            host2 = `[${ipV6res.escapedHost}]`;
           } else {
-            host = reescapeHostDelimiters(host, false);
+            host2 = reescapeHostDelimiters(host2, false);
           }
         }
-        uriTokens.push(host);
+        uriTokens.push(host2);
       }
       if (typeof component.port === "number" || typeof component.port === "string") {
         const port = String(component.port);
@@ -3837,11 +3837,11 @@ var require_fast_uri = __commonJS({
         normalizeString(uri, options);
       } else if (typeof uri === "object") {
         uri = /** @type {T} */
-        parse3(serialize(uri, options), options);
+        parse4(serialize(uri, options), options);
       }
       return uri;
     }
-    function resolve(baseURI, relativeURI, options) {
+    function resolve2(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const {
         parsed: baseParsed,
@@ -3877,8 +3877,8 @@ var require_fast_uri = __commonJS({
     function resolveComponent(base, relative, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
-        base = parse3(serialize(base, options), options);
-        relative = parse3(serialize(relative, options), options);
+        base = parse4(serialize(base, options), options);
+        relative = parse4(serialize(relative, options), options);
       }
       options = options || {};
       if (!options.tolerant && relative.scheme) {
@@ -4023,12 +4023,12 @@ var require_fast_uri = __commonJS({
       }
       return false;
     }
-    function isIPLiteral(host) {
-      return host[0] === "[" && host[host.length - 1] === "]";
+    function isIPLiteral(host2) {
+      return host2[0] === "[" && host2[host2.length - 1] === "]";
     }
     function hasMalformedComponentPercentEncoding(matches) {
-      const host = matches[4];
-      return hasMalformedPercentEncoding(matches[3]) || host !== void 0 && !isIPLiteral(host) && hasMalformedPercentEncoding(host) || hasMalformedPercentEncoding(matches[6]) || hasMalformedPercentEncoding(matches[7]) || hasMalformedPercentEncoding(matches[8]);
+      const host2 = matches[4];
+      return hasMalformedPercentEncoding(matches[3]) || host2 !== void 0 && !isIPLiteral(host2) && hasMalformedPercentEncoding(host2) || hasMalformedPercentEncoding(matches[6]) || hasMalformedPercentEncoding(matches[7]) || hasMalformedPercentEncoding(matches[8]);
     }
     function canonicalizeHost(parsed, options, schemeHandler, isIP) {
       if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport) && parsed.host && !isIPLiteral(parsed.host) && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
@@ -4149,11 +4149,11 @@ var require_fast_uri = __commonJS({
           malformedHost = canonicalizeHost(parsed, options, schemeHandler, isIP);
         }
         if (uri.indexOf("%") !== -1 && parsed.host !== void 0 && !malformedIPLiteral) {
-          let host = isIP ? parsed.host : normalizePercentEncoding(parsed.host, true);
+          let host2 = isIP ? parsed.host : normalizePercentEncoding(parsed.host, true);
           if (!isIP) {
-            host = normalizePercentEncoding(host.toLowerCase());
+            host2 = normalizePercentEncoding(host2.toLowerCase());
           }
-          parsed.host = reescapeHostDelimiters(host, isIP);
+          parsed.host = reescapeHostDelimiters(host2, isIP);
         }
         if (!schemeHandler || schemeHandler && !schemeHandler.skipNormalize) {
           if (parsed.path) {
@@ -4177,7 +4177,7 @@ var require_fast_uri = __commonJS({
       }
       return { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme };
     }
-    function parse3(uri, opts) {
+    function parse4(uri, opts) {
       return parseWithStatus(uri, opts).parsed;
     }
     function normalizeString(uri, opts) {
@@ -4210,11 +4210,11 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve,
+      resolve: resolve2,
       resolveComponent,
       equal,
       serialize,
-      parse: parse3
+      parse: parse4
     };
     module.exports = fastUri;
     module.exports.default = fastUri;
@@ -7427,7 +7427,7 @@ var require_DOMException = __commonJS({
       "INVALID_NODE_TYPE_ERR (24): the supplied node is invalid or has an invalid ancestor for this operation",
       "DATA_CLONE_ERR (25): the object can not be cloned."
     ];
-    var constants = {
+    var constants2 = {
       INDEX_SIZE_ERR,
       DOMSTRING_SIZE_ERR: 2,
       // historical
@@ -7466,8 +7466,8 @@ var require_DOMException = __commonJS({
       this.name = names[code];
     }
     DOMException.prototype.__proto__ = Error.prototype;
-    for (c in constants) {
-      v = { value: constants[c] };
+    for (c in constants2) {
+      v = { value: constants2[c] };
       Object.defineProperty(DOMException, c, v);
       Object.defineProperty(DOMException.prototype, c, v);
     }
@@ -10013,7 +10013,7 @@ var require_ChildNode = __commonJS({
         parentNode.insertBefore(docFrag, nextSibling);
       } },
       // Remove this node from its parent
-      remove: { value: function remove() {
+      remove: { value: function remove2() {
         if (this.parentNode === null) return;
         if (this.doc) {
           this.doc._preremoveNodeIterators(this);
@@ -12312,7 +12312,7 @@ var require_style_parser = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.hyphenate = exports.parse = void 0;
-    function parse3(value) {
+    function parse4(value) {
       const styles = [];
       let i = 0;
       let parenDepth = 0;
@@ -12366,7 +12366,7 @@ var require_style_parser = __commonJS({
       }
       return styles;
     }
-    exports.parse = parse3;
+    exports.parse = parse4;
     function hyphenate(value) {
       return value.replace(/[a-z][A-Z]/g, (v) => {
         return v.charAt(0) + "-" + v.charAt(1);
@@ -12380,7 +12380,7 @@ var require_style_parser = __commonJS({
 var require_CSSStyleDeclaration = __commonJS({
   "node_modules/@mixmark-io/domino/lib/CSSStyleDeclaration.js"(exports, module) {
     "use strict";
-    var { parse: parse3 } = require_style_parser();
+    var { parse: parse4 } = require_style_parser();
     module.exports = function(elt) {
       const style = new CSSStyleDeclaration(elt);
       const handler = {
@@ -12416,7 +12416,7 @@ var require_CSSStyleDeclaration = __commonJS({
       if (!value) {
         return result;
       }
-      const styleValues = parse3(value);
+      const styleValues = parse4(value);
       if (styleValues.length < 2) {
         return result;
       }
@@ -24191,7 +24191,7 @@ var require_turndown_cjs = __commonJS({
             text = text.substr(1);
           }
           if (!text) {
-            node = remove(node);
+            node = remove2(node);
             continue;
           }
           node.data = text;
@@ -24210,7 +24210,7 @@ var require_turndown_cjs = __commonJS({
             keepLeadingWs = false;
           }
         } else {
-          node = remove(node);
+          node = remove2(node);
           continue;
         }
         var nextNode = next(prev, node, isPre);
@@ -24220,11 +24220,11 @@ var require_turndown_cjs = __commonJS({
       if (prevText) {
         prevText.data = prevText.data.replace(/ $/, "");
         if (!prevText.data) {
-          remove(prevText);
+          remove2(prevText);
         }
       }
     }
-    function remove(node) {
+    function remove2(node) {
       var next2 = node.nextSibling || node.parentNode;
       node.parentNode.removeChild(node);
       return next2;
@@ -24470,14 +24470,14 @@ var require_turndown_cjs = __commonJS({
         } else if (node.nodeType === 1) {
           replacement = replacementForNode.call(self, node);
         }
-        return join2(output, replacement);
+        return join5(output, replacement);
       }, "");
     }
     function postProcess(output) {
       var self = this;
       this.rules.forEach(function(rule) {
         if (typeof rule.append === "function") {
-          output = join2(output, rule.append(self.options));
+          output = join5(output, rule.append(self.options));
         }
       });
       return output.replace(/^[\t\r\n]+/, "").replace(/[\t\r\n\s]+$/, "");
@@ -24489,7 +24489,7 @@ var require_turndown_cjs = __commonJS({
       if (whitespace.leading || whitespace.trailing) content = content.trim();
       return whitespace.leading + rule.replacement(content, node, this.options) + whitespace.trailing;
     }
-    function join2(output, replacement) {
+    function join5(output, replacement) {
       var s1 = trimTrailingNewlines(output);
       var s2 = trimLeadingNewlines(replacement);
       var nls = Math.max(output.length - s1.length, replacement.length - s2.length);
@@ -24502,6 +24502,9 @@ var require_turndown_cjs = __commonJS({
     module.exports = TurndownService2;
   }
 });
+
+// src/version.ts
+var VERSION = "2.0.0";
 
 // node_modules/zod/v3/external.js
 var external_exports = {};
@@ -31920,28 +31923,28 @@ var JSONSchemaGenerator = class {
           }
           case "file": {
             const json2 = _json;
-            const file = {
+            const file2 = {
               type: "string",
               format: "binary",
               contentEncoding: "binary"
             };
             const { minimum, maximum, mime } = schema._zod.bag;
             if (minimum !== void 0)
-              file.minLength = minimum;
+              file2.minLength = minimum;
             if (maximum !== void 0)
-              file.maxLength = maximum;
+              file2.maxLength = maximum;
             if (mime) {
               if (mime.length === 1) {
-                file.contentMediaType = mime[0];
-                Object.assign(json2, file);
+                file2.contentMediaType = mime[0];
+                Object.assign(json2, file2);
               } else {
                 json2.anyOf = mime.map((m) => {
-                  const mFile = { ...file, contentMediaType: m };
+                  const mFile = { ...file2, contentMediaType: m };
                   return mFile;
                 });
               }
             } else {
-              Object.assign(json2, file);
+              Object.assign(json2, file2);
             }
             break;
           }
@@ -36610,7 +36613,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -36627,7 +36630,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -36705,7 +36708,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve(parseResult.data);
+            resolve2(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -36966,12 +36969,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve, interval);
+      const timeoutId = setTimeout(resolve2, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -38062,7 +38065,7 @@ var McpServer = class {
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
       const updatedTask = await extra.taskStore.getTask(taskId);
       if (!updatedTask) {
         throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
@@ -38726,12 +38729,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve) => {
+    return new Promise((resolve2) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve();
+        resolve2();
       } else {
-        this._stdout.once("drain", resolve);
+        this._stdout.once("drain", resolve2);
       }
     });
   }
@@ -38747,7 +38750,9 @@ var ToolError = class extends Error {
   code;
 };
 var CONFIGURE_HINT = "/plugin configure apple-notes-folder@yarikmix-plugins";
+var CODEX_CONFIGURE_HINT = "$apple-notes-folder:setup";
 var MESSAGES = {
+  IMAGE_RUNTIME_LOCK: "\u0425\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043A\u0430\u0440\u0442\u0438\u043D\u043E\u043A \u0437\u0430\u043D\u044F\u0442\u043E \u0438\u043B\u0438 \u0435\u0433\u043E lock \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438. \u0415\u0441\u043B\u0438 \u043E\u0442\u043A\u0430\u0437 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u044F \u0437\u0430\u043F\u0438\u0441\u0438, \u0441\u043B\u0435\u0434\u0443\u0439\u0442\u0435 \u0440\u0430\u0437\u0434\u0435\u043B\u0443 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F lock \u0432 README \u043F\u043B\u0430\u0433\u0438\u043D\u0430. \u0422\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0435 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B.",
   OUTSIDE: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u0432\u043D\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0451\u043D\u043D\u043E\u0439 \u043F\u0430\u043F\u043A\u0438.",
   NOT_FOUND: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430: \u043D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 id \u0438\u043B\u0438 \u0437\u0430\u043C\u0435\u0442\u043A\u0430 \u0443\u0434\u0430\u043B\u0435\u043D\u0430.",
   LOCKED: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u0437\u0430\u0449\u0438\u0449\u0435\u043D\u0430 \u043F\u0430\u0440\u043E\u043B\u0435\u043C \u2014 \u0441\u0435\u0440\u0432\u0435\u0440 \u0435\u0451 \u043D\u0435 \u0447\u0438\u0442\u0430\u0435\u0442 \u0438 \u043D\u0435 \u043C\u0435\u043D\u044F\u0435\u0442.",
@@ -38766,252 +38771,21 @@ function toToolResult(e) {
   const text = e instanceof ToolError ? e.message : `\u0412\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u044F\u044F \u043E\u0448\u0438\u0431\u043A\u0430: ${e instanceof Error ? e.message : String(e)}`;
   return { isError: true, content: [{ type: "text", text }] };
 }
-
-// src/images.ts
-import { lstat, open, realpath } from "node:fs/promises";
-import { isAbsolute, sep } from "node:path";
-import { pathToFileURL } from "node:url";
-var MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-var PNG_MAGIC = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-var HEIC_BRANDS = /* @__PURE__ */ new Set(["heic", "heix", "heim", "heis", "hevc", "hevx", "mif1", "msf1"]);
-function defaultImageRoot() {
-  return `/private/tmp/claude-${process.getuid()}`;
-}
-function sniffImageMime(head) {
-  if (head.length >= 8 && head.subarray(0, 8).equals(PNG_MAGIC)) return "image/png";
-  if (head.length >= 3 && head[0] === 255 && head[1] === 216 && head[2] === 255) return "image/jpeg";
-  const ascii = head.subarray(0, 16).toString("latin1");
-  if (ascii.startsWith("GIF87a") || ascii.startsWith("GIF89a")) return "image/gif";
-  if (ascii.startsWith("RIFF") && ascii.slice(8, 12) === "WEBP") return "image/webp";
-  if (ascii.slice(4, 8) === "ftyp" && HEIC_BRANDS.has(ascii.slice(8, 12))) return "image/heic";
-  return null;
-}
-async function imageSrc(path, root = defaultImageRoot()) {
-  const fail = (why) => new ToolError("IMAGE", `\u041A\u0430\u0440\u0442\u0438\u043D\u043A\u0430 ${path} \u043D\u0435 \u043F\u0440\u0438\u043D\u044F\u0442\u0430: ${why}.`);
-  if (!isAbsolute(path)) throw fail("\u043D\u0443\u0436\u0435\u043D \u0430\u0431\u0441\u043E\u043B\u044E\u0442\u043D\u044B\u0439 \u043F\u0443\u0442\u044C");
-  const st2 = await lstat(path).catch(() => null);
-  if (!st2) throw fail("\u0444\u0430\u0439\u043B \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D");
-  if (st2.isSymbolicLink()) throw fail("\u044D\u0442\u043E \u0441\u0438\u043C\u0432\u043E\u043B\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0441\u0441\u044B\u043B\u043A\u0430");
-  if (!st2.isFile()) throw fail("\u044D\u0442\u043E \u043D\u0435 \u043E\u0431\u044B\u0447\u043D\u044B\u0439 \u0444\u0430\u0439\u043B");
-  const realRoot = await realpath(root).catch(() => null);
-  const real = await realpath(path).catch(() => null);
-  if (!real) throw fail("\u0444\u0430\u0439\u043B \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D");
-  if (!realRoot || !real.startsWith(realRoot + sep)) throw fail(`\u0444\u0430\u0439\u043B \u0434\u043E\u043B\u0436\u0435\u043D \u043B\u0435\u0436\u0430\u0442\u044C \u0432 ${root}`);
-  if (st2.size > MAX_IMAGE_BYTES) throw fail("\u0444\u0430\u0439\u043B \u0431\u043E\u043B\u044C\u0448\u0435 10 \u041C\u0411");
-  const fh = await open(real, "r");
-  let head;
+function reportAttachmentCleanupFailure() {
   try {
-    const buf = Buffer.alloc(16);
-    const { bytesRead } = await fh.read(buf, 0, buf.length, 0);
-    head = buf.subarray(0, bytesRead);
-  } finally {
-    await fh.close();
+    process.stderr.write("apple-notes-folder: attachment cleanup failed; retained for later cleanup.\n");
+  } catch {
   }
-  if (!sniffImageMime(head)) throw fail("\u0444\u043E\u0440\u043C\u0430\u0442 \u043D\u0435 PNG, JPEG, GIF, HEIC \u0438\u043B\u0438 WebP");
-  return pathToFileURL(real).href;
 }
 
-// src/runner.ts
-import { execFile } from "node:child_process";
-var OSA_TIMEOUT_MS = 3e4;
-var MAX_BUFFER = 64 * 1024 * 1024;
-function mapOsaFailure(err, stderr, write) {
-  const timeout = () => new ToolError(write ? "TIMEOUT_WRITE" : "TIMEOUT", write ? MESSAGES.TIMEOUT_WRITE : MESSAGES.TIMEOUT);
-  if (err.killed || err.signal === "SIGTERM") return timeout();
-  const apn = /APN:([A-Z_]+)(?::(\d+))?/.exec(stderr);
-  const code = apn?.[1];
-  switch (code) {
-    case "ATTACHMENTS":
-      return new ToolError("ATTACHMENTS", attachmentsMessage(Number(apn?.[2] ?? 0)));
-    case "LISTS":
-      return new ToolError("LISTS", MESSAGES.LISTS);
-    case "OUTSIDE":
-      return new ToolError("OUTSIDE", MESSAGES.OUTSIDE);
-    case "NOT_FOUND":
-      return new ToolError("NOT_FOUND", MESSAGES.NOT_FOUND);
-    case "LOCKED":
-      return new ToolError("LOCKED", MESSAGES.LOCKED);
-    case "FOLDER_GONE":
-      return new ToolError("CONFIG", MESSAGES.FOLDER_GONE);
-    case "IO":
-      return new ToolError("OSA", MESSAGES.IO);
-  }
-  if (/-1743|not authori[sz]ed/i.test(stderr)) return new ToolError("PERMISSION", MESSAGES.PERMISSION);
-  if (/-1712/.test(stderr)) return timeout();
-  return new ToolError("OSA", `\u041E\u0448\u0438\u0431\u043A\u0430 \u0417\u0430\u043C\u0435\u0442\u043E\u043A: ${stderr.trim().slice(0, 500)}`);
-}
-function makeOsascriptRunner(exec = execFile) {
-  return (script, args, { write }) => new Promise((resolve, reject) => {
-    exec(
-      "osascript",
-      ["-l", "JavaScript", "-e", script, ...args],
-      { timeout: OSA_TIMEOUT_MS, maxBuffer: MAX_BUFFER },
-      (err, stdout, stderr) => {
-        if (err) reject(mapOsaFailure(err, String(stderr ?? ""), write));
-        else resolve(String(stdout).trim());
-      }
-    );
-  });
-}
+// src/server.ts
+import { homedir } from "node:os";
 
-// src/scripts.ts
-var PRELUDE = `
-ObjC.import('Foundation');
-var app = Application('Notes');
-function fail(code) { throw new Error('APN:' + code); }
-function readFile(p) {
-  var s = $.NSString.stringWithContentsOfFileEncodingError(p, $.NSUTF8StringEncoding, null);
-  if (s.isNil()) fail('IO');
-  return ObjC.unwrap(s);
-}
-function folderById(id) {
-  var f = app.folders.byId(id);
-  try { f.id(); } catch (e) { fail('FOLDER_GONE'); }
-  return f;
-}
-function guardNote(folderId, noteId) {
-  var n = app.notes.byId(noteId), cid;
-  try { cid = n.container().id(); } catch (e) { fail('NOT_FOUND'); }
-  if (cid !== folderId) fail('OUTSIDE');
-  if (n.passwordProtected()) fail('LOCKED');
-  return n;
-}
-// \u0412\u043B\u043E\u0436\u0435\u043D\u0438\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0438. \u0422\u043E\u043B\u044C\u043A\u043E \u0447\u0442\u043E \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043D\u0443\u044E \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0443 \u0417\u0430\u043C\u0435\u0442\u043A\u0438 \u043C\u043E\u0433\u0443\u0442 \u0435\u0449\u0451 \u043D\u0435 \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0432 attachments,
-// \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0441\u043A\u0440\u0438\u043F\u0442\u044B \u0437\u0430\u043F\u0438\u0441\u0438 \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u043F\u043E \u0435\u0451 \u0441\u043B\u0435\u0434\u0443 \u0432 \u0442\u0435\u043B\u0435 (<img> \u0438\u043B\u0438 \u0441\u0438\u043C\u0432\u043E\u043B \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u044F U+FFFC).
-function attachmentCount(n) {
-  // \u0421\u0432\u0435\u0436\u0435\u0435 \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0417\u0430\u043C\u0435\u0442\u043A\u0438 \u0438\u043D\u043E\u0433\u0434\u0430 \u043E\u0442\u0434\u0430\u044E\u0442 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u0434\u0432\u0430\u0436\u0434\u044B \u2014 \u0441\u0447\u0438\u0442\u0430\u0435\u043C \u043F\u043E id \u0431\u0435\u0437 \u043F\u043E\u0432\u0442\u043E\u0440\u043E\u0432.
-  var ids = n.attachments.id(), seen = {}, k = 0;
-  for (var i = 0; i < ids.length; i++) if (!seen[ids[i]]) { seen[ids[i]] = true; k++; }
-  return k;
-}
-function summaries(notes) {
-  var ids = notes.id(), names = notes.name(), dates = notes.modificationDate(), out = [];
-  for (var i = 0; i < ids.length; i++) out.push({ id: ids[i], name: names[i], modified: dates[i].toISOString() });
-  return JSON.stringify(out);
-}
-`;
-var GUARD_CALL = "guardNote(argv[0], argv[1])";
-var listFolders = PRELUDE + `
-function run() {
-  var out = [];
-  function walk(folders, account) {
-    for (var i = 0; i < folders.length; i++) {
-      out.push({ id: folders[i].id(), name: folders[i].name(), account: account });
-      walk(folders[i].folders(), account);
-    }
-  }
-  var accounts = app.accounts();
-  for (var i = 0; i < accounts.length; i++) walk(accounts[i].folders(), accounts[i].name());
-  return JSON.stringify(out);
-}`;
-var listNotes = PRELUDE + `
-function run(argv) {
-  var f = folderById(argv[0]);
-  return summaries(f.notes);
-}`;
-var searchNotes = PRELUDE + `
-function run(argv) {
-  var f = folderById(argv[0]), q = argv[1].toLowerCase();
-  var ids = f.notes.id(), names = f.notes.name(), texts = f.notes.plaintext(), dates = f.notes.modificationDate(), out = [];
-  for (var i = 0; i < ids.length; i++) {
-    if ((names[i] + '\\n' + (texts[i] || '')).toLowerCase().indexOf(q) !== -1)
-      out.push({ id: ids[i], name: names[i], modified: dates[i].toISOString() });
-  }
-  return JSON.stringify(out);
-}`;
-var readNote = PRELUDE + `
-function run(argv) {
-  var n = ${GUARD_CALL};
-  return JSON.stringify({ id: n.id(), name: n.name(), modified: n.modificationDate().toISOString(), body: n.body(), attachments: attachmentCount(n) });
-}`;
-var createNote = PRELUDE + `
-function run(argv) {
-  var f = folderById(argv[0]);
-  var n = app.Note({ body: readFile(argv[1]) });
-  f.notes.push(n);
-  return JSON.stringify({ id: n.id() });
-}`;
-var appendNote = PRELUDE + `
-function run(argv) {
-  var n = ${GUARD_CALL};
-  var b = n.body();
-  var k = attachmentCount(n);
-  if (k > 0 || /<img\\b/i.test(b) || b.indexOf('\\uFFFC') !== -1) fail('ATTACHMENTS:' + Math.max(k, 1));
-  if (/<(ul|ol)\\b/i.test(b)) fail('LISTS');
-  n.body = b + readFile(argv[2]);
-  return JSON.stringify({ id: n.id() });
-}`;
-var updateNote = PRELUDE + `
-function run(argv) {
-  var n = ${GUARD_CALL};
-  var b = n.body();
-  var k = attachmentCount(n);
-  if (k > 0 || /<img\\b/i.test(b) || b.indexOf('\\uFFFC') !== -1) fail('ATTACHMENTS:' + Math.max(k, 1));
-  if (/<(ul|ol)\\b/i.test(b)) fail('LISTS');
-  n.body = readFile(argv[2]);
-  return JSON.stringify({ id: n.id() });
-}`;
-var deleteNote = PRELUDE + `
-function run(argv) {
-  var n = ${GUARD_CALL};
-  app.delete(n);
-  return JSON.stringify({ ok: true });
-}`;
-var SCRIPTS = Object.freeze({
-  listFolders,
-  listNotes,
-  searchNotes,
-  readNote,
-  createNote,
-  appendNote,
-  updateNote,
-  deleteNote
-});
-var ID_SCRIPTS = Object.freeze([readNote, appendNote, updateNote, deleteNote]);
-
-// src/scope.ts
-function configuredFolder(env) {
-  const v = env.NOTES_FOLDER?.trim();
-  if (!v || v.startsWith("${")) return null;
-  return v;
-}
-var RECENTLY_DELETED_NAMES = /* @__PURE__ */ new Set(["recently deleted", "\u043D\u0435\u0434\u0430\u0432\u043D\u043E \u0443\u0434\u0430\u043B\u0451\u043D\u043D\u044B\u0435", "\u043D\u0435\u0434\u0430\u0432\u043D\u043E \u0443\u0434\u0430\u043B\u0435\u043D\u043D\u044B\u0435"]);
-async function resolveScope(name, run2) {
-  if (!name) throw new ToolError("CONFIG", `\u041D\u0435 \u0437\u0430\u0434\u0430\u043D\u0430 \u043F\u0430\u043F\u043A\u0430 \u0417\u0430\u043C\u0435\u0442\u043E\u043A. \u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u0435\u0451: ${CONFIGURE_HINT}.`);
-  if (RECENTLY_DELETED_NAMES.has(name.trim().toLowerCase())) {
-    throw new ToolError("CONFIG", `\u041F\u0430\u043F\u043A\u0443 \xAB${name}\xBB \u043D\u0435\u043B\u044C\u0437\u044F \u0432\u044B\u0431\u0440\u0430\u0442\u044C: \u0432 \u043D\u0435\u0439 \u043B\u0435\u0436\u0430\u0442 \u0443\u0434\u0430\u043B\u0451\u043D\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0438\u0437 \u0432\u0441\u0435\u0445 \u043F\u0430\u043F\u043E\u043A.`);
-  }
-  const byId = /* @__PURE__ */ new Map();
-  for (const f of JSON.parse(await run2(SCRIPTS.listFolders, [], { write: false }))) byId.set(f.id, f);
-  const matches = [...byId.values()].filter((f) => f.name === name);
-  if (matches.length === 0) {
-    throw new ToolError(
-      "CONFIG",
-      `\u041F\u0430\u043F\u043A\u0430 \xAB${name}\xBB \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430 \u0432 \u0417\u0430\u043C\u0435\u0442\u043A\u0430\u0445. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0438\u043C\u044F: ${CONFIGURE_HINT}. \u041F\u0430\u043F\u043A\u0430 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E \u0432 \u0441\u043A\u0440\u0438\u043F\u0442\u0430\u0445 \u043C\u043E\u0436\u0435\u0442 \u043D\u0430\u0437\u044B\u0432\u0430\u0442\u044C\u0441\u044F \u0438\u043D\u0430\u0447\u0435, \u0447\u0435\u043C \u0432 \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0435: \u0432 \u0440\u0443\u0441\u0441\u043A\u043E\u043C \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0435 \xAB\u0417\u0430\u043C\u0435\u0442\u043A\u0438\xBB, \u0432 \u0441\u043A\u0440\u0438\u043F\u0442\u0430\u0445 \xABNotes\xBB.`
-    );
-  }
-  if (matches.length > 1) {
-    const accounts = [...new Set(matches.map((m) => m.account))].join(", ");
-    throw new ToolError(
-      "CONFIG",
-      `\u041F\u0430\u043F\u043E\u043A \u0441 \u0438\u043C\u0435\u043D\u0435\u043C \xAB${name}\xBB \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E (${matches.length}; \u0430\u043A\u043A\u0430\u0443\u043D\u0442\u044B: ${accounts}). \u041F\u0435\u0440\u0435\u0438\u043C\u0435\u043D\u0443\u0439\u0442\u0435 \u043B\u0438\u0448\u043D\u0438\u0435 \u0438\u043B\u0438 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u0443\u044E \u043F\u0430\u043F\u043A\u0443: ${CONFIGURE_HINT}.`
-    );
-  }
-  return { folderId: matches[0].id, folderName: name };
-}
-function makeScopeProvider(name, run2) {
-  let pending = null;
-  return () => {
-    if (!pending) {
-      const attempt = resolveScope(name, run2);
-      pending = attempt;
-      attempt.catch(() => {
-        if (pending === attempt) pending = null;
-      });
-    }
-    return pending;
-  };
-}
+// src/attachments/tickets.ts
+import { createHash as createHash2, randomBytes as randomBytes2 } from "node:crypto";
+import { lstat as lstat2, mkdir as mkdir2, readdir, rename as rename2, rmdir, unlink as unlink2, utimes as utimes2 } from "node:fs/promises";
+import { join as join2 } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 // src/markdown.ts
 var import_turndown = __toESM(require_turndown_cjs(), 1);
@@ -40344,7 +40118,6 @@ var MAX_MARKDOWN_CHARS = 2e5;
 var TRUNCATION_MARKER_PREFIX = "[\u2026 \u043E\u0431\u0440\u0435\u0437\u0430\u043D\u043E: \u0437\u0430\u043C\u0435\u0442\u043A\u0430 \u0434\u043B\u0438\u043D\u043D\u0435\u0435";
 var IMG_TAG = /<img\b[^>]*>/gi;
 var SRC_ATTR = /\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)')/i;
-var PLACEHOLDER = /^note-image:(\d+)$/;
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -40382,23 +40155,22 @@ ${TRUNCATION_MARKER_PREFIX} ${maxChars} \u0441\u0438\u043C\u0432\u043E\u043B\u04
   }
   return { markdown, images };
 }
-function makeResolver(load) {
-  return async (href) => {
-    if (PLACEHOLDER.test(href)) {
-      throw new ToolError("IMAGE_REF", `\u0421\u0441\u044B\u043B\u043A\u0430 ${href} \u043D\u0435 \u0441\u043E\u043E\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043D\u0438 \u043E\u0434\u043D\u043E\u0439 \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0435 \u0437\u0430\u043C\u0435\u0442\u043A\u0438.`);
-    }
-    return load(href);
-  };
-}
-async function markdownToHtml(md, resolve) {
+function imageTokens(md) {
   const marked = new F({ gfm: true });
   const tokens = marked.lexer(md);
-  const hrefs = [];
+  const hrefs = /* @__PURE__ */ new Set();
   marked.walkTokens(tokens, (t) => {
-    if (t.type === "image") hrefs.push(t.href);
+    if (t.type === "image") hrefs.add(t.href);
   });
+  return { marked, tokens, hrefs: [...hrefs] };
+}
+function imageHrefs(markdown) {
+  return imageTokens(markdown).hrefs;
+}
+async function markdownToHtml(md, resolve2) {
+  const { marked, tokens, hrefs } = imageTokens(md);
   const srcs = /* @__PURE__ */ new Map();
-  for (const href of hrefs) if (!srcs.has(href)) srcs.set(href, await resolve(href));
+  for (const href of hrefs) if (!srcs.has(href)) srcs.set(href, await resolve2(href));
   marked.use({
     renderer: {
       html(token) {
@@ -40431,27 +40203,598 @@ function titleHtml(title) {
 `;
 }
 
-// src/notes.ts
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-async function withHtmlFile(html, fn2) {
-  const dir = await mkdtemp(join(tmpdir(), "apple-notes-folder-"));
-  const path = join(dir, "body.html");
+// src/attachments/snapshots.ts
+import { constants } from "node:fs";
+import { lstat, mkdir, open, realpath, rename, unlink, utimes } from "node:fs/promises";
+import { createHash, randomBytes } from "node:crypto";
+import { dirname, isAbsolute, join, parse as parse3, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
+
+// src/images.ts
+var MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+var PNG_MAGIC = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+var HEIC_BRANDS = /* @__PURE__ */ new Set(["heic", "heix", "heim", "heis", "hevc", "hevx", "mif1", "msf1"]);
+function sniffImageMime(head) {
+  if (head.length >= 8 && head.subarray(0, 8).equals(PNG_MAGIC)) return "image/png";
+  if (head.length >= 3 && head[0] === 255 && head[1] === 216 && head[2] === 255) return "image/jpeg";
+  const ascii = head.subarray(0, 16).toString("latin1");
+  if (ascii.startsWith("GIF87a") || ascii.startsWith("GIF89a")) return "image/gif";
+  if (ascii.startsWith("RIFF") && ascii.slice(8, 12) === "WEBP") return "image/webp";
+  if (ascii.slice(4, 8) === "ftyp" && HEIC_BRANDS.has(ascii.slice(8, 12))) return "image/heic";
+  return null;
+}
+function validateImageBytes(bytes) {
+  if (bytes.byteLength > MAX_IMAGE_BYTES) throw new ToolError("IMAGE", "\u041A\u0430\u0440\u0442\u0438\u043D\u043A\u0430 \u0431\u043E\u043B\u044C\u0448\u0435 10 \u041C\u0411.");
+  if (!sniffImageMime(Buffer.from(bytes.subarray(0, 16)))) {
+    throw new ToolError("IMAGE", "\u0424\u043E\u0440\u043C\u0430\u0442 \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0438 \u043D\u0435 PNG, JPEG, GIF, HEIC \u0438\u043B\u0438 WebP.");
+  }
+}
+
+// src/attachments/snapshots.ts
+var SHA256 = /^[a-f0-9]{64}$/;
+var SNAPSHOT_NAME = /^[a-f0-9]{64}\.(png|jpg|gif|heic|webp)$/;
+var PUBLICATION_TEMP_NAME = /^\.tmp-(?:([1-9][0-9]*)-)?[a-f0-9]{64}$/;
+var extensions = { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/heic": "heic", "image/webp": "webp" };
+var fail = () => new ToolError("IMAGE", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0437\u0430\u043A\u0440\u044B\u0442\u044B\u0439 \u0441\u043D\u0438\u043C\u043E\u043A \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0438.");
+async function privateDirectory(path, create = true) {
+  if (!isAbsolute(path) || resolve(path) !== path) throw fail();
+  let current = parse3(path).root;
+  for (const part of path.slice(current.length).split(sep).filter(Boolean)) {
+    current = join(current, part);
+    if (create) await mkdir(current, { mode: 448 }).catch((error2) => {
+      if (error2.code !== "EEXIST") throw error2;
+    });
+    const st2 = await lstat(current);
+    if (!st2.isDirectory() || st2.isSymbolicLink()) throw fail();
+    if (current === path && ((st2.mode & 511) !== 448 || st2.uid !== process.getuid())) throw fail();
+  }
+  if (await realpath(path) !== path) throw fail();
+}
+async function readPrivateFile(path, limit) {
+  await privateDirectory(dirname(path), false);
+  const fh = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
-    await writeFile(path, html, { mode: 384 });
+    const st2 = await fh.stat();
+    if (!st2.isFile() || st2.nlink !== 1 || st2.uid !== process.getuid() || (st2.mode & 511) !== 384 || st2.size > limit) throw fail();
+    if (await realpath(path) !== path) throw fail();
+    const bytes = Buffer.alloc(st2.size + 1);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const { bytesRead } = await fh.read(bytes, offset, bytes.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    const after = await fh.stat();
+    if (offset !== st2.size || after.size !== st2.size || after.mtimeMs !== st2.mtimeMs || after.ctimeMs !== st2.ctimeMs) throw fail();
+    return bytes.subarray(0, offset);
+  } finally {
+    await fh.close();
+  }
+}
+async function publishPrivateFile(path, bytes) {
+  await privateDirectory(dirname(path));
+  const temporary = join(dirname(path), `.tmp-${process.pid}-${randomBytes(32).toString("hex")}`);
+  try {
+    const fh = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 384);
+    try {
+      await fh.writeFile(bytes);
+      await fh.sync();
+    } finally {
+      await fh.close();
+    }
+    await rename(temporary, path);
+  } finally {
+    await unlink(temporary).catch((error2) => {
+      if (error2.code !== "ENOENT") throw error2;
+    });
+  }
+}
+function validSnapshotPath(runtimeDir, grant) {
+  if (!grant || typeof grant.href !== "string" || typeof grant.sha256 !== "string" || !SHA256.test(grant.sha256) || typeof grant.snapshotPath !== "string") return false;
+  return Object.values(extensions).some((ext) => grant.snapshotPath === join(runtimeDir, "snapshots", `${grant.sha256}.${ext}`));
+}
+async function verifySnapshot(runtimeDir, grant) {
+  try {
+    if (!validSnapshotPath(runtimeDir, grant)) throw fail();
+    await privateDirectory(runtimeDir, false);
+    const bytes = await readPrivateFile(grant.snapshotPath, MAX_IMAGE_BYTES);
+    validateImageBytes(bytes);
+    if (createHash("sha256").update(bytes).digest("hex") !== grant.sha256) throw fail();
+    if (grant.snapshotPath !== join(runtimeDir, "snapshots", `${grant.sha256}.${extensions[sniffImageMime(bytes)]}`)) throw fail();
+    return pathToFileURL(grant.snapshotPath).href;
+  } catch {
+    throw fail();
+  }
+}
+
+// src/attachments/tickets.ts
+var TICKET_TTL = 9e5;
+var SNAPSHOT_TTL = 864e5;
+var JSON_LIMIT = 8 * 1024 * 1024;
+var TICKET_NAME = /^[a-f0-9]{64}\.json$/;
+var fail2 = () => new ToolError("IMAGE_TICKET", "\u0414\u043E\u043F\u0443\u0441\u043A \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0438 \u043D\u0435\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u0435\u043D, \u0438\u0441\u0442\u0451\u043A \u0438\u043B\u0438 \u0443\u0436\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D. \u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0432\u044B\u0437\u043E\u0432 \u0441 \u043D\u043E\u0432\u044B\u043C \u0434\u043E\u043F\u0443\u0441\u043A\u043E\u043C.");
+var validHost = (host2) => host2 === "claude" || host2 === "codex";
+var validTool = (tool) => ["notes_create", "notes_append", "notes_update"].includes(tool);
+function canonical(value) {
+  if (value === null || typeof value !== "object") {
+    const json2 = JSON.stringify(value);
+    if (json2 === void 0 || typeof value === "number" && !Number.isFinite(value)) throw fail2();
+    return json2;
+  }
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw fail2();
+  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+}
+function argsHash(args) {
+  if (!args || typeof args.markdown !== "string") throw fail2();
+  const { attachment_ticket: _ticket, ...original } = args;
+  return createHash2("sha256").update(canonical(original)).digest("hex");
+}
+function parseManifest(value, root) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw fail2();
+  const m = value;
+  if (m.version !== 1 || !validHost(m.host) || !validTool(m.tool) || typeof m.sessionId !== "string" || !m.sessionId || typeof m.callId !== "string" || !m.callId || typeof m.argsHash !== "string" || !SHA256.test(m.argsHash) || !Number.isSafeInteger(m.issuedAt) || !Number.isSafeInteger(m.expiresAt) || m.expiresAt !== m.issuedAt + TICKET_TTL || !Array.isArray(m.images) || !m.images.every((image) => validSnapshotPath(root, image)) || new Set(m.images.map((image) => image.href)).size !== m.images.length) throw fail2();
+  return m;
+}
+var readJson = async (path) => JSON.parse((await readPrivateFile(path, JSON_LIMIT)).toString("utf8"));
+var publishJson = async (path, value) => {
+  const bytes = Buffer.from(JSON.stringify(value));
+  if (bytes.length > JSON_LIMIT) throw fail2();
+  await publishPrivateFile(path, bytes);
+};
+var file = (root, dir, ticket) => join2(root, dir, `${ticket}.json`);
+var remove = async (path) => {
+  await unlink2(path).catch((error2) => {
+    if (error2.code !== "ENOENT") throw error2;
+  });
+};
+function ownerAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error2) {
+    return error2.code !== "ESRCH";
+  }
+}
+async function recoverDeadLock(lock) {
+  try {
+    await privateDirectory(lock, false);
+    const names = await readdir(lock);
+    if (names.length !== 1 || !/^owner-[1-9][0-9]*-[a-f0-9]{64}\.json$/.test(names[0])) return;
+    const owner = await readJson(join2(lock, names[0]));
+    if (!Number.isSafeInteger(owner?.pid) || owner.pid <= 0 || !names[0].startsWith(`owner-${owner.pid}-`) || ownerAlive(owner.pid)) return;
+    await unlink2(join2(lock, names[0]));
+    await rmdir(lock);
+  } catch {
+  }
+}
+async function locked(paths2, action) {
+  const root = paths2.runtimeDir;
+  try {
+    await privateDirectory(root);
+  } catch {
+    throw fail2();
+  }
+  const lock = join2(root, ".lock");
+  const owner = join2(lock, `owner-${process.pid}-${randomBytes2(32).toString("hex")}.json`);
+  const deadline = Date.now() + 2e3;
+  while (true) {
+    try {
+      await mkdir2(lock, { mode: 448 });
+      break;
+    } catch (error2) {
+      if (error2.code !== "EEXIST") throw fail2();
+      await recoverDeadLock(lock);
+      if (Date.now() >= deadline) throw new ToolError("IMAGE_RUNTIME_LOCK", MESSAGES.IMAGE_RUNTIME_LOCK);
+      await delay(10);
+    }
+  }
+  try {
+    await publishJson(owner, { pid: process.pid, createdAt: Date.now() });
+    for (const dir of ["snapshots", "tickets", "consumed", "active"]) await privateDirectory(join2(root, dir));
+    return await action();
+  } finally {
+    await remove(owner);
+    await rmdir(lock);
+  }
+}
+async function consumeTicket(paths2, host2, name, args, now = Date.now) {
+  const ticket = args?.attachment_ticket;
+  if (typeof ticket !== "string" || !SHA256.test(ticket) || !validHost(host2) || !validTool(name)) throw fail2();
+  const hash = argsHash(args);
+  return locked(paths2, async () => {
+    const root = paths2.runtimeDir;
+    let manifest;
+    const claimedAt = now();
+    try {
+      manifest = parseManifest(await readJson(file(root, "tickets", ticket)), root);
+      if (!Number.isSafeInteger(claimedAt) || manifest.host !== host2 || manifest.tool !== name || manifest.argsHash !== hash || claimedAt >= manifest.expiresAt || claimedAt < manifest.issuedAt || canonical(manifest.images.map((image) => image.href)) !== canonical(imageHrefs(args.markdown))) throw fail2();
+      await rename2(file(root, "tickets", ticket), file(root, "consumed", ticket));
+    } catch {
+      throw fail2();
+    }
+    const active = file(root, "active", ticket);
+    let released = false;
+    const release = async () => {
+      if (released) return;
+      await privateDirectory(join2(root, "active"), false);
+      await remove(active);
+      released = true;
+    };
+    try {
+      await publishJson(active, { ...manifest, pid: process.pid, claimedAt });
+      for (const grant of manifest.images) await verifySnapshot(root, grant);
+      return { images: manifest.images, release };
+    } catch (error2) {
+      try {
+        await release();
+      } catch {
+        reportAttachmentCleanupFailure();
+      }
+      throw error2;
+    }
+  });
+}
+async function cleanupRuntime(paths2, now = Date.now) {
+  await locked(paths2, async () => {
+    const root = paths2.runtimeDir;
+    const timestamp = now();
+    if (!Number.isSafeInteger(timestamp)) throw fail2();
+    const protectedPaths = /* @__PURE__ */ new Set();
+    let uncertain = false;
+    for (const dir of ["tickets", "active", "consumed"]) {
+      for (const name of await readdir(join2(root, dir))) {
+        if (!TICKET_NAME.test(name)) continue;
+        const path = join2(root, dir, name);
+        try {
+          const raw = await readJson(path);
+          const manifest = parseManifest(raw, root);
+          if (dir === "active") {
+            const marker = raw;
+            if (!Number.isSafeInteger(marker.pid) || marker.pid <= 0 || !Number.isSafeInteger(marker.claimedAt)) {
+              uncertain = true;
+              continue;
+            }
+            if (ownerAlive(marker.pid) || timestamp - marker.claimedAt < SNAPSHOT_TTL) {
+              for (const image of manifest.images) protectedPaths.add(image.snapshotPath);
+            } else await remove(path);
+          } else if (dir === "tickets" && timestamp < manifest.expiresAt) {
+            for (const image of manifest.images) protectedPaths.add(image.snapshotPath);
+          } else if (dir === "tickets" || timestamp - manifest.issuedAt >= SNAPSHOT_TTL) {
+            await remove(path);
+          }
+        } catch {
+          uncertain = true;
+        }
+      }
+    }
+    if (uncertain) return;
+    for (const name of await readdir(join2(root, "snapshots"))) {
+      const temporary = PUBLICATION_TEMP_NAME.exec(name);
+      if (!SNAPSHOT_NAME.test(name) && !temporary) continue;
+      if (temporary?.[1]) {
+        const pid = Number(temporary[1]);
+        if (!Number.isSafeInteger(pid) || ownerAlive(pid)) continue;
+      }
+      const path = join2(root, "snapshots", name);
+      const st2 = await lstat2(path);
+      if (!protectedPaths.has(path) && st2.isFile() && !st2.isSymbolicLink() && st2.uid === process.getuid() && (st2.mode & 511) === 384 && st2.nlink === 1 && timestamp - st2.mtimeMs >= SNAPSHOT_TTL) await remove(path);
+    }
+  });
+}
+function makeImagePreparer(host2, paths2, now = Date.now) {
+  return async (name, args) => {
+    if (!imageHrefs(args.markdown).length) return { snapshotPaths: [], resolve: async () => {
+      throw fail2();
+    }, release: async () => {
+    } };
+    const lease = await consumeTicket(paths2, host2, name, args, now);
+    try {
+      const urls = /* @__PURE__ */ new Map();
+      for (const grant of lease.images) urls.set(grant.href, await verifySnapshot(paths2.runtimeDir, grant));
+      return {
+        snapshotPaths: [...new Set(lease.images.map((grant) => grant.snapshotPath))],
+        resolve: async (href) => {
+          const url = urls.get(href);
+          if (!url) throw fail2();
+          return url;
+        },
+        release: lease.release
+      };
+    } catch (error2) {
+      try {
+        await lease.release();
+      } catch {
+        reportAttachmentCleanupFailure();
+      }
+      throw error2;
+    }
+  };
+}
+
+// src/hosts/config.ts
+import { chmod, mkdir as mkdir3, readFile, rename as rename3, rm, writeFile } from "node:fs/promises";
+
+// src/scripts.ts
+var PRELUDE = `
+ObjC.import('Foundation');
+var app = Application('Notes');
+function fail(code) { throw new Error('APN:' + code); }
+function readFile(p) {
+  var s = $.NSString.stringWithContentsOfFileEncodingError(p, $.NSUTF8StringEncoding, null);
+  if (s.isNil()) fail('IO');
+  return ObjC.unwrap(s);
+}
+// HTML file URLs carry no sandbox extension. Deliver ONLY the verified snapshot
+// paths supplied internally by consume/verify, never paths parsed from HTML.
+// Notes cannot resolve a file as its scripting object (-1728), but receiving the
+// native file descriptor grants access for the following HTML import (macOS 26.5).
+function handoffImages(json) {
+  var paths = JSON.parse(json);
+  for (var i = 0; i < paths.length; i++) {
+    try { app.exists(Path(paths[i])); }
+    catch (e) { if (e.errorNumber !== -1728) throw e; }
+  }
+}
+function folderById(id) {
+  var f = app.folders.byId(id);
+  try { f.id(); } catch (e) { fail('FOLDER_GONE'); }
+  return f;
+}
+function guardNote(folderId, noteId) {
+  var n = app.notes.byId(noteId), cid;
+  try { cid = n.container().id(); } catch (e) { fail('NOT_FOUND'); }
+  if (cid !== folderId) fail('OUTSIDE');
+  if (n.passwordProtected()) fail('LOCKED');
+  return n;
+}
+// \u0412\u043B\u043E\u0436\u0435\u043D\u0438\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0438. \u0422\u043E\u043B\u044C\u043A\u043E \u0447\u0442\u043E \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043D\u0443\u044E \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0443 \u0417\u0430\u043C\u0435\u0442\u043A\u0438 \u043C\u043E\u0433\u0443\u0442 \u0435\u0449\u0451 \u043D\u0435 \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0432 attachments,
+// \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0441\u043A\u0440\u0438\u043F\u0442\u044B \u0437\u0430\u043F\u0438\u0441\u0438 \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u043E\u0442\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u043F\u043E \u0435\u0451 \u0441\u043B\u0435\u0434\u0443 \u0432 \u0442\u0435\u043B\u0435 (<img> \u0438\u043B\u0438 \u0441\u0438\u043C\u0432\u043E\u043B \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u044F U+FFFC).
+function attachmentCount(n) {
+  // \u0421\u0432\u0435\u0436\u0435\u0435 \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0417\u0430\u043C\u0435\u0442\u043A\u0438 \u0438\u043D\u043E\u0433\u0434\u0430 \u043E\u0442\u0434\u0430\u044E\u0442 \u0432 \u0441\u043F\u0438\u0441\u043A\u0435 \u0434\u0432\u0430\u0436\u0434\u044B \u2014 \u0441\u0447\u0438\u0442\u0430\u0435\u043C \u043F\u043E id \u0431\u0435\u0437 \u043F\u043E\u0432\u0442\u043E\u0440\u043E\u0432.
+  var ids = n.attachments.id(), seen = {}, k = 0;
+  for (var i = 0; i < ids.length; i++) if (!seen[ids[i]]) { seen[ids[i]] = true; k++; }
+  return k;
+}
+function summaries(notes) {
+  var ids = notes.id(), names = notes.name(), dates = notes.modificationDate(), out = [];
+  for (var i = 0; i < ids.length; i++) out.push({ id: ids[i], name: names[i], modified: dates[i].toISOString() });
+  return JSON.stringify(out);
+}
+`;
+var GUARD_CALL = "guardNote(argv[0], argv[1])";
+var listFolders = PRELUDE + `
+function run() {
+  var out = [];
+  function walk(folders, account) {
+    for (var i = 0; i < folders.length; i++) {
+      out.push({ id: folders[i].id(), name: folders[i].name(), account: account });
+      walk(folders[i].folders(), account);
+    }
+  }
+  var accounts = app.accounts();
+  for (var i = 0; i < accounts.length; i++) walk(accounts[i].folders(), accounts[i].name());
+  return JSON.stringify(out);
+}`;
+var listNotes = PRELUDE + `
+function run(argv) {
+  var f = folderById(argv[0]);
+  return summaries(f.notes);
+}`;
+var searchNotes = PRELUDE + `
+function run(argv) {
+  var f = folderById(argv[0]), q = argv[1].toLowerCase();
+  var ids = f.notes.id(), names = f.notes.name(), texts = f.notes.plaintext(), dates = f.notes.modificationDate(), out = [];
+  for (var i = 0; i < ids.length; i++) {
+    if ((names[i] + '\\n' + (texts[i] || '')).toLowerCase().indexOf(q) !== -1)
+      out.push({ id: ids[i], name: names[i], modified: dates[i].toISOString() });
+  }
+  return JSON.stringify(out);
+}`;
+var readNote = PRELUDE + `
+function run(argv) {
+  var n = ${GUARD_CALL};
+  return JSON.stringify({ id: n.id(), name: n.name(), modified: n.modificationDate().toISOString(), body: n.body(), attachments: attachmentCount(n) });
+}`;
+var createNote = PRELUDE + `
+function run(argv) {
+  var f = folderById(argv[0]);
+  handoffImages(argv[2]);
+  var n = app.Note({ body: readFile(argv[1]) });
+  f.notes.push(n);
+  return JSON.stringify({ id: n.id() });
+}`;
+var appendNote = PRELUDE + `
+function run(argv) {
+  var n = ${GUARD_CALL};
+  var b = n.body();
+  var k = attachmentCount(n);
+  if (k > 0 || /<img\\b/i.test(b) || b.indexOf('\\uFFFC') !== -1) fail('ATTACHMENTS:' + Math.max(k, 1));
+  if (/<(ul|ol)\\b/i.test(b)) fail('LISTS');
+  handoffImages(argv[3]);
+  n.body = b + readFile(argv[2]);
+  return JSON.stringify({ id: n.id() });
+}`;
+var updateNote = PRELUDE + `
+function run(argv) {
+  var n = ${GUARD_CALL};
+  var b = n.body();
+  var k = attachmentCount(n);
+  if (k > 0 || /<img\\b/i.test(b) || b.indexOf('\\uFFFC') !== -1) fail('ATTACHMENTS:' + Math.max(k, 1));
+  if (/<(ul|ol)\\b/i.test(b)) fail('LISTS');
+  handoffImages(argv[3]);
+  n.body = readFile(argv[2]);
+  return JSON.stringify({ id: n.id() });
+}`;
+var deleteNote = PRELUDE + `
+function run(argv) {
+  var n = ${GUARD_CALL};
+  app.delete(n);
+  return JSON.stringify({ ok: true });
+}`;
+var SCRIPTS = Object.freeze({
+  listFolders,
+  listNotes,
+  searchNotes,
+  readNote,
+  createNote,
+  appendNote,
+  updateNote,
+  deleteNote
+});
+var ID_SCRIPTS = Object.freeze([readNote, appendNote, updateNote, deleteNote]);
+
+// src/scope.ts
+function configuredFolder(env) {
+  const v = env.NOTES_FOLDER?.trim();
+  if (!v || v.startsWith("${")) return null;
+  return v;
+}
+var RECENTLY_DELETED_NAMES = /* @__PURE__ */ new Set(["recently deleted", "\u043D\u0435\u0434\u0430\u0432\u043D\u043E \u0443\u0434\u0430\u043B\u0451\u043D\u043D\u044B\u0435", "\u043D\u0435\u0434\u0430\u0432\u043D\u043E \u0443\u0434\u0430\u043B\u0435\u043D\u043D\u044B\u0435"]);
+async function resolveScope(name, run2, hint2 = CONFIGURE_HINT) {
+  if (!name) throw new ToolError("CONFIG", `\u041D\u0435 \u0437\u0430\u0434\u0430\u043D\u0430 \u043F\u0430\u043F\u043A\u0430 \u0417\u0430\u043C\u0435\u0442\u043E\u043A. \u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u0435\u0451: ${hint2}.`);
+  if (RECENTLY_DELETED_NAMES.has(name.trim().toLowerCase())) {
+    throw new ToolError("CONFIG", `\u041F\u0430\u043F\u043A\u0443 \xAB${name}\xBB \u043D\u0435\u043B\u044C\u0437\u044F \u0432\u044B\u0431\u0440\u0430\u0442\u044C: \u0432 \u043D\u0435\u0439 \u043B\u0435\u0436\u0430\u0442 \u0443\u0434\u0430\u043B\u0451\u043D\u043D\u044B\u0435 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0438\u0437 \u0432\u0441\u0435\u0445 \u043F\u0430\u043F\u043E\u043A.`);
+  }
+  const byId = /* @__PURE__ */ new Map();
+  for (const f of JSON.parse(await run2(SCRIPTS.listFolders, [], { write: false }))) byId.set(f.id, f);
+  const matches = [...byId.values()].filter((f) => f.name === name);
+  if (matches.length === 0) {
+    throw new ToolError(
+      "CONFIG",
+      `\u041F\u0430\u043F\u043A\u0430 \xAB${name}\xBB \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430 \u0432 \u0417\u0430\u043C\u0435\u0442\u043A\u0430\u0445. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0438\u043C\u044F: ${hint2}. \u041F\u0430\u043F\u043A\u0430 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E \u0432 \u0441\u043A\u0440\u0438\u043F\u0442\u0430\u0445 \u043C\u043E\u0436\u0435\u0442 \u043D\u0430\u0437\u044B\u0432\u0430\u0442\u044C\u0441\u044F \u0438\u043D\u0430\u0447\u0435, \u0447\u0435\u043C \u0432 \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0435: \u0432 \u0440\u0443\u0441\u0441\u043A\u043E\u043C \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0435 \xAB\u0417\u0430\u043C\u0435\u0442\u043A\u0438\xBB, \u0432 \u0441\u043A\u0440\u0438\u043F\u0442\u0430\u0445 \xABNotes\xBB.`
+    );
+  }
+  if (matches.length > 1) {
+    const accounts = [...new Set(matches.map((m) => m.account))].join(", ");
+    throw new ToolError(
+      "CONFIG",
+      `\u041F\u0430\u043F\u043E\u043A \u0441 \u0438\u043C\u0435\u043D\u0435\u043C \xAB${name}\xBB \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E (${matches.length}; \u0430\u043A\u043A\u0430\u0443\u043D\u0442\u044B: ${accounts}). \u041F\u0435\u0440\u0435\u0438\u043C\u0435\u043D\u0443\u0439\u0442\u0435 \u043B\u0438\u0448\u043D\u0438\u0435 \u0438\u043B\u0438 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u0443\u044E \u043F\u0430\u043F\u043A\u0443: ${hint2}.`
+    );
+  }
+  return { folderId: matches[0].id, folderName: name };
+}
+function makeScopeProvider(name, run2, hint2 = CONFIGURE_HINT) {
+  let pending = null;
+  return () => {
+    if (!pending) {
+      const attempt = resolveScope(name, run2, hint2);
+      pending = attempt;
+      attempt.catch(() => {
+        if (pending === attempt) pending = null;
+      });
+    }
+    return pending;
+  };
+}
+
+// src/hosts/paths.ts
+import { join as join3 } from "node:path";
+function parseHost(argv) {
+  if (argv.length === 0) return "claude";
+  if (argv.length === 2 && argv[0] === "--client" && (argv[1] === "claude" || argv[1] === "codex")) return argv[1];
+  throw new ToolError("CONFIG", "\u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u043A\u043B\u0438\u0435\u043D\u0442: --client claude|codex.");
+}
+function hostPaths(host2, env, home) {
+  const root = host2 === "codex" ? env.CODEX_HOME || join3(home, ".codex") : env.CLAUDE_CONFIG_DIR || join3(home, ".claude");
+  const pluginDir = join3(root, "agent-utils", "apple-notes-folder");
+  return {
+    configFile: host2 === "codex" ? join3(pluginDir, "config.json") : null,
+    runtimeDir: join3(pluginDir, "runtime")
+  };
+}
+function configurationHint(host2) {
+  return host2 === "codex" ? CODEX_CONFIGURE_HINT : CONFIGURE_HINT;
+}
+
+// src/hosts/config.ts
+async function readFolder(host2, env, home) {
+  if (host2 === "claude") return configuredFolder(env);
+  const { configFile } = hostPaths(host2, env, home);
+  let raw;
+  try {
+    raw = await readFile(configFile, "utf8");
+  } catch (error2) {
+    if (error2.code === "ENOENT") return null;
+    throw new ToolError("CONFIG", `\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0443 \u043F\u0430\u043F\u043A\u0438. \u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0443: ${configurationHint(host2)}.`);
+  }
+  try {
+    const config2 = JSON.parse(raw);
+    if (!config2 || typeof config2 !== "object" || !("version" in config2) || config2.version !== 1 || !("folder" in config2) || typeof config2.folder !== "string" || !config2.folder.trim()) {
+      throw new Error("Invalid config");
+    }
+    return config2.folder;
+  } catch {
+    throw new ToolError("CONFIG", `\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u043F\u0430\u043F\u043A\u0438 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0435\u043D\u0430 \u0438\u043B\u0438 \u0438\u043C\u0435\u0435\u0442 \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u044B\u0439 \u0444\u043E\u0440\u043C\u0430\u0442. \u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0443: ${configurationHint(host2)}.`);
+  }
+}
+
+// src/runner.ts
+import { execFile } from "node:child_process";
+var OSA_TIMEOUT_MS = 3e4;
+var MAX_BUFFER = 64 * 1024 * 1024;
+function mapOsaFailure(err, stderr, write, hint2 = CONFIGURE_HINT) {
+  const timeout = () => new ToolError(write ? "TIMEOUT_WRITE" : "TIMEOUT", write ? MESSAGES.TIMEOUT_WRITE : MESSAGES.TIMEOUT);
+  if (err.killed || err.signal === "SIGTERM") return timeout();
+  const apn = /APN:([A-Z_]+)(?::(\d+))?/.exec(stderr);
+  const code = apn?.[1];
+  switch (code) {
+    case "ATTACHMENTS":
+      return new ToolError("ATTACHMENTS", attachmentsMessage(Number(apn?.[2] ?? 0)));
+    case "LISTS":
+      return new ToolError("LISTS", MESSAGES.LISTS);
+    case "OUTSIDE":
+      return new ToolError("OUTSIDE", MESSAGES.OUTSIDE);
+    case "NOT_FOUND":
+      return new ToolError("NOT_FOUND", MESSAGES.NOT_FOUND);
+    case "LOCKED":
+      return new ToolError("LOCKED", MESSAGES.LOCKED);
+    case "FOLDER_GONE":
+      return new ToolError("CONFIG", MESSAGES.FOLDER_GONE.replace(CONFIGURE_HINT, hint2));
+    case "IO":
+      return new ToolError("OSA", MESSAGES.IO);
+  }
+  if (/-1743|not authori[sz]ed/i.test(stderr)) return new ToolError("PERMISSION", MESSAGES.PERMISSION);
+  if (/-1712/.test(stderr)) return timeout();
+  return new ToolError("OSA", `\u041E\u0448\u0438\u0431\u043A\u0430 \u0417\u0430\u043C\u0435\u0442\u043E\u043A: ${stderr.trim().slice(0, 500)}`);
+}
+function makeOsascriptRunner(exec = execFile, hint2 = CONFIGURE_HINT) {
+  return (script, args, { write }) => new Promise((resolve2, reject) => {
+    exec(
+      "osascript",
+      ["-l", "JavaScript", "-e", script, ...args],
+      { timeout: OSA_TIMEOUT_MS, maxBuffer: MAX_BUFFER },
+      (err, stdout, stderr) => {
+        if (err) reject(mapOsaFailure(err, String(stderr ?? ""), write, hint2));
+        else resolve2(String(stdout).trim());
+      }
+    );
+  });
+}
+
+// src/notes.ts
+import { mkdtemp, rm as rm2, writeFile as writeFile2 } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join as join4 } from "node:path";
+async function withHtmlFile(html, fn2) {
+  const dir = await mkdtemp(join4(tmpdir(), "apple-notes-folder-"));
+  const path = join4(dir, "body.html");
+  try {
+    await writeFile2(path, html, { mode: 384 });
     return await fn2(path);
   } finally {
-    await rm(dir, { recursive: true, force: true });
+    await rm2(dir, { recursive: true, force: true });
   }
 }
 var NotesService = class {
-  constructor(run2, folderId) {
+  constructor(run2, folderId, snapshotPaths = []) {
     this.run = run2;
     this.folderId = folderId;
+    this.snapshotPaths = snapshotPaths;
   }
   run;
   folderId;
+  snapshotPaths;
   async call(script, args, write) {
     return JSON.parse(await this.run(script, [this.folderId, ...args], { write }));
   }
@@ -40465,14 +40808,14 @@ var NotesService = class {
     return this.call(SCRIPTS.readNote, [id], false);
   }
   async create(html) {
-    const r = await withHtmlFile(html, (p) => this.call(SCRIPTS.createNote, [p], true));
+    const r = await withHtmlFile(html, (p) => this.call(SCRIPTS.createNote, [p, JSON.stringify(this.snapshotPaths)], true));
     return r.id;
   }
   async append(id, html) {
-    await withHtmlFile(html, (p) => this.call(SCRIPTS.appendNote, [id, p], true));
+    await withHtmlFile(html, (p) => this.call(SCRIPTS.appendNote, [id, p, JSON.stringify(this.snapshotPaths)], true));
   }
   async update(id, html) {
-    await withHtmlFile(html, (p) => this.call(SCRIPTS.updateNote, [id, p], true));
+    await withHtmlFile(html, (p) => this.call(SCRIPTS.updateNote, [id, p, JSON.stringify(this.snapshotPaths)], true));
   }
   async delete(id) {
     await this.call(SCRIPTS.deleteNote, [id], true);
@@ -40481,7 +40824,7 @@ var NotesService = class {
 
 // src/tools.ts
 var SCOPE_NOTE = "\u0420\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0441 \u043E\u0434\u043D\u043E\u0439 \u0440\u0430\u0437\u0440\u0435\u0448\u0451\u043D\u043D\u043E\u0439 \u043F\u0430\u043F\u043A\u043E\u0439 Apple Notes; \u0434\u0440\u0443\u0433\u0438\u0435 \u043F\u0430\u043F\u043A\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B.";
-var IMAGES_HELP = "\u041A\u0430\u0440\u0442\u0438\u043D\u043A\u0430: ![\u043F\u043E\u0434\u043F\u0438\u0441\u044C](/\u0430\u0431\u0441\u043E\u043B\u044E\u0442\u043D\u044B\u0439/\u043F\u0443\u0442\u044C) \u2014 \u0442\u043E\u043B\u044C\u043A\u043E \u0444\u0430\u0439\u043B\u044B \u0438\u0437 /private/tmp/claude-<uid>/ (\u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0438, \u0432\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0435 \u0432 \u043F\u0440\u043E\u043C\u043F\u0442 Claude Code, \u0438 scratchpad \u0441\u0435\u0441\u0441\u0438\u0438); PNG, JPEG, GIF, HEIC \u0438\u043B\u0438 WebP \u0434\u043E 10 \u041C\u0411; \u0432 \u0437\u0430\u043C\u0435\u0442\u043A\u0435 \u043E\u043D\u0430 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u0435\u043C. \u041F\u0443\u0442\u044C \u0441 \u043F\u0440\u043E\u0431\u0435\u043B\u0430\u043C\u0438 \u2014 \u0432 \u0443\u0433\u043B\u043E\u0432\u044B\u0445 \u0441\u043A\u043E\u0431\u043A\u0430\u0445: ![](<\u043F\u0443\u0442\u044C>).";
+var IMAGES_HELP = "\u041A\u0430\u0440\u0442\u0438\u043D\u043A\u0430: ![\u043F\u043E\u0434\u043F\u0438\u0441\u044C](attachment:...) \u2014 \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u044B\u0435 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0433\u043E \u0434\u0438\u0430\u043B\u043E\u0433\u0430; PNG, JPEG, GIF, HEIC \u0438\u043B\u0438 WebP \u0434\u043E 10 \u041C\u0411. \u0425\u0443\u043A \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u043E\u0434\u043D\u043E\u0440\u0430\u0437\u043E\u0432\u044B\u0439 attachment_ticket; \u0432 \u0437\u0430\u043C\u0435\u0442\u043A\u0435 \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0430 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u0435\u043C. \u041F\u0440\u043E\u0438\u0437\u0432\u043E\u043B\u044C\u043D\u044B\u0435 \u043F\u0443\u0442\u0438 \u043A \u0444\u0430\u0439\u043B\u0430\u043C \u043D\u0435 \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u044E\u0442\u0441\u044F.";
 var ATTACHMENTS_RULE = "\u0423 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0441 \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u044F\u043C\u0438 (\u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0430\u043C\u0438, \u0444\u0430\u0439\u043B\u0430\u043C\u0438) \u2014 \u043E\u0442\u043A\u0430\u0437: \u0417\u0430\u043C\u0435\u0442\u043A\u0438 \u043F\u043E\u0440\u0442\u044F\u0442 \u0432\u043B\u043E\u0436\u0435\u043D\u0438\u044F \u043F\u0440\u0438 \u043B\u044E\u0431\u043E\u043C \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0438 \u0442\u0435\u043A\u0441\u0442\u0430. \u0422\u0430\u043A\u0443\u044E \u0437\u0430\u043C\u0435\u0442\u043A\u0443 \u043C\u043E\u0436\u043D\u043E \u0442\u043E\u043B\u044C\u043A\u043E \u0447\u0438\u0442\u0430\u0442\u044C \u0438 \u0443\u0434\u0430\u043B\u044F\u0442\u044C; \u043D\u043E\u0432\u044B\u0439 \u0442\u0435\u043A\u0441\u0442 \u0438 \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0438 \u2014 \u0432 \u043D\u043E\u0432\u0443\u044E \u0437\u0430\u043C\u0435\u0442\u043A\u0443.";
 var LISTS_RULE = "\u0423 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0441\u043E \u0441\u043F\u0438\u0441\u043A\u0430\u043C\u0438 \u2014 \u043E\u0442\u043A\u0430\u0437: \u0447\u0435\u043A-\u043B\u0438\u0441\u0442\u044B \u0432 HTML \u0437\u0430\u043C\u0435\u0442\u043E\u043A \u043D\u0435\u043E\u0442\u043B\u0438\u0447\u0438\u043C\u044B \u043E\u0442 \u043E\u0431\u044B\u0447\u043D\u044B\u0445 \u0441\u043F\u0438\u0441\u043A\u043E\u0432, \u0438 \u0437\u0430\u043F\u0438\u0441\u044C \u0442\u0435\u043A\u0441\u0442\u0430 \u0441\u0442\u0451\u0440\u043B\u0430 \u0431\u044B \u0438\u0445 \u043E\u0442\u043C\u0435\u0442\u043A\u0438. \u0422\u0430\u043A\u0443\u044E \u0437\u0430\u043C\u0435\u0442\u043A\u0443 \u043C\u043E\u0436\u043D\u043E \u0442\u043E\u043B\u044C\u043A\u043E \u0447\u0438\u0442\u0430\u0442\u044C \u0438 \u0443\u0434\u0430\u043B\u044F\u0442\u044C; \u043D\u043E\u0432\u044B\u0439 \u0442\u0435\u043A\u0441\u0442 \u2014 \u0432 \u043D\u043E\u0432\u0443\u044E \u0437\u0430\u043C\u0435\u0442\u043A\u0443.";
 var FORMATTING_NOTE = "\u0422\u0435\u043A\u0441\u0442 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F; \u043E\u0444\u043E\u0440\u043C\u043B\u0435\u043D\u0438\u0435, \u043A\u043E\u0442\u043E\u0440\u043E\u0433\u043E \u043D\u0435\u0442 \u0432 Markdown (\u0447\u0435\u043A-\u043B\u0438\u0441\u0442\u044B, \u043F\u043E\u0434\u0447\u0451\u0440\u043A\u0438\u0432\u0430\u043D\u0438\u0435, \u0446\u0432\u0435\u0442\u0430), \u043C\u043E\u0436\u0435\u0442 \u0441\u0442\u0430\u0442\u044C \u043E\u0431\u044B\u0447\u043D\u044B\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C.";
@@ -40493,9 +40836,28 @@ function attachmentsLine(n) {
 var byModifiedDesc = (a, b) => b.modified.localeCompare(a.modified);
 var json = (v) => JSON.stringify(v, null, 2);
 function makeTools(deps) {
-  const service = async () => new NotesService(deps.run, (await deps.getScope()).folderId);
+  const service = async (snapshotPaths = []) => new NotesService(deps.run, (await deps.getScope()).folderId, snapshotPaths);
   const noteId = external_exports.string().min(1).describe("id \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0438\u0437 notes_list \u0438\u043B\u0438 notes_search");
-  const newImages = () => makeResolver(deps.imageSrc);
+  const attachmentTicket = external_exports.string().regex(/^[a-f0-9]{64}$/).optional();
+  const write = async (name, args, operation) => {
+    if (name === "notes_update" && args.markdown.includes(TRUNCATION_MARKER_PREFIX)) {
+      throw new ToolError("TRUNCATED", MESSAGES.TRUNCATED);
+    }
+    for (const href of imageHrefs(args.markdown)) {
+      if (/^note-image:\d+$/.test(href)) throw new ToolError("IMAGE_REF", `\u0421\u0441\u044B\u043B\u043A\u0430 ${href} \u043D\u0435 \u0441\u043E\u043E\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043D\u0438 \u043E\u0434\u043D\u043E\u0439 \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0435 \u0437\u0430\u043C\u0435\u0442\u043A\u0438.`);
+    }
+    const images = await deps.prepareImages(name, args);
+    try {
+      const html = await markdownToHtml(args.markdown, images.resolve);
+      return await operation(html, images.snapshotPaths);
+    } finally {
+      try {
+        await images.release();
+      } catch {
+        reportAttachmentCleanupFailure();
+      }
+    }
+  };
   return [
     {
       name: "notes_list",
@@ -40537,35 +40899,29 @@ function makeTools(deps) {
     {
       name: "notes_create",
       description: `\u041D\u043E\u0432\u0430\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0430 \u0432 \u043F\u0430\u043F\u043A\u0435. title \u2014 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A, markdown \u2014 \u0442\u0435\u043A\u0441\u0442. ${IMAGES_HELP} ${SCOPE_NOTE}`,
-      shape: { title: external_exports.string().min(1), markdown: external_exports.string() },
+      shape: { title: external_exports.string().min(1), markdown: external_exports.string(), attachment_ticket: attachmentTicket },
       annotations: {},
-      handler: async ({ title, markdown }) => {
-        const html = titleHtml(title) + await markdownToHtml(markdown, newImages());
-        return json({ id: await (await service()).create(html) });
-      }
+      handler: async (args) => write("notes_create", args, async (html, snapshots) => json({ id: await (await service(snapshots)).create(titleHtml(args.title) + html) }))
     },
     {
       name: "notes_append",
       description: `\u0414\u043E\u043F\u0438\u0441\u0430\u0442\u044C Markdown \u0432 \u043A\u043E\u043D\u0435\u0446 \u0437\u0430\u043C\u0435\u0442\u043A\u0438. ${FORMATTING_NOTE} ${ATTACHMENTS_RULE} ${LISTS_RULE} ${IMAGES_HELP} ${SCOPE_NOTE}`,
-      shape: { id: noteId, markdown: external_exports.string().min(1) },
+      shape: { id: noteId, markdown: external_exports.string().min(1), attachment_ticket: attachmentTicket },
       annotations: {},
-      handler: async ({ id, markdown }) => {
-        const html = await markdownToHtml(markdown, newImages());
-        await (await service()).append(id, html);
-        return json({ id });
-      }
+      handler: async (args) => write("notes_append", args, async (html, snapshots) => {
+        await (await service(snapshots)).append(args.id, html);
+        return json({ id: args.id });
+      })
     },
     {
       name: "notes_update",
       description: `\u0417\u0430\u043C\u0435\u043D\u0438\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0446\u0435\u043B\u0438\u043A\u043E\u043C \u2014 \u0432 \u0444\u043E\u0440\u043C\u0430\u0442\u0435 notes_read, \u0441 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043A\u043E\u043C \u043F\u0435\u0440\u0432\u043E\u0439 \u0441\u0442\u0440\u043E\u043A\u043E\u0439. ${FORMATTING_NOTE} ${ATTACHMENTS_RULE} ${LISTS_RULE} \u0417\u0430\u0433\u043B\u0443\u0448\u043A\u0438 ![\u2026](note-image:N) \u0432\u043E \u0432\u0445\u043E\u0434\u0435 \u043D\u0435 \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u044E\u0442\u0441\u044F. ${IMAGES_HELP} ${SCOPE_NOTE}`,
-      shape: { id: noteId, markdown: external_exports.string().min(1) },
+      shape: { id: noteId, markdown: external_exports.string().min(1), attachment_ticket: attachmentTicket },
       annotations: { destructiveHint: true },
-      handler: async ({ id, markdown }) => {
-        if (markdown.includes(TRUNCATION_MARKER_PREFIX)) throw new ToolError("TRUNCATED", MESSAGES.TRUNCATED);
-        const html = await markdownToHtml(markdown, newImages());
-        await (await service()).update(id, html);
-        return json({ id });
-      }
+      handler: async (args) => write("notes_update", args, async (html, snapshots) => {
+        await (await service(snapshots)).update(args.id, html);
+        return json({ id: args.id });
+      })
     },
     {
       name: "notes_delete",
@@ -40581,10 +40937,25 @@ function makeTools(deps) {
 }
 
 // src/server.ts
-var run = makeOsascriptRunner();
-var getScope = makeScopeProvider(configuredFolder(process.env), run);
-var server = new McpServer({ name: "apple-notes-folder", version: "1.1.0" });
-for (const tool of makeTools({ getScope, run, imageSrc: (p) => imageSrc(p) })) {
+var host = parseHost(process.argv.slice(2));
+var hint = configurationHint(host);
+var paths = hostPaths(host, process.env, homedir());
+var run = makeOsascriptRunner(void 0, hint);
+try {
+  await cleanupRuntime(paths);
+} catch {
+  reportAttachmentCleanupFailure();
+}
+var getScope;
+try {
+  getScope = makeScopeProvider(await readFolder(host, process.env, homedir()), run, hint);
+} catch (error2) {
+  getScope = async () => {
+    throw error2;
+  };
+}
+var server = new McpServer({ name: "apple-notes-folder", version: VERSION });
+for (const tool of makeTools({ getScope, run, prepareImages: makeImagePreparer(host, paths) })) {
   server.registerTool(
     tool.name,
     { description: tool.description, inputSchema: tool.shape, annotations: tool.annotations },
