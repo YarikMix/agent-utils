@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runHook } from '../src/hook.js';
@@ -36,7 +36,9 @@ describe.each(['codex', 'claude'] as const)('%s attachment hooks (Claude tool en
     const { call } = await materialize(host);
     call.tool_name = `${prefixes[host]}${name}`;
     const result = await output(host, call);
-    expect(result).toMatchObject({ hookEventName: 'PreToolUse', permissionDecision: 'allow', updatedInput: call.tool_input });
+    expect(result).toMatchObject({ hookEventName: 'PreToolUse', updatedInput: call.tool_input });
+    if (host === 'claude') expect(result).not.toHaveProperty('permissionDecision');
+    else expect(result.permissionDecision).toBe('allow'); // Codex rewrite gate; client approval is separate.
     expect(result.updatedInput.attachment_ticket).toMatch(/^[a-f0-9]{64}$/);
     const manifest = JSON.parse(await readFile(join(paths.runtimeDir, 'tickets', `${result.updatedInput.attachment_ticket}.json`), 'utf8'));
     expect(manifest).toMatchObject({ host, sessionId: call.session_id, callId: call.tool_use_id, tool: name });
@@ -46,6 +48,21 @@ describe.each(['codex', 'claude'] as const)('%s attachment hooks (Claude tool en
     expect(lease.images[0]).toMatchObject({ href, sha256: hash });
     expect((await readFile(lease.images[0].snapshotPath)).subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
     await lease.release();
+  });
+
+  it('distinguishes a retained ambiguous lock from provenance denial without exposing private data', async () => {
+    const { call } = await materialize(host);
+    await mkdir(join(paths.runtimeDir, '.lock'), { recursive: true, mode: 0o700 });
+    const result = await output(host, call);
+    expect(result.permissionDecision).toBe('deny');
+    expect(result.permissionDecisionReason).toContain('lock');
+    expect(result.permissionDecisionReason).toContain('README');
+    expect(result.updatedInput).toBeUndefined();
+    expect(result.permissionDecisionReason).not.toContain(dir);
+    expect(result.permissionDecisionReason).not.toContain(href);
+    expect((await stat(join(paths.runtimeDir, '.lock'))).isDirectory()).toBe(true);
+    call.tool_input.markdown = 'text remains usable';
+    expect(await runHook(host, JSON.stringify(call), paths, now)).toBe('');
   });
 
   it('uses converter hrefs for reference images nested inside emphasis and blockquotes', async () => {

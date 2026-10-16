@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { lstat, mkdir, readdir, rename, rmdir, unlink, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { ToolError, reportAttachmentCleanupFailure } from '../errors.js';
+import { ToolError, MESSAGES, reportAttachmentCleanupFailure } from '../errors.js';
 import { imageHrefs } from '../markdown.js';
 import type { AttachmentContext, Clock, Host, ImageGrant, PreparedImages, RuntimePaths, TicketLease, VerifiedAttachment, WriteArgs, WriteToolName } from '../hosts/types.js';
 import { privateDirectory, publishPrivateFile, readPrivateFile, saveSnapshot, SHA256, SNAPSHOT_NAME, PUBLICATION_TEMP_NAME, validSnapshotPath, verifySnapshot } from './snapshots.js';
@@ -85,7 +85,7 @@ async function locked<T>(paths: RuntimePaths, action: () => Promise<T>): Promise
     catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw fail();
       await recoverDeadLock(lock);
-      if (Date.now() >= deadline) throw new ToolError('IMAGE_TICKET', 'Хранилище картинок занято или его lock требует проверки. Повторите вызов позже.');
+      if (Date.now() >= deadline) throw new ToolError('IMAGE_RUNTIME_LOCK', MESSAGES.IMAGE_RUNTIME_LOCK);
       await delay(10);
     }
   }

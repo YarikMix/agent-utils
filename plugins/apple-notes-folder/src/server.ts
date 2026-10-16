@@ -1,9 +1,9 @@
 import { VERSION } from './version.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { toToolResult } from './errors.js';
+import { toToolResult, reportAttachmentCleanupFailure } from './errors.js';
 import { homedir } from 'node:os';
-import { makeImagePreparer } from './attachments/tickets.js';
+import { cleanupRuntime, makeImagePreparer } from './attachments/tickets.js';
 import { readFolder } from './hosts/config.js';
 import { configurationHint, hostPaths, parseHost } from './hosts/paths.js';
 import { makeOsascriptRunner } from './runner.js';
@@ -14,6 +14,8 @@ const host = parseHost(process.argv.slice(2));
 const hint = configurationHint(host);
 const paths = hostPaths(host, process.env, homedir());
 const run = makeOsascriptRunner(undefined, hint);
+// Best-effort maintenance on each MCP start, independent of Notes operations.
+try { await cleanupRuntime(paths); } catch { reportAttachmentCleanupFailure(); }
 // Capture configuration once. A malformed config remains a tool-level error until restart.
 let getScope: ReturnType<typeof makeScopeProvider>;
 try { getScope = makeScopeProvider(await readFolder(host, process.env, homedir()), run, hint); }

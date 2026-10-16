@@ -56,7 +56,8 @@ function tools(host: Host = 'codex', failure?: ToolError, cleanupFailure = false
 async function hooked(host: Host, name: WriteToolName, args: WriteArgs) {
   const call = await event(host, name, args);
   const output = JSON.parse(await runHook(host, JSON.stringify(call), paths, now));
-  expect(output.hookSpecificOutput.permissionDecision).toBe('allow');
+  if (host === 'claude') expect(output.hookSpecificOutput).not.toHaveProperty('permissionDecision');
+  else expect(output.hookSpecificOutput.permissionDecision).toBe('allow'); // Codex rewrite gate; client approval is separate.
   return output.hookSpecificOutput.updatedInput as WriteArgs;
 }
 

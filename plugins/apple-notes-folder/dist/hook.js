@@ -56,6 +56,7 @@ var init_errors = __esm({
     };
     CONFIGURE_HINT = "/plugin configure apple-notes-folder@yarikmix-plugins";
     MESSAGES = {
+      IMAGE_RUNTIME_LOCK: "\u0425\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043A\u0430\u0440\u0442\u0438\u043D\u043E\u043A \u0437\u0430\u043D\u044F\u0442\u043E \u0438\u043B\u0438 \u0435\u0433\u043E lock \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438. \u0415\u0441\u043B\u0438 \u043E\u0442\u043A\u0430\u0437 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u044F \u0437\u0430\u043F\u0438\u0441\u0438, \u0441\u043B\u0435\u0434\u0443\u0439\u0442\u0435 \u0440\u0430\u0437\u0434\u0435\u043B\u0443 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F lock \u0432 README \u043F\u043B\u0430\u0433\u0438\u043D\u0430. \u0422\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0435 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B.",
       OUTSIDE: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u0432\u043D\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0451\u043D\u043D\u043E\u0439 \u043F\u0430\u043F\u043A\u0438.",
       NOT_FOUND: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430: \u043D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 id \u0438\u043B\u0438 \u0437\u0430\u043C\u0435\u0442\u043A\u0430 \u0443\u0434\u0430\u043B\u0435\u043D\u0430.",
       LOCKED: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u0437\u0430\u0449\u0438\u0449\u0435\u043D\u0430 \u043F\u0430\u0440\u043E\u043B\u0435\u043C \u2014 \u0441\u0435\u0440\u0432\u0435\u0440 \u0435\u0451 \u043D\u0435 \u0447\u0438\u0442\u0430\u0435\u0442 \u0438 \u043D\u0435 \u043C\u0435\u043D\u044F\u0435\u0442.",
@@ -17607,6 +17608,9 @@ var init_attachments = __esm({
 // src/hook-cli.ts
 import { homedir } from "node:os";
 
+// src/attachment-hook.ts
+init_errors();
+
 // src/attachments/tickets.ts
 init_errors();
 import { createHash as createHash2, randomBytes as randomBytes2 } from "node:crypto";
@@ -19136,7 +19140,7 @@ async function locked(paths2, action) {
     } catch (error) {
       if (error.code !== "EEXIST") throw fail2();
       await recoverDeadLock(lock);
-      if (Date.now() >= deadline) throw new ToolError("IMAGE_TICKET", "\u0425\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043A\u0430\u0440\u0442\u0438\u043D\u043E\u043A \u0437\u0430\u043D\u044F\u0442\u043E \u0438\u043B\u0438 \u0435\u0433\u043E lock \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438. \u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0432\u044B\u0437\u043E\u0432 \u043F\u043E\u0437\u0436\u0435.");
+      if (Date.now() >= deadline) throw new ToolError("IMAGE_RUNTIME_LOCK", MESSAGES.IMAGE_RUNTIME_LOCK);
       await delay(10);
     }
   }
@@ -19221,10 +19225,16 @@ async function attachmentHook(host2, input2, paths2, now = Date.now) {
     const ticket = await issueTicket(paths2, context, name, args, attachments, now);
     return JSON.stringify({ hookSpecificOutput: {
       hookEventName: "PreToolUse",
-      permissionDecision: "allow",
+      // Codex 0.163 requires allow as a rewrite gate; MCP approval still runs afterwards.
+      // Claude allow would bypass permissions, so omit it. Exact-version source proof:
+      // docs/superpowers/research/2026-10-15-apple-notes-acceptance.md (final permission fix).
+      ...host2 === "codex" ? { permissionDecision: "allow" } : {},
       updatedInput: { ...args, attachment_ticket: ticket }
     } });
-  } catch {
+  } catch (error) {
+    if (error instanceof ToolError && error.code === "IMAGE_RUNTIME_LOCK") return JSON.stringify({
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: MESSAGES.IMAGE_RUNTIME_LOCK }
+    });
     return deny(attachments);
   }
 }

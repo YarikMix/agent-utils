@@ -1,3 +1,4 @@
+import { ToolError, MESSAGES } from './errors.js';
 import { issueTicket } from './attachments/tickets.js';
 import { object, readVerifiedAttachments } from './hosts/attachments.js';
 import * as claude from './hosts/claude.js';
@@ -52,8 +53,17 @@ export async function attachmentHook(host: Host, input: unknown, paths: RuntimeP
     attachments = await readVerifiedAttachments(context);
     const ticket = await issueTicket(paths, context, name, args as WriteArgs, attachments, now);
     return JSON.stringify({ hookSpecificOutput: {
-      hookEventName: 'PreToolUse', permissionDecision: 'allow',
+      hookEventName: 'PreToolUse',
+      // Codex 0.163 requires allow as a rewrite gate; MCP approval still runs afterwards.
+      // Claude allow would bypass permissions, so omit it. Exact-version source proof:
+      // docs/superpowers/research/2026-10-15-apple-notes-acceptance.md (final permission fix).
+      ...(host === 'codex' ? { permissionDecision: 'allow' } : {}),
       updatedInput: { ...args, attachment_ticket: ticket },
     } });
-  } catch { return deny(attachments); }
+  } catch (error) {
+    if (error instanceof ToolError && error.code === 'IMAGE_RUNTIME_LOCK') return JSON.stringify({
+      hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: MESSAGES.IMAGE_RUNTIME_LOCK },
+    });
+    return deny(attachments);
+  }
 }

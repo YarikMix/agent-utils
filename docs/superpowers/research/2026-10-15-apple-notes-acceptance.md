@@ -163,7 +163,9 @@ server-only прогон после правки — **50/50 PASS**, journal с�
 Исходное отсутствие пользовательского plugin-folder config восстановлено после
 проверки собственного значения. Все собственные CLI завершены; точное GUI окно
 закрыто. Четыре известных consumed tickets и один synthetic snapshot остаются
-в приватном runtime по обычной политике GC до 24 часов; своих active operations 0.
+в приватном runtime до следующего запуска MCP после истечения 24 часов;
+своих active operations 0. Production trigger этой очистки подключён финальным
+исправлением ниже.
 Evidence и изолированные профили сохранены приватно. Следы удалённых заметок
 могут оставаться в «Недавно удалённых» до 30 дней; предупреждение дано до запуска.
 
@@ -175,3 +177,64 @@ URLs. Push/merge не выполнялись.
 Точные synthetic IDs, private пути, команды, raw stdout/stderr и счётчики
 сохранены в локальном SDD task-8-report.md и закрытом evidence root. Личные пути,
 содержимое чужих Notes, credentials и tickets в этот отчёт не включены.
+
+## Финальное исправление обслуживания и разрешений
+
+После whole-branch review production MCP-сервер выполняет GC один раз при
+запуске. Просроченные допуски и незащищённые снимки старше 24 часов удаляются;
+свежие допуски, активные операции и runtime другого клиента сохраняются.
+Ошибка обслуживания выдаёт фиксированную безопасную диагностику, не отключает
+текстовые инструменты и не меняет результат завершённой записи Notes. Проверка
+исполняет настоящий bundled entrypoint обоих host, включая занятый и повреждённый
+lock. Отказ по lock теперь отличим от отказа происхождения; README описывает
+ручное восстановление конкретного своего lock после остановки writers.
+Неопределённый lock автоматически не удаляется.
+
+**Permission wire различается по клиентам.** Claude получает `updatedInput` без
+`permissionDecision`, поэтому проверка картинки не выдаёт разрешение на замену.
+В Codex 0.163.0 такой ответ реально не применил rewrite: MCP получил исходные
+аргументы без билета и безопасно отказал. Это отрицательное наблюдение сохранено,
+а несовместимый вариант не объявлялся рабочим. `ask` также не поддерживается
+точной версией; соответствующая диагностика найдена в установленном binary и
+подтверждена исходниками. Для Codex оставлен обязательный `allow` только вместе
+с `updatedInput`: здесь он разрешает передачу новых аргументов, не саму запись.
+
+Это подтверждено по публичному тегу `openai/codex/rust-v0.163.0`:
+
+- [output_parser.rs](https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/hooks/src/engine/output_parser.rs#L162) возвращает `updated_input` и не возвращает состояние approval; [проверка wire](https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/hooks/src/engine/output_parser.rs#L442) требует `allow` для rewrite и отклоняет `ask`.
+- [hook_runtime.rs](https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/hook_runtime.rs#L210) переводит результат в `Continue { updated_input }`; [registry.rs](https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/tools/registry.rs#L701) передаёт заменённый invocation обычному обработчику.
+- [MCP handler](https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/tools/handlers/mcp.rs#L460) меняет только arguments; затем [mcp_tool_call.rs](https://github.com/openai/codex/blob/rust-v0.163.0/codex-rs/core/src/mcp_tool_call.rs#L273) отдельно вызывает штатный `maybe_request_mcp_tool_approval` по policy/annotations, без состояния hook-allow.
+
+Это статическое доказательство сохранения проверки разрешений точной версии,
+дополненное реальными вызовами клиента; оно не является заявлением о живом
+Claude или показе ручного confirmation в каждом режиме Codex. Доверие к hook
+не менялось. Другие версии Codex требуют новой проверки wire и approval.
+
+M1 отложен как неблокирующее ограничение: лимит 10 МБ проверяется после
+материализации JSONL record; суммарная память длинного диалога этим лимитом
+не ограничена. Тяжёлый OOM stress не запускался, новая parser policy не вводилась.
+Claude live и Git-source установка остаются NOT RUN по согласованному дополнению.
+
+После финального изменения source/test: **373/373 PASS, 22 файла, 0 SKIP**;
+77/77 focused, typecheck PASS, verify-build **3/3**, diff-check PASS. Первый
+sandbox suite дал 372 PASS и timeout существующего теста snapshots из-за
+`EMFILE` в `fs.watch`; повтор полного suite в обычном ранее разрешённом окружении
+вне sandbox прошёл без изменений теста/таймаута. Сырой неуспешный запуск сохранён.
+
+Узкая повторная приёмка Codex 0.163.0: **5 завершённых MCP-вызовов** — current-image
+create/read (2) и same-dialogue plain-text create → previous-image update → read
+(3). Три model write calls не содержали ручного ticket; оба image calls получили
+билет от hook. В каждой заметке **1 image / 1 attachment / 1 unique attachment**;
+349 bytes из body и официального Notes export равны исходному PNG, SHA256
+`2f1c46b0c01c840bc20065e94517511b2de3ab7b1137c4d9eb3389b0758656a2`.
+Предшествующий отказ выдуманному model href сохранён отдельно. Полная историческая
+матрица 20/20 и GUI повторно не запускались: изменились только обслуживание,
+диагностика и permission wire, native import не менялся.
+
+Две новые собственные заметки удалены после проверки exact ID/title/container/
+marker; затем удалена собственная пустая папка. Исходное отсутствие plugin config
+восстановлено после проверки собственного значения. Все CLI завершены; новые
+окна GUI не открывались. Отложенная проверка подтвердила отсутствие своей папки
+и обеих заметок в исходном container; у двух известных успешных tickets
+active markers отсутствуют. Текущие source и разрешённые project/cache копии совпали
+по **10/10** проверенным runtime/config файлам; hooks trust не менялся.

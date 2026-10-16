@@ -152,7 +152,7 @@ describe('one-use exact-call tickets', () => {
     await writeFile(join(lock, `owner-${dead.pid}-${'a'.repeat(64)}.json`), JSON.stringify({ pid: dead.pid }), { mode: 0o600 });
     expect(await issue()).toMatch(/^[a-f0-9]{64}$/);
     await mkdir(lock, { mode: 0o700 });
-    await expect(issue()).rejects.toMatchObject({ code: 'IMAGE_TICKET' });
+    await expect(issue()).rejects.toMatchObject({ code: 'IMAGE_RUNTIME_LOCK' });
     expect(await stat(lock)).toBeTruthy();
     await rm(lock, { recursive: true });
     expect(await issue()).toMatch(/^[a-f0-9]{64}$/);
@@ -253,7 +253,7 @@ describe('runtime cleanup', () => {
     if (state === 'live') {
       await writeFile(join(lock, `owner-${process.pid}-${'b'.repeat(64)}.json`), JSON.stringify({ pid: process.pid }), { mode: 0o600 });
     }
-    await expect(cleanupRuntime(paths, () => DAY * 2)).rejects.toMatchObject({ code: 'IMAGE_TICKET' });
+    await expect(cleanupRuntime(paths, () => DAY * 2)).rejects.toMatchObject({ code: 'IMAGE_RUNTIME_LOCK' });
     expect(await readFile(temporary)).toEqual(png);
     expect((await stat(lock)).isDirectory()).toBe(true);
   });

@@ -10,6 +10,7 @@ export type ErrorCode =
   | 'IMAGE_REF'
   | 'IMAGE_PROVENANCE'
   | 'IMAGE_TICKET'
+  | 'IMAGE_RUNTIME_LOCK'
   | 'ATTACHMENTS'
   | 'LISTS'
   | 'TRUNCATED'
@@ -29,6 +30,7 @@ export const CONFIGURE_HINT = '/plugin configure apple-notes-folder@yarikmix-plu
 export const CODEX_CONFIGURE_HINT = '$apple-notes-folder:setup';
 
 export const MESSAGES = {
+  IMAGE_RUNTIME_LOCK: 'Хранилище картинок занято или его lock требует проверки. Если отказ сохраняется после завершения записи, следуйте разделу восстановления lock в README плагина. Текстовые операции доступны.',
   OUTSIDE: 'Заметка вне разрешённой папки.',
   NOT_FOUND: 'Заметка не найдена: неверный id или заметка удалена.',
   LOCKED: 'Заметка защищена паролем — сервер её не читает и не меняет.',

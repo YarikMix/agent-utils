@@ -38752,6 +38752,7 @@ var ToolError = class extends Error {
 var CONFIGURE_HINT = "/plugin configure apple-notes-folder@yarikmix-plugins";
 var CODEX_CONFIGURE_HINT = "$apple-notes-folder:setup";
 var MESSAGES = {
+  IMAGE_RUNTIME_LOCK: "\u0425\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043A\u0430\u0440\u0442\u0438\u043D\u043E\u043A \u0437\u0430\u043D\u044F\u0442\u043E \u0438\u043B\u0438 \u0435\u0433\u043E lock \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438. \u0415\u0441\u043B\u0438 \u043E\u0442\u043A\u0430\u0437 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u044F \u0437\u0430\u043F\u0438\u0441\u0438, \u0441\u043B\u0435\u0434\u0443\u0439\u0442\u0435 \u0440\u0430\u0437\u0434\u0435\u043B\u0443 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F lock \u0432 README \u043F\u043B\u0430\u0433\u0438\u043D\u0430. \u0422\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0435 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B.",
   OUTSIDE: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u0432\u043D\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0451\u043D\u043D\u043E\u0439 \u043F\u0430\u043F\u043A\u0438.",
   NOT_FOUND: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430: \u043D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 id \u0438\u043B\u0438 \u0437\u0430\u043C\u0435\u0442\u043A\u0430 \u0443\u0434\u0430\u043B\u0435\u043D\u0430.",
   LOCKED: "\u0417\u0430\u043C\u0435\u0442\u043A\u0430 \u0437\u0430\u0449\u0438\u0449\u0435\u043D\u0430 \u043F\u0430\u0440\u043E\u043B\u0435\u043C \u2014 \u0441\u0435\u0440\u0432\u0435\u0440 \u0435\u0451 \u043D\u0435 \u0447\u0438\u0442\u0430\u0435\u0442 \u0438 \u043D\u0435 \u043C\u0435\u043D\u044F\u0435\u0442.",
@@ -40231,6 +40232,8 @@ function validateImageBytes(bytes) {
 
 // src/attachments/snapshots.ts
 var SHA256 = /^[a-f0-9]{64}$/;
+var SNAPSHOT_NAME = /^[a-f0-9]{64}\.(png|jpg|gif|heic|webp)$/;
+var PUBLICATION_TEMP_NAME = /^\.tmp-(?:([1-9][0-9]*)-)?[a-f0-9]{64}$/;
 var extensions = { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/heic": "heic", "image/webp": "webp" };
 var fail = () => new ToolError("IMAGE", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0437\u0430\u043A\u0440\u044B\u0442\u044B\u0439 \u0441\u043D\u0438\u043C\u043E\u043A \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0438.");
 async function privateDirectory(path, create = true) {
@@ -40306,7 +40309,9 @@ async function verifySnapshot(runtimeDir, grant) {
 
 // src/attachments/tickets.ts
 var TICKET_TTL = 9e5;
+var SNAPSHOT_TTL = 864e5;
 var JSON_LIMIT = 8 * 1024 * 1024;
+var TICKET_NAME = /^[a-f0-9]{64}\.json$/;
 var fail2 = () => new ToolError("IMAGE_TICKET", "\u0414\u043E\u043F\u0443\u0441\u043A \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0438 \u043D\u0435\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u0435\u043D, \u0438\u0441\u0442\u0451\u043A \u0438\u043B\u0438 \u0443\u0436\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D. \u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0432\u044B\u0437\u043E\u0432 \u0441 \u043D\u043E\u0432\u044B\u043C \u0434\u043E\u043F\u0443\u0441\u043A\u043E\u043C.");
 var validHost = (host2) => host2 === "claude" || host2 === "codex";
 var validTool = (tool) => ["notes_create", "notes_append", "notes_update"].includes(tool);
@@ -40380,7 +40385,7 @@ async function locked(paths2, action) {
     } catch (error2) {
       if (error2.code !== "EEXIST") throw fail2();
       await recoverDeadLock(lock);
-      if (Date.now() >= deadline) throw new ToolError("IMAGE_TICKET", "\u0425\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043A\u0430\u0440\u0442\u0438\u043D\u043E\u043A \u0437\u0430\u043D\u044F\u0442\u043E \u0438\u043B\u0438 \u0435\u0433\u043E lock \u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438. \u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0432\u044B\u0437\u043E\u0432 \u043F\u043E\u0437\u0436\u0435.");
+      if (Date.now() >= deadline) throw new ToolError("IMAGE_RUNTIME_LOCK", MESSAGES.IMAGE_RUNTIME_LOCK);
       await delay(10);
     }
   }
@@ -40427,6 +40432,53 @@ async function consumeTicket(paths2, host2, name, args, now = Date.now) {
         reportAttachmentCleanupFailure();
       }
       throw error2;
+    }
+  });
+}
+async function cleanupRuntime(paths2, now = Date.now) {
+  await locked(paths2, async () => {
+    const root = paths2.runtimeDir;
+    const timestamp = now();
+    if (!Number.isSafeInteger(timestamp)) throw fail2();
+    const protectedPaths = /* @__PURE__ */ new Set();
+    let uncertain = false;
+    for (const dir of ["tickets", "active", "consumed"]) {
+      for (const name of await readdir(join2(root, dir))) {
+        if (!TICKET_NAME.test(name)) continue;
+        const path = join2(root, dir, name);
+        try {
+          const raw = await readJson(path);
+          const manifest = parseManifest(raw, root);
+          if (dir === "active") {
+            const marker = raw;
+            if (!Number.isSafeInteger(marker.pid) || marker.pid <= 0 || !Number.isSafeInteger(marker.claimedAt)) {
+              uncertain = true;
+              continue;
+            }
+            if (ownerAlive(marker.pid) || timestamp - marker.claimedAt < SNAPSHOT_TTL) {
+              for (const image of manifest.images) protectedPaths.add(image.snapshotPath);
+            } else await remove(path);
+          } else if (dir === "tickets" && timestamp < manifest.expiresAt) {
+            for (const image of manifest.images) protectedPaths.add(image.snapshotPath);
+          } else if (dir === "tickets" || timestamp - manifest.issuedAt >= SNAPSHOT_TTL) {
+            await remove(path);
+          }
+        } catch {
+          uncertain = true;
+        }
+      }
+    }
+    if (uncertain) return;
+    for (const name of await readdir(join2(root, "snapshots"))) {
+      const temporary = PUBLICATION_TEMP_NAME.exec(name);
+      if (!SNAPSHOT_NAME.test(name) && !temporary) continue;
+      if (temporary?.[1]) {
+        const pid = Number(temporary[1]);
+        if (!Number.isSafeInteger(pid) || ownerAlive(pid)) continue;
+      }
+      const path = join2(root, "snapshots", name);
+      const st2 = await lstat2(path);
+      if (!protectedPaths.has(path) && st2.isFile() && !st2.isSymbolicLink() && st2.uid === process.getuid() && (st2.mode & 511) === 384 && st2.nlink === 1 && timestamp - st2.mtimeMs >= SNAPSHOT_TTL) await remove(path);
     }
   });
 }
@@ -40889,6 +40941,11 @@ var host = parseHost(process.argv.slice(2));
 var hint = configurationHint(host);
 var paths = hostPaths(host, process.env, homedir());
 var run = makeOsascriptRunner(void 0, hint);
+try {
+  await cleanupRuntime(paths);
+} catch {
+  reportAttachmentCleanupFailure();
+}
 var getScope;
 try {
   getScope = makeScopeProvider(await readFolder(host, process.env, homedir()), run, hint);
