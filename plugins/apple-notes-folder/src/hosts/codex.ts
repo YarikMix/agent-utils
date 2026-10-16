@@ -36,7 +36,10 @@ export async function readAttachments(context: Omit<AttachmentContext, 'callId'>
       const item = object(raw);
       if (!item) throw provenanceError('неизвестный блок пользовательского сообщения');
       if (item.type === 'input_text') {
-        if (kinds[index] !== 'user.text') throw provenanceError('не совпадает источник текстового блока с его metadata');
+        // Codex also retains host instructions/environment as user-role text, never image sources.
+        if (kinds[index] !== 'user.text' && kinds[index] !== 'agents_md.instructions' && kinds[index] !== 'environments.environment_context') {
+          throw provenanceError('не совпадает источник текстового блока с его metadata');
+        }
         continue;
       }
       if (item.type !== 'input_image') throw provenanceError('неподдерживаемый источник вложения Codex');

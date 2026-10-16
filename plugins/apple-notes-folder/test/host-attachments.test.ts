@@ -185,6 +185,65 @@ describe.each(['claude', 'codex'] as const)('%s hook contexts and original user 
 });
 
 describe('host-specific binding and clearly labeled structural negatives', () => {
+  async function actualInjectedCodex() {
+    const { transcriptRecords: records } = await fixture('codex-host-injected-actual-derived');
+    const context = { host: 'codex' as const, sessionId: records[0].payload.id, transcriptPath: join(dir, 'actual-injected.jsonl') };
+    await save(context, records);
+    return { context, records };
+  }
+
+  it('Codex reads actual-derived original PNG after host-injected instructions and environment text', async () => {
+    const { context, records } = await actualInjectedCodex();
+    const bytes = Buffer.from(records[2].payload.content[1].image_url.split(',')[1], 'base64');
+    // Independently hashed original synthetic PNG from the own live Task8 probe.
+    const sha256 = '2f1c46b0c01c840bc20065e94517511b2de3ab7b1137c4d9eb3389b0758656a2';
+    expect(await readVerifiedAttachments(context)).toEqual([{ href: `attachment:${sha256}`, aliases: [], bytes, sha256 }]);
+  });
+
+  it('Codex host-injected text alone never grants an attachment', async () => {
+    const { context, records } = await actualInjectedCodex();
+    await save(context, records.slice(0, 2));
+    expect(await readVerifiedAttachments(context)).toEqual([]);
+  });
+
+  it('Codex retains an earlier actual-derived image after a later user text message', async () => {
+    const { context, records } = await actualInjectedCodex();
+    const later = structuredClone(records[2]);
+    later.payload.id = later.metadata.retained_source.id.message_id = 'synthetic-later-message';
+    later.payload.internal_chat_message_metadata_passthrough.turn_id = later.metadata.retained_source.id.turn_id = 'synthetic-later-turn';
+    later.payload.content = [{ type: 'input_text', text: 'Use the earlier image' }];
+    later.payload.internal_chat_message_metadata_passthrough.content_item_kinds = ['user.text'];
+    await save(context, [...records, later]);
+    const attachments = await readVerifiedAttachments(context);
+    expect(attachments).toHaveLength(1);
+    expect(attachments[0].sha256).toBe('2f1c46b0c01c840bc20065e94517511b2de3ab7b1137c4d9eb3389b0758656a2');
+    expect(attachments[0].aliases).toEqual([]);
+  });
+
+  it.each(['agents_md.instructions', 'environments.environment_context'])(
+    'Codex rejects an image mislabeled as host text kind %s', async kind => {
+      const { context, records } = await actualInjectedCodex();
+      records[2].payload.internal_chat_message_metadata_passthrough.content_item_kinds[1] = kind;
+      await save(context, records);
+      await expect(readVerifiedAttachments(context)).rejects.toMatchObject({ code: 'IMAGE_PROVENANCE' });
+    },
+  );
+
+  it.each(['unknown-text-kind', 'shifted-metadata', 'unknown-host-item', 'preparation-error'])(
+    'Codex rejects malformed actual-derived injected content: %s', async mismatch => {
+      const { context, records } = await actualInjectedCodex();
+      if (mismatch === 'unknown-text-kind') records[1].payload.internal_chat_message_metadata_passthrough.content_item_kinds[0] = 'unknown.instructions';
+      if (mismatch === 'shifted-metadata') {
+        const kinds = records[2].payload.internal_chat_message_metadata_passthrough.content_item_kinds;
+        [kinds[0], kinds[1]] = [kinds[1], kinds[0]];
+      }
+      if (mismatch === 'unknown-host-item') records[1].payload.content[0].type = 'unknown';
+      if (mismatch === 'preparation-error') records[1].payload.internal_chat_message_metadata_passthrough.content_item_kinds[0] = 'images.preparation_error';
+      await save(context, records);
+      await expect(readVerifiedAttachments(context)).rejects.toMatchObject({ code: 'IMAGE_PROVENANCE' });
+    },
+  );
+
   it('retains the incomplete real Claude fixture as incomplete', async () => {
     const original = await fixture('claude');
     expect(claude.parseToolContext(original.preToolUse)).toBeNull();
