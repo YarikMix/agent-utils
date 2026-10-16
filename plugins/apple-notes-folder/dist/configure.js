@@ -48,6 +48,17 @@ function readFile(p) {
   if (s.isNil()) fail('IO');
   return ObjC.unwrap(s);
 }
+// HTML file URLs carry no sandbox extension. Deliver ONLY the verified snapshot
+// paths supplied internally by consume/verify, never paths parsed from HTML.
+// Notes cannot resolve a file as its scripting object (-1728), but receiving the
+// native file descriptor grants access for the following HTML import (macOS 26.5).
+function handoffImages(json) {
+  var paths = JSON.parse(json);
+  for (var i = 0; i < paths.length; i++) {
+    try { app.exists(Path(paths[i])); }
+    catch (e) { if (e.errorNumber !== -1728) throw e; }
+  }
+}
 function folderById(id) {
   var f = app.folders.byId(id);
   try { f.id(); } catch (e) { fail('FOLDER_GONE'); }
@@ -111,6 +122,7 @@ function run(argv) {
 var createNote = PRELUDE + `
 function run(argv) {
   var f = folderById(argv[0]);
+  handoffImages(argv[2]);
   var n = app.Note({ body: readFile(argv[1]) });
   f.notes.push(n);
   return JSON.stringify({ id: n.id() });
@@ -122,6 +134,7 @@ function run(argv) {
   var k = attachmentCount(n);
   if (k > 0 || /<img\\b/i.test(b) || b.indexOf('\\uFFFC') !== -1) fail('ATTACHMENTS:' + Math.max(k, 1));
   if (/<(ul|ol)\\b/i.test(b)) fail('LISTS');
+  handoffImages(argv[3]);
   n.body = b + readFile(argv[2]);
   return JSON.stringify({ id: n.id() });
 }`;
@@ -132,6 +145,7 @@ function run(argv) {
   var k = attachmentCount(n);
   if (k > 0 || /<img\\b/i.test(b) || b.indexOf('\\uFFFC') !== -1) fail('ATTACHMENTS:' + Math.max(k, 1));
   if (/<(ul|ol)\\b/i.test(b)) fail('LISTS');
+  handoffImages(argv[3]);
   n.body = readFile(argv[2]);
   return JSON.stringify({ id: n.id() });
 }`;

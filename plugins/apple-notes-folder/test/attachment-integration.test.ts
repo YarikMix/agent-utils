@@ -42,7 +42,7 @@ function tools(host: Host = 'codex', failure?: ToolError, cleanupFailure = false
   const scope = vi.fn(async () => ({ folderId: 'F1', folderName: 'F' }));
   const run: Runner = async (_script, args, options) => {
     expect(options.write).toBe(true);
-    writes.push(await readFile(args.at(-1)!, 'utf8'));
+    writes.push(await readFile(args[args.length - 2], 'utf8'));
     if (failure) throw failure;
     return JSON.stringify({ id: 'N1' });
   };
@@ -194,4 +194,16 @@ it('text preparer does not consume supplied ticket and rejects any later image r
   await images.release();
   expect(await readdir(join(paths.runtimeDir, 'tickets'))).toEqual([`${args.attachment_ticket}.json`]);
   await tools().handler('notes_create')(args);
+});
+
+it.each(['notes_create', 'notes_append', 'notes_update'] as const)('%s hands only consumed verified snapshots to the native layer', async name => {
+  let nativeArgs: string[] = [];
+  const run: Runner = async (_script, args) => { nativeArgs = args; return JSON.stringify({ id: 'N1' }); };
+  const handler = makeTools({ getScope: async () => ({ folderId: 'F1', folderName: 'F' }), run,
+    prepareImages: makeImagePreparer('codex', paths, now) }).find(t => t.name === name)!.handler;
+  const updated = await hooked('codex', name, { title: 'T', id: 'N1', markdown: `![](${href})` });
+  await handler(updated);
+  const manifest = JSON.parse(await readFile(join(paths.runtimeDir, 'consumed', `${updated.attachment_ticket}.json`), 'utf8'));
+  expect(nativeArgs.at(-1)).toBe(JSON.stringify([manifest.images[0].snapshotPath]));
+  expect(nativeArgs.at(-1)).not.toContain('attachment:');
 });

@@ -378,7 +378,7 @@ describe('prepareImages lifecycle', () => {
     const args = { title: 'Title', id: 'N1', markdown: 'text', attachment_ticket: 'a'.repeat(64) };
     const error = new ToolError('TIMEOUT_WRITE', MESSAGES.TIMEOUT_WRITE);
     const release = vi.fn(async () => { throw new Error('PRIVATE_PATH ticket note bytes'); });
-    const prepare = vi.fn(async () => ({ resolve: async () => { throw new Error('unexpected image'); }, release }));
+    const prepare = vi.fn(async () => ({ snapshotPaths: [], resolve: async () => { throw new Error('unexpected image'); }, release }));
     const diagnostic = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const run: Runner = async () => { throw error; };
     const handler = makeTools({ getScope: async () => ({ folderId: 'F1', folderName: 'F' }), run, prepareImages: prepare }).find(t => t.name === name)!.handler;
@@ -393,7 +393,7 @@ describe('prepareImages lifecycle', () => {
     const diagnostic = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const fake = fakeNotes({});
     const handler = makeTools({ getScope: async () => ({ folderId: 'F1', folderName: 'F' }), run: fake.run,
-      prepareImages: async () => ({ resolve: async () => '', release }) }).find(t => t.name === 'notes_create')!.handler;
+      prepareImages: async () => ({ snapshotPaths: [], resolve: async () => '', release }) }).find(t => t.name === 'notes_create')!.handler;
     expect(JSON.parse(await handler({ title: 'T', markdown: 'text' }))).toEqual({ id: 'NEW1' });
     expect(release).toHaveBeenCalledTimes(1);
     expect(diagnostic.mock.calls.flat().join('')).not.toContain('PRIVATE_PATH');
@@ -425,7 +425,7 @@ it('conversion failure releases prepared images before any NotesService call', a
   const getScope = vi.fn(async () => ({ folderId: 'F1', folderName: 'F' }));
   const resolve = vi.fn(async (href: string) => { if (href === 'second') throw failure; return 'file:///verified.png'; });
   const fake = fakeNotes({});
-  const handler = makeTools({ getScope, run: fake.run, prepareImages: async () => ({ resolve, release }) }).find(t => t.name === 'notes_create')!.handler;
+  const handler = makeTools({ getScope, run: fake.run, prepareImages: async () => ({ snapshotPaths: [], resolve, release }) }).find(t => t.name === 'notes_create')!.handler;
   await expect(handler({ title: 'T', markdown: '![](first) ![](second)' })).rejects.toBe(failure);
   expect(resolve).toHaveBeenCalledTimes(2);
   expect(getScope).not.toHaveBeenCalled();

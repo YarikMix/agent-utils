@@ -206,12 +206,13 @@ export async function cleanupRuntime(paths: RuntimePaths, now: Clock = Date.now)
 /** Resolve only verified grants; text-only calls never consume a ticket or read a file. */
 export function makeImagePreparer(host: Host, paths: RuntimePaths, now: Clock = Date.now): (name: WriteToolName, args: WriteArgs) => Promise<PreparedImages> {
   return async (name, args) => {
-    if (!imageHrefs(args.markdown).length) return { resolve: async () => { throw fail(); }, release: async () => {} };
+    if (!imageHrefs(args.markdown).length) return { snapshotPaths: [], resolve: async () => { throw fail(); }, release: async () => {} };
     const lease = await consumeTicket(paths, host, name, args, now);
     try {
       const urls = new Map<string, string>();
       for (const grant of lease.images) urls.set(grant.href, await verifySnapshot(paths.runtimeDir, grant));
       return {
+        snapshotPaths: [...new Set(lease.images.map(grant => grant.snapshotPath))],
         resolve: async href => { const url = urls.get(href); if (!url) throw fail(); return url; },
         release: lease.release,
       };

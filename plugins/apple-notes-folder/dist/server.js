@@ -40432,7 +40432,7 @@ async function consumeTicket(paths2, host2, name, args, now = Date.now) {
 }
 function makeImagePreparer(host2, paths2, now = Date.now) {
   return async (name, args) => {
-    if (!imageHrefs(args.markdown).length) return { resolve: async () => {
+    if (!imageHrefs(args.markdown).length) return { snapshotPaths: [], resolve: async () => {
       throw fail2();
     }, release: async () => {
     } };
@@ -40441,6 +40441,7 @@ function makeImagePreparer(host2, paths2, now = Date.now) {
       const urls = /* @__PURE__ */ new Map();
       for (const grant of lease.images) urls.set(grant.href, await verifySnapshot(paths2.runtimeDir, grant));
       return {
+        snapshotPaths: [...new Set(lease.images.map((grant) => grant.snapshotPath))],
         resolve: async (href) => {
           const url = urls.get(href);
           if (!url) throw fail2();
@@ -40471,6 +40472,17 @@ function readFile(p) {
   var s = $.NSString.stringWithContentsOfFileEncodingError(p, $.NSUTF8StringEncoding, null);
   if (s.isNil()) fail('IO');
   return ObjC.unwrap(s);
+}
+// HTML file URLs carry no sandbox extension. Deliver ONLY the verified snapshot
+// paths supplied internally by consume/verify, never paths parsed from HTML.
+// Notes cannot resolve a file as its scripting object (-1728), but receiving the
+// native file descriptor grants access for the following HTML import (macOS 26.5).
+function handoffImages(json) {
+  var paths = JSON.parse(json);
+  for (var i = 0; i < paths.length; i++) {
+    try { app.exists(Path(paths[i])); }
+    catch (e) { if (e.errorNumber !== -1728) throw e; }
+  }
 }
 function folderById(id) {
   var f = app.folders.byId(id);
@@ -40535,6 +40547,7 @@ function run(argv) {
 var createNote = PRELUDE + `
 function run(argv) {
   var f = folderById(argv[0]);
+  handoffImages(argv[2]);
   var n = app.Note({ body: readFile(argv[1]) });
   f.notes.push(n);
   return JSON.stringify({ id: n.id() });
@@ -40546,6 +40559,7 @@ function run(argv) {
   var k = attachmentCount(n);
   if (k > 0 || /<img\\b/i.test(b) || b.indexOf('\\uFFFC') !== -1) fail('ATTACHMENTS:' + Math.max(k, 1));
   if (/<(ul|ol)\\b/i.test(b)) fail('LISTS');
+  handoffImages(argv[3]);
   n.body = b + readFile(argv[2]);
   return JSON.stringify({ id: n.id() });
 }`;
@@ -40556,6 +40570,7 @@ function run(argv) {
   var k = attachmentCount(n);
   if (k > 0 || /<img\\b/i.test(b) || b.indexOf('\\uFFFC') !== -1) fail('ATTACHMENTS:' + Math.max(k, 1));
   if (/<(ul|ol)\\b/i.test(b)) fail('LISTS');
+  handoffImages(argv[3]);
   n.body = readFile(argv[2]);
   return JSON.stringify({ id: n.id() });
 }`;
@@ -40720,12 +40735,14 @@ async function withHtmlFile(html, fn2) {
   }
 }
 var NotesService = class {
-  constructor(run2, folderId) {
+  constructor(run2, folderId, snapshotPaths = []) {
     this.run = run2;
     this.folderId = folderId;
+    this.snapshotPaths = snapshotPaths;
   }
   run;
   folderId;
+  snapshotPaths;
   async call(script, args, write) {
     return JSON.parse(await this.run(script, [this.folderId, ...args], { write }));
   }
@@ -40739,14 +40756,14 @@ var NotesService = class {
     return this.call(SCRIPTS.readNote, [id], false);
   }
   async create(html) {
-    const r = await withHtmlFile(html, (p) => this.call(SCRIPTS.createNote, [p], true));
+    const r = await withHtmlFile(html, (p) => this.call(SCRIPTS.createNote, [p, JSON.stringify(this.snapshotPaths)], true));
     return r.id;
   }
   async append(id, html) {
-    await withHtmlFile(html, (p) => this.call(SCRIPTS.appendNote, [id, p], true));
+    await withHtmlFile(html, (p) => this.call(SCRIPTS.appendNote, [id, p, JSON.stringify(this.snapshotPaths)], true));
   }
   async update(id, html) {
-    await withHtmlFile(html, (p) => this.call(SCRIPTS.updateNote, [id, p], true));
+    await withHtmlFile(html, (p) => this.call(SCRIPTS.updateNote, [id, p, JSON.stringify(this.snapshotPaths)], true));
   }
   async delete(id) {
     await this.call(SCRIPTS.deleteNote, [id], true);
@@ -40767,7 +40784,7 @@ function attachmentsLine(n) {
 var byModifiedDesc = (a, b) => b.modified.localeCompare(a.modified);
 var json = (v) => JSON.stringify(v, null, 2);
 function makeTools(deps) {
-  const service = async () => new NotesService(deps.run, (await deps.getScope()).folderId);
+  const service = async (snapshotPaths = []) => new NotesService(deps.run, (await deps.getScope()).folderId, snapshotPaths);
   const noteId = external_exports.string().min(1).describe("id \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0438\u0437 notes_list \u0438\u043B\u0438 notes_search");
   const attachmentTicket = external_exports.string().regex(/^[a-f0-9]{64}$/).optional();
   const write = async (name, args, operation) => {
@@ -40780,7 +40797,7 @@ function makeTools(deps) {
     const images = await deps.prepareImages(name, args);
     try {
       const html = await markdownToHtml(args.markdown, images.resolve);
-      return await operation(html);
+      return await operation(html, images.snapshotPaths);
     } finally {
       try {
         await images.release();
@@ -40832,15 +40849,15 @@ function makeTools(deps) {
       description: `\u041D\u043E\u0432\u0430\u044F \u0437\u0430\u043C\u0435\u0442\u043A\u0430 \u0432 \u043F\u0430\u043F\u043A\u0435. title \u2014 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A, markdown \u2014 \u0442\u0435\u043A\u0441\u0442. ${IMAGES_HELP} ${SCOPE_NOTE}`,
       shape: { title: external_exports.string().min(1), markdown: external_exports.string(), attachment_ticket: attachmentTicket },
       annotations: {},
-      handler: async (args) => write("notes_create", args, async (html) => json({ id: await (await service()).create(titleHtml(args.title) + html) }))
+      handler: async (args) => write("notes_create", args, async (html, snapshots) => json({ id: await (await service(snapshots)).create(titleHtml(args.title) + html) }))
     },
     {
       name: "notes_append",
       description: `\u0414\u043E\u043F\u0438\u0441\u0430\u0442\u044C Markdown \u0432 \u043A\u043E\u043D\u0435\u0446 \u0437\u0430\u043C\u0435\u0442\u043A\u0438. ${FORMATTING_NOTE} ${ATTACHMENTS_RULE} ${LISTS_RULE} ${IMAGES_HELP} ${SCOPE_NOTE}`,
       shape: { id: noteId, markdown: external_exports.string().min(1), attachment_ticket: attachmentTicket },
       annotations: {},
-      handler: async (args) => write("notes_append", args, async (html) => {
-        await (await service()).append(args.id, html);
+      handler: async (args) => write("notes_append", args, async (html, snapshots) => {
+        await (await service(snapshots)).append(args.id, html);
         return json({ id: args.id });
       })
     },
@@ -40849,8 +40866,8 @@ function makeTools(deps) {
       description: `\u0417\u0430\u043C\u0435\u043D\u0438\u0442\u044C \u0442\u0435\u043A\u0441\u0442 \u0437\u0430\u043C\u0435\u0442\u043A\u0438 \u0446\u0435\u043B\u0438\u043A\u043E\u043C \u2014 \u0432 \u0444\u043E\u0440\u043C\u0430\u0442\u0435 notes_read, \u0441 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043A\u043E\u043C \u043F\u0435\u0440\u0432\u043E\u0439 \u0441\u0442\u0440\u043E\u043A\u043E\u0439. ${FORMATTING_NOTE} ${ATTACHMENTS_RULE} ${LISTS_RULE} \u0417\u0430\u0433\u043B\u0443\u0448\u043A\u0438 ![\u2026](note-image:N) \u0432\u043E \u0432\u0445\u043E\u0434\u0435 \u043D\u0435 \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u044E\u0442\u0441\u044F. ${IMAGES_HELP} ${SCOPE_NOTE}`,
       shape: { id: noteId, markdown: external_exports.string().min(1), attachment_ticket: attachmentTicket },
       annotations: { destructiveHint: true },
-      handler: async (args) => write("notes_update", args, async (html) => {
-        await (await service()).update(args.id, html);
+      handler: async (args) => write("notes_update", args, async (html, snapshots) => {
+        await (await service(snapshots)).update(args.id, html);
         return json({ id: args.id });
       })
     },

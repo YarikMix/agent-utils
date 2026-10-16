@@ -38,10 +38,10 @@ const byModifiedDesc = (a: NoteSummary, b: NoteSummary) => b.modified.localeComp
 const json = (v: unknown) => JSON.stringify(v, null, 2);
 
 export function makeTools(deps: ToolDeps): ToolDef[] {
-  const service = async () => new NotesService(deps.run, (await deps.getScope()).folderId);
+  const service = async (snapshotPaths: readonly string[] = []) => new NotesService(deps.run, (await deps.getScope()).folderId, snapshotPaths);
   const noteId = z.string().min(1).describe('id заметки из notes_list или notes_search');
   const attachmentTicket = z.string().regex(/^[a-f0-9]{64}$/).optional();
-  const write = async (name: WriteToolName, args: WriteArgs, operation: (html: string) => Promise<string>) => {
+  const write = async (name: WriteToolName, args: WriteArgs, operation: (html: string, snapshotPaths: string[]) => Promise<string>) => {
     if (name === 'notes_update' && args.markdown.includes(TRUNCATION_MARKER_PREFIX)) {
       throw new ToolError('TRUNCATED', MESSAGES.TRUNCATED);
     }
@@ -51,7 +51,7 @@ export function makeTools(deps: ToolDeps): ToolDef[] {
     const images = await deps.prepareImages(name, args);
     try {
       const html = await markdownToHtml(args.markdown, images.resolve);
-      return await operation(html);
+      return await operation(html, images.snapshotPaths);
     } finally {
       // Cleanup must never turn a confirmed write into a retry or hide TIMEOUT_WRITE.
       try { await images.release(); } catch { reportAttachmentCleanupFailure(); }
@@ -102,7 +102,7 @@ export function makeTools(deps: ToolDeps): ToolDef[] {
       shape: { title: z.string().min(1), markdown: z.string(), attachment_ticket: attachmentTicket },
       annotations: {},
       handler: async (args: WriteArgs & { title: string }) =>
-        write('notes_create', args, async html => json({ id: await (await service()).create(titleHtml(args.title) + html) })),
+        write('notes_create', args, async (html, snapshots) => json({ id: await (await service(snapshots)).create(titleHtml(args.title) + html) })),
     },
     {
       name: 'notes_append',
@@ -110,8 +110,8 @@ export function makeTools(deps: ToolDeps): ToolDef[] {
       shape: { id: noteId, markdown: z.string().min(1), attachment_ticket: attachmentTicket },
       annotations: {},
       handler: async (args: WriteArgs & { id: string }) =>
-        write('notes_append', args, async html => {
-          await (await service()).append(args.id, html);
+        write('notes_append', args, async (html, snapshots) => {
+          await (await service(snapshots)).append(args.id, html);
           return json({ id: args.id });
         }),
     },
@@ -121,8 +121,8 @@ export function makeTools(deps: ToolDeps): ToolDef[] {
       shape: { id: noteId, markdown: z.string().min(1), attachment_ticket: attachmentTicket },
       annotations: { destructiveHint: true },
       handler: async (args: WriteArgs & { id: string }) =>
-        write('notes_update', args, async html => {
-          await (await service()).update(args.id, html);
+        write('notes_update', args, async (html, snapshots) => {
+          await (await service(snapshots)).update(args.id, html);
           return json({ id: args.id });
         }),
     },

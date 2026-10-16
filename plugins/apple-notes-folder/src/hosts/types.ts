@@ -6,5 +6,5 @@ export type AttachmentContext = { host: Host; sessionId: string; callId: string;
 export type VerifiedAttachment = { href: string; aliases: string[]; bytes: Uint8Array; sha256: string };
 export type ImageGrant = { href: string; snapshotPath: string; sha256: string };
 export type TicketLease = { images: ImageGrant[]; release: () => Promise<void> };
-export type PreparedImages = { resolve: (href: string) => Promise<string>; release: () => Promise<void> };
+export type PreparedImages = { snapshotPaths: string[]; resolve: (href: string) => Promise<string>; release: () => Promise<void> };
 export type Clock = () => number;
