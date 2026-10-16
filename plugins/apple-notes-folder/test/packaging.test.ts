@@ -57,11 +57,12 @@ const claudeCatalogBaseline = [
 const temporary: string[] = [];
 afterEach(async () => { for (const dir of temporary.splice(0)) await rm(dir, { recursive: true, force: true }); });
 
-// This regression targets the legacy loader in exactly Codex 0.162.1.
-// Missing/other CLI versions skip only this host integration; artifact tests still run.
+// Both versions were verified against their actual installed app-server.
+// Unknown/missing CLI versions skip only host integration; artifact tests still run.
 const cliEnv = { PATH: process.env.PATH ?? '' };
 const codexVersion = spawnSync('codex', ['--version'], { encoding: 'utf8', env: cliEnv }).stdout?.trim();
-it.skipIf(codexVersion !== 'codex-cli 0.162.1')('Codex 0.162.1 starts seven production tools from its dependency-free installed cache', async () => {
+const verifiedCodexVersions = ['codex-cli 0.162.1', 'codex-cli 0.163.0'];
+it.skipIf(!verifiedCodexVersions.includes(codexVersion))(`verified installed Codex (${codexVersion ?? 'unavailable'}) starts seven production tools from its dependency-free cache`, async () => {
   const dir = await realpath(await mkdtemp(join(tmpdir(), 'apple-notes-codex-install-'))); temporary.push(dir);
   const source = join(dir, 'marketplace');
   const project = join(dir, 'unrelated-project');

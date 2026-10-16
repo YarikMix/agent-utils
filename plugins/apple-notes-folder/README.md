@@ -94,12 +94,19 @@ PNG, JPEG, GIF, HEIC, WebP; размер до 10 МБ. Заметки копир
 
 | Клиент | Версия | Проверки | Ограничения |
 |---|---|---|---|
-| Codex CLI | 0.162.1 | реальные контракты вложений, rewrite, shell guard/Code Mode; автоматические тесты сервера и упаковки | новая полная setup/image-приёмка — отдельный Task 8 |
+| Codex CLI | 0.163.0 | local-marketplace: 20/20 живых сценариев, setup, исходные PNG bytes/экспорт/GUI, rewrite, shell guard/Code Mode; установленный app-server запускает 7 tools | Git-source NOT RUN |
+| Codex CLI | 0.162.1 | исторические контракты вложений и guards; версия сохранена в allowlist упаковочного теста | до native исправления GUI выявила битое изображение; финальная приёмка выполнена на 0.163.0 |
 | Claude Code | 2.1.300 | автоматические тесты, MCP-протокол, auth-free установка/загрузка плагина | model/tool/setup/image NOT RUN: нет аккаунта |
 
 Локальный marketplace проверяется отдельно от Git source. Git-source установка
 2.0.0 не проверена до разрешённой публикации ветки. Проверка наличия скилла не
 означает завершённую живую настройку.
+
+Итоговая приёмка 16.10.2026: общий server-only live-check по 50/50 для обоих
+host с точным сравнением PNG bytes; автоматический suite 347/347 без пропусков.
+Подробности — [отчёт приёмки](../../docs/superpowers/research/2026-10-15-apple-notes-acceptance.md).
+Task1 probe verifier остаётся привязан к 0.162.1; поддержку наблюдённого формата
+0.163.0 подтверждают отдельная actual-derived fixture и реальные вызовы клиента.
 
 ## Прежняя живая проверка Notes
 
@@ -160,5 +167,6 @@ npm ci && npm run verify-build
 npm ci
 npm test            # сборка + автотесты
 npm run typecheck
-npm run live-check  # ручная проверка на живых Заметках, см. scripts/live-check.mjs
+npm run live-check -- --client claude  # server-only, синтетическое подтверждение вложений
+npm run live-check -- --client codex
 ```

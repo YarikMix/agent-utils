@@ -185,6 +185,19 @@ describe.each(['claude', 'codex'] as const)('%s hook contexts and original user 
 });
 
 describe('host-specific binding and clearly labeled structural negatives', () => {
+  it('replays actual Codex 0.163.0 retained bytes without granting host instructions or environment text', async () => {
+    const observed = await fixture('codex-0163-actual-derived');
+    expect(observed.version).toBe('0.163.0');
+    const records = observed.transcriptRecords;
+    const context = { host: 'codex' as const, sessionId: records[0].payload.id, transcriptPath: join(dir, 'actual-0163.jsonl') };
+    const bytes = Buffer.from(records[2].payload.content[1].image_url.split(',')[1], 'base64');
+    const sha256 = '2f1c46b0c01c840bc20065e94517511b2de3ab7b1137c4d9eb3389b0758656a2';
+    await save(context, records);
+    expect(await codex.readAttachments(context)).toEqual([{ href: `attachment:${sha256}`, aliases: [], bytes, sha256 }]);
+    await save(context, records.slice(0, 2));
+    expect(await codex.readAttachments(context)).toEqual([]);
+  });
+
   async function actualInjectedCodex() {
     const { transcriptRecords: records } = await fixture('codex-host-injected-actual-derived');
     const context = { host: 'codex' as const, sessionId: records[0].payload.id, transcriptPath: join(dir, 'actual-injected.jsonl') };
