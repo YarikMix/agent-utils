@@ -2,6 +2,19 @@
   "name": "yarikmix-plugins",
   "plugins": [
     {
+      "name": "codex-disable-skill",
+      "version": "1.0.0",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-disable-skill"
+      },
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
       "name": "apple-notes-folder",
       "version": "2.0.0",
       "source": {

@@ -1,0 +1,10 @@
+{
+  "name": "codex-disable-skill",
+  "version": "1.0.0",
+  "description": "Отключение отдельных скиллов в пользовательском конфиге Codex",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Disable Skill",
+    "shortDescription": "Отключение скиллов и их подсказок в Codex"
+  }
+}
