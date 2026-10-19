@@ -1,0 +1,10 @@
+{
+  "name": "karabiner-layout-switch",
+  "version": "1.0.0",
+  "description": "Настройка Cmd+Shift в Karabiner-Elements с поддержкой Keychron K8 Pro",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Karabiner Layout Switch",
+    "shortDescription": "Переключение английской и русской раскладок по Cmd+Shift"
+  }
+}
