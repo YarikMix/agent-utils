@@ -1,6 +1,6 @@
 # agent-utils
 
-Плагины для Claude Code и Codex. Apple Notes работает в обоих клиентах;
+Плагины для Claude Code и Codex. Apple Notes и Karabiner работают в обоих клиентах;
 Selectel и TypeScript LSP предназначены для Claude Code,
 а Codex Disable Skill — для Codex.
 
@@ -24,6 +24,7 @@ Codex — `$apple-notes-folder:setup`.
 
 | Плагин | Возможности | Клиенты |
 |---|---|---|
+| [karabiner-layout-switch](plugins/karabiner-layout-switch/README.md) | Настройка Cmd+Shift для английской и русской раскладок macOS, включая Keychron K8 Pro | Claude Code, Codex |
 | [apple-notes-folder](plugins/apple-notes-folder/README.md) | Apple Notes в одной папке: чтение, поиск, правка, картинки | Claude Code, Codex |
 | [codex-disable-skill](plugins/codex-disable-skill/README.md) | Отключение отдельных скиллов и их подсказок | Codex |
 | [typescript-native-lsp](plugins/typescript-native-lsp/README.md) | TypeScript 7 через `tsc --lsp` | Claude Code |

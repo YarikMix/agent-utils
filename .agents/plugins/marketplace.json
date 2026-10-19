@@ -2,6 +2,19 @@
   "name": "yarikmix-plugins",
   "plugins": [
     {
+      "name": "karabiner-layout-switch",
+      "version": "1.0.0",
+      "source": {
+        "source": "local",
+        "path": "./plugins/karabiner-layout-switch"
+      },
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
       "name": "codex-disable-skill",
       "version": "1.0.0",
       "source": {

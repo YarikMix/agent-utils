@@ -1,0 +1,8 @@
+{
+  "name": "karabiner-layout-switch",
+  "version": "1.0.0",
+  "description": "Настройка Cmd+Shift для английской и русской раскладок macOS, включая Keychron K8 Pro",
+  "author": { "name": "Yaroslav Mihalev" },
+  "license": "MIT",
+  "skills": "./skills/"
+}

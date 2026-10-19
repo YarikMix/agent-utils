@@ -7,6 +7,16 @@
   },
   "plugins": [
     {
+      "name": "karabiner-layout-switch",
+      "description": "Переключение английской и русской раскладок по Cmd+Shift в Karabiner, включая Keychron K8 Pro",
+      "version": "1.0.0",
+      "author": {
+        "name": "Yaroslav Mihalev"
+      },
+      "source": "./plugins/karabiner-layout-switch",
+      "category": "productivity"
+    },
+    {
       "name": "typescript-native-lsp",
       "description": "TypeScript 7 native language server (tsc --lsp) for Claude Code",
       "version": "1.0.0",
