@@ -86,6 +86,16 @@
       },
       "source": "./plugins/setup-iphone-control",
       "category": "development"
+    },
+    {
+      "name": "peekaboo-control",
+      "version": "1.0.0",
+      "description": "Управление macOS через Peekaboo MCP и Desktop Bridge",
+      "author": {
+        "name": "Yaroslav Mihalev"
+      },
+      "source": "./plugins/peekaboo-control",
+      "category": "productivity"
     }
   ]
 }

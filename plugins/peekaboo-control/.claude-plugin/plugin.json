@@ -1,0 +1,10 @@
+{
+  "name": "peekaboo-control",
+  "version": "1.0.0",
+  "description": "Управление macOS через Peekaboo MCP и Desktop Bridge",
+  "skills": "./skills/",
+  "author": {
+    "name": "Yaroslav Mihalev"
+  },
+  "license": "MIT"
+}
