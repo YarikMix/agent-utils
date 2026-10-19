@@ -1,0 +1,10 @@
+{
+  "name": "iphone-control",
+  "version": "1.0.0",
+  "description": "Управление физическим iPhone через Appium MCP: экран, XML, ввод и навигация",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "iPhone Control",
+    "shortDescription": "Управление физическим iPhone через Appium MCP: экран, XML, ввод и навигация"
+  }
+}

@@ -29,7 +29,10 @@
       "lspServers": {
         "typescript": {
           "command": "tsc",
-          "args": ["--lsp", "--stdio"],
+          "args": [
+            "--lsp",
+            "--stdio"
+          ],
           "extensionToLanguage": {
             ".ts": "typescript",
             ".tsx": "typescriptreact",
@@ -63,6 +66,26 @@
       },
       "source": "./plugins/apple-notes-folder",
       "category": "productivity"
+    },
+    {
+      "name": "iphone-control",
+      "version": "1.0.0",
+      "description": "Управление физическим iPhone через Appium MCP: экран, XML, ввод и навигация",
+      "author": {
+        "name": "Yaroslav Mihalev"
+      },
+      "source": "./plugins/iphone-control",
+      "category": "development"
+    },
+    {
+      "name": "setup-iphone-control",
+      "version": "1.0.0",
+      "description": "Первоначальная настройка Appium MCP и WebDriverAgent для физического iPhone на Mac",
+      "author": {
+        "name": "Yaroslav Mihalev"
+      },
+      "source": "./plugins/setup-iphone-control",
+      "category": "development"
     }
   ]
 }

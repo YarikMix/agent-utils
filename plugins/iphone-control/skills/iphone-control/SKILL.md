@@ -1,0 +1,25 @@
+---
+name: iphone-control
+description: Use when a task requires observing or controlling a physical iPhone through Appium MCP on a configured Mac, including screenshots, native apps, taps, text input and navigation. Not for iOS Simulator or initial environment setup.
+---
+
+# Физический iPhone через Appium MCP
+
+Используй официальный Appium MCP и embedded XCUITest driver с подписанным WDA. Для симулятора выбери соответствующий навык. Системные подтверждения, код-пароль, Face ID и Apple Account выполняет человек; обычные действия в пределах задачи выполняй самостоятельно.
+
+## Начало работы
+
+1. Узнай зарегистрированные tools и их актуальные схемы, затем прочитай managed sessions (`appium_session_management`, `action:list`). Не начинай готовый Mac с переустановки.
+2. Сверь целевой физический iPhone и UDID с выбором пользователя. Подходящую сессию переиспользуй: выбери её и передавай `sessionId` явно. При нескольких телефонах без выбора спроси пользователя; до выбора ввод не отправляй. `deviceName: iPhone Simulator` может быть неверным default: проверяй фактический UDID и тип устройства, не отвергай сессию только по имени.
+3. Перед native наблюдением и локаторами прочитай `appium_context({action:"list",sessionId:S})`; если текущий context не `NATIVE_APP`, переключи `appium_context({action:"switch",context:"NATIVE_APP",sessionId:S})`. Затем получи свежие PNG/XML, старые element IDs не используй. `select` не переключает context.
+4. Если подходящей сессии нет, обнаружь **real** iOS device, подтверди выбор и создай local embedded session по [операциям](references/operations.md). Не готовь симулятор и не выдумывай localhost URL. Remote допустим только с URL от пользователя.
+
+## Рабочий цикл
+
+Получи свежие PNG и XML, открой PNG и выбери цель по наблюдению. Предпочитай accessibility id, затем платформенный селектор; координаты — запасной путь. Уменьшенный PNG не задаёт координаты устройства: проверь размеры окна, поворот и масштаб. Выполни одно действие, получи новое наблюдение и проверь смысловой результат. Успех tool означает доставку, а не достижение цели. При таймауте или неизвестном исходе сначала наблюдай, затем решай о повторе; не повторяй вслепую.
+
+Схемы PNG/XML, locator/tap, ввода, жестов, lifecycle и Home — в [operations](references/operations.md). Границы живой проверки — в [validation](references/validation.md). Береги пользовательские данные; после приёмочной пробы убери только свой тестовый текст и восстанови исходное приложение. Сохрани исходный context пробы и восстанови его, если он ещё доступен и соответствует исходной задаче; не вмешивайся в чужую параллельную работу. Не удаляй чужую сессию; завершай только собственную, когда это не мешает задаче.
+
+## Когда нужна настройка
+
+Отсутствует MCP/tool, устройство недоступно, WDA/подпись/Developer Mode/XCTest дают конкретный блокер — переходи к `setup-iphone-control`, передав точную ошибку. Скилл может быть установлен поштучно: если его нет, используй [источник и установку setup-iphone-control](https://github.com/YarikMix/agent-utils/tree/main/plugins/setup-iphone-control/skills/setup-iphone-control), а не отсутствующий соседний файл. Установка плагина описана в README его каталога. Установка скилла сама по себе не подключает MCP. Переустановка не исправляет любой таймаут: сначала установи причину.

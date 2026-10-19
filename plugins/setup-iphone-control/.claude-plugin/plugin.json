@@ -1,0 +1,10 @@
+{
+  "name": "setup-iphone-control",
+  "version": "1.0.0",
+  "description": "Первоначальная настройка Appium MCP и WebDriverAgent для физического iPhone на Mac",
+  "skills": "./skills/",
+  "author": {
+    "name": "Yaroslav Mihalev"
+  },
+  "license": "MIT"
+}
