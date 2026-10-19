@@ -1,0 +1,10 @@
+{
+  "name": "figma-lookup",
+  "version": "1.0.0",
+  "description": "Чтение макетов Figma, комментариев и экспорт ассетов с опциональным Peekaboo",
+  "skills": "./skills/",
+  "author": {
+    "name": "Yaroslav Mihalev"
+  },
+  "license": "MIT"
+}

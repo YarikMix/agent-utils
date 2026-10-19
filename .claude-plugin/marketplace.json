@@ -96,6 +96,16 @@
       },
       "source": "./plugins/peekaboo-control",
       "category": "productivity"
+    },
+    {
+      "name": "figma-lookup",
+      "version": "1.0.0",
+      "description": "Чтение макетов Figma, комментариев и экспорт ассетов с опциональным Peekaboo",
+      "author": {
+        "name": "Yaroslav Mihalev"
+      },
+      "source": "./plugins/figma-lookup",
+      "category": "productivity"
     }
   ]
 }
