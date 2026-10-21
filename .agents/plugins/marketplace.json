@@ -42,7 +42,7 @@
     },
     {
       "name": "iphone-control",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "source": {
         "source": "local",
         "path": "./plugins/iphone-control"
