@@ -69,7 +69,7 @@
     },
     {
       "name": "iphone-control",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "description": "Управление физическим iPhone через Appium MCP: экран, XML, ввод и навигация",
       "author": {
         "name": "Yaroslav Mihalev"
@@ -79,7 +79,7 @@
     },
     {
       "name": "setup-iphone-control",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Первоначальная настройка Appium MCP и WebDriverAgent для физического iPhone на Mac",
       "author": {
         "name": "Yaroslav Mihalev"

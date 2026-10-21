@@ -25,7 +25,8 @@ codex plugin add setup-iphone-control@yarikmix-plugins
 Настройка MCP и подписи WDA выполняется по запросу пользователя через
 [setup-iphone-control](../setup-iphone-control/README.md).
 Нужны физический iPhone, совместимые macOS/Xcode и собственный Apple Account/Team.
-Разблокировку, доверие компьютеру и системные подтверждения выполняет человек.
+Разблокировку, доверие компьютеру и вход в Apple Account выполняет человек.
+Системные диалоги в пределах порученной задачи агент обрабатывает самостоятельно.
 Симуляторы и управление через iPhone Mirroring в этот путь не входят.
 
 Инструкция: [SKILL.md](skills/setup-iphone-control/SKILL.md).
