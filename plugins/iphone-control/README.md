@@ -29,7 +29,11 @@ codex plugin add iphone-control@yarikmix-plugins
 Симуляторы и управление через iPhone Mirroring в этот путь не входят.
 
 Инструкция: [SKILL.md](skills/iphone-control/SKILL.md).
-Управление после настройки: [iphone-control](../iphone-control/README.md).
+Версия 1.0.1 описывает передачу единственного владения между агентами,
+[проверку точного ввода и результата открытия, включая StoreKit](skills/iphone-control/references/operations.md),
+и [ограниченное восстановление своей сессии](skills/iphone-control/references/recovery.md).
+Прямой локальный WDA — отдельная диагностическая ветка после проверки привязки
+к своему устройству и сессии; штатное управление выполняется через MCP.
 Границы исходной живой проверки и непроверенные сценарии:
 [validation.md](../iphone-control/skills/iphone-control/references/validation.md).
 Первоначальная установка на втором чистом Mac и discovery скилла клиентским CLI
