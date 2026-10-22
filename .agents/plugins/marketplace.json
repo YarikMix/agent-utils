@@ -81,7 +81,7 @@
     },
     {
       "name": "figma-ops",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": {
         "source": "local",
         "path": "./plugins/figma-ops"
@@ -94,7 +94,7 @@
     },
     {
       "name": "figma-lookup",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": {
         "source": "local",
         "path": "./plugins/figma-lookup"

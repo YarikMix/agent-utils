@@ -32,7 +32,7 @@ Codex — `$apple-notes-folder:setup`.
 
 | Плагин | Возможности | Клиенты |
 |---|---|---|
-| [figma-ops](plugins/figma-ops/README.md) | Чтение Figma через MCP/REST, поиск текста, полные обсуждения и проверенный экспорт | Claude Code, Codex |
+| [figma-ops](plugins/figma-ops/README.md) | Figma context dossier, annotations/prototype, поиск текста, полные обсуждения и проверенный экспорт через MCP/REST | Claude Code, Codex |
 | [figma-lookup](plugins/figma-lookup/README.md) | Совместимое имя Figma Ops с автономными runtime и skill | Claude Code, Codex |
 | [peekaboo-control](plugins/peekaboo-control/README.md) | Управление macOS через Peekaboo MCP и Desktop Bridge | Claude Code, Codex |
 | [iphone-control](plugins/iphone-control/README.md) | Управление физическим iPhone через Appium MCP | Claude Code, Codex |
@@ -60,3 +60,6 @@ Figma Ops использует уже подключённый Figma MCP; REST C
 REST необязателен для MCP. Для недоступных другим путём UI-задач можно использовать
 `peekaboo-control`; подключение MCP и системные разрешения настраиваются отдельно.
 Старое имя `figma-lookup` остаётся рабочим без установки соседнего плагина.
+Figma Ops 1.1.0 и Figma Lookup 1.2.0 дают один workflow: точный source/context,
+явный root при расширении, annotations/prototype и отдельное MCP motion evidence.
+CLI не собирает keyframes/визуал и не делает вывод об их отсутствии.

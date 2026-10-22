@@ -20,7 +20,7 @@ class PackagingTests(unittest.TestCase):
         for host, catalog in (('.claude-plugin', '.claude-plugin/marketplace.json'),
                               ('.codex-plugin', '.agents/plugins/marketplace.json')):
             entries = json.loads((ROOT / catalog).read_text())['plugins']
-            for name, version in (('figma-ops', '1.0.0'), ('figma-lookup', '1.1.0')):
+            for name, version in (('figma-ops', '1.1.0'), ('figma-lookup', '1.2.0')):
                 with self.subTest(host=host, name=name):
                     entry, = [item for item in entries if item['name'] == name]
                     source = entry['source']
@@ -32,6 +32,9 @@ class PackagingTests(unittest.TestCase):
                     skill, = (directory / manifest['skills']).glob('*/SKILL.md')
                     self.assertEqual(skill.parent.name, name)
                     self.assertIn('\nname: ' + name + '\n', skill.read_text())
+                    frontmatter, body = skill.read_text().split('---', 2)[1:]
+                    self.assertRegex(frontmatter, r'\ndescription: \S[^\n]+\n')
+                    self.assertTrue(body.strip())
                     self.assertTrue((directory / 'LICENSE').is_file())
 
     def test_all_skill_reference_links_resolve_inside_plugin(self):
@@ -40,7 +43,7 @@ class PackagingTests(unittest.TestCase):
                 skill = plugin / 'skills' / plugin.name / 'SKILL.md'
                 self.assertTrue(skill.is_file())
                 references = list((skill.parent / 'references').glob('*.md'))
-                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md'})
+                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md', 'context.md'})
                 for path in [skill, *references]:
                     for target in re.findall(r'\]\(([^)]+)\)', path.read_text()):
                         if '://' in target or target.startswith('#'):
@@ -74,10 +77,14 @@ class PackagingTests(unittest.TestCase):
             stale.write_text('obsolete')
             copied = root / 'plugins/figma-lookup/scripts/figma_ops.py'
             copied.write_text('drift')
+            snapshots = []
             for _ in range(2):
                 result = subprocess.run([sys.executable, str(script)], cwd=temporary, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(copied.read_bytes(), (CANONICAL / 'scripts/figma_ops.py').read_bytes())
+                snapshots.append({str(p.relative_to(copied.parents[1])): p.read_bytes()
+                                  for p in copied.parents[1].rglob('*') if p.is_file()})
+            self.assertEqual(snapshots[0], snapshots[1])
             self.assertFalse(stale.exists())
             self.assertFalse((copied.parent / 'sync-compat.py').exists())
 
@@ -90,10 +97,13 @@ class PackagingTests(unittest.TestCase):
                 cwd = root / 'unrelated working directory'
                 cwd.mkdir()
                 script = plugin / 'scripts/figma_ops.py'
+                help_count = 0
                 for command in (None, *COMMANDS):
                     args = [sys.executable, str(script), *([command] if command else []), '--help']
                     result = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
+                    help_count += 1
+                self.assertEqual(help_count, 11)
                 # A fake transport executes the installed runtime, without network or Keychain.
                 binary = root / 'fake bin'
                 binary.mkdir()
@@ -112,6 +122,7 @@ class PackagingTests(unittest.TestCase):
                     ['export', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'export')],
                     ['fills', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'fills')],
                 ]
+                operation_count = 0
                 for arguments in examples:
                     result = subprocess.run([sys.executable, str(script), *arguments, '--no-cache'], cwd=cwd,
                                             env=environment, capture_output=True, text=True)
@@ -120,9 +131,20 @@ class PackagingTests(unittest.TestCase):
                     self.assertEqual(response['status'], 'ok', response)
                     self.assertEqual(response['operation'], arguments[0])
                     self.assertNotIn('synthetic-packaging-token', result.stdout + result.stderr)
+                    operation_count += 1
+                    if arguments[0] == 'annotations':
+                        self.assertEqual(response['data']['annotations'][0]['raw']['label'], 'Synthetic note')
+                    if arguments[0] == 'prototype':
+                        self.assertEqual(response['data']['interactions'][0]['raw']['actions'][0]['destinationId'], '1:2')
                     if arguments[0] == 'context':
                         self.assertEqual(response['data']['sections']['comments']['data']['threads'][0]['root']['id'], 'root')
                         self.assertEqual(len(response['data']['sections']['comments']['data']['threads'][0]['replies']), 1)
+                self.assertEqual(operation_count, 10)
+                partial = subprocess.run(
+                    [sys.executable, str(script), 'annotations', 'PartialKey', '--node', '1:2', '--no-cache'],
+                    cwd=cwd, env=environment, capture_output=True, text=True)
+                self.assertEqual(partial.returncode, 0, partial.stderr + partial.stdout)
+                self.assertEqual(json.loads(partial.stdout)['status'], 'partial')
                 self.assertEqual(len(list((cwd / 'export').glob('*.png'))), 1)
                 self.assertEqual(len(list((cwd / 'fills').glob('*'))), 1)
 
@@ -148,6 +170,8 @@ node = {'id': '1:2', 'name': 'Synthetic frame', 'type': 'FRAME', 'children': [],
 document = {'id': '0:0', 'type': 'DOCUMENT', 'children': [
     {'id': '0:1', 'type': 'CANVAS', 'name': 'Synthetic page', 'children': [node]}]}
 path = urlsplit(url).path
+if '/PartialKey' in path:
+    node['annotations'] = 'malformed synthetic field'
 if path.endswith('/me'):
     payload = {'id': 'synthetic-user'}
 elif path.endswith('/comments'):

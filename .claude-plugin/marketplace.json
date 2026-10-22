@@ -99,7 +99,7 @@
     },
     {
       "name": "figma-ops",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Чтение Figma: поиск, полные обсуждения и проверенный экспорт через MCP и REST",
       "author": {
         "name": "Yaroslav Mihalev"
@@ -109,7 +109,7 @@
     },
     {
       "name": "figma-lookup",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "Совместимое имя Figma Ops: чтение, обсуждения и проверенный экспорт",
       "author": {
         "name": "Yaroslav Mihalev"
