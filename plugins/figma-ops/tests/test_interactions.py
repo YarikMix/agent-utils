@@ -97,6 +97,41 @@ class InteractionTests(unittest.TestCase):
         self.assertIn('timing_units_unverified', result.warnings)
         self.assertFalse(result.partial)
 
+    def test_unknown_nested_timing_names_do_not_inherit_documented_units(self):
+        body = interaction_payload()
+        interaction = selected(body)['interactions'][0]
+        action = interaction['actions'][0]
+        action['futurePayload'] = {
+            'transition': {'duration': 17}, 'trigger': {'timeout': 18, 'delay': 20},
+            'mediaHitTime': 19, 'transitionDuration': 21,
+            'actions': [{'type': 'NODE', 'transition': {'duration': 22}}]}
+        action['transition']['futurePayload'] = {'duration': 23}
+        selected(body)['transitionDuration'] = 24
+        result = self.extract(body)
+        timings = {record['raw_field']: record for record in result.data['timings']}
+        expected = {
+            '/interactions/0/actions/0/futurePayload/transition/duration': 17,
+            '/interactions/0/actions/0/futurePayload/trigger/timeout': 18,
+            '/interactions/0/actions/0/futurePayload/trigger/delay': 20,
+            '/interactions/0/actions/0/futurePayload/mediaHitTime': 19,
+            '/interactions/0/actions/0/futurePayload/transitionDuration': 21,
+            '/interactions/0/actions/0/futurePayload/actions/0/transition/duration': 22,
+            '/interactions/0/actions/0/transition/futurePayload/duration': 23}
+        for field, raw_value in expected.items():
+            with self.subTest(field=field):
+                timing = timings[field]
+                self.assertEqual(timing['raw_value'], raw_value)
+                self.assertIsNone(timing['documented_unit'])
+                self.assertIsNone(timing['verified_unit'])
+                self.assertIsNone(timing['normalized_ms'])
+                self.assertEqual(timing['unit_basis'], 'unverified')
+        self.assertEqual(timings['/interactions/0/actions/0/transition/duration']['documented_unit'], 'ms')
+        self.assertEqual(timings['/interactions/0/actions/1/conditionalBlocks/0/actions/1/transition/duration']['documented_unit'], 'ms')
+        self.assertEqual(timings['/transitionDuration']['documented_unit'], 'ms')
+        self.assertEqual(result.data['interactions'][0]['raw'], interaction)
+        self.assertIn('timing_units_unverified', result.warnings)
+        self.assertFalse(result.partial)
+
     def test_zero_duration_is_not_missing(self):
         body = interaction_payload()
         selected(body)['interactions'][0]['actions'][0]['transition']['duration'] = 0

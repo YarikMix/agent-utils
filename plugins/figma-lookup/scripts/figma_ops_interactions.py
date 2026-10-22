@@ -21,15 +21,15 @@ def _known(value, choices):
     return isinstance(value, str) and value in choices
 
 
-def _timings(raw, path, base):
+def _timings(raw, path, base, role='interaction'):
     """Walk all payload fields without interpreting expressions or guessing units.
 
     Temporal field names identify raw evidence only; documentation is attached to
     exact known REST field locations. No numeric magnitude implies a unit.
     """
-    stack = [(raw, path)]
+    stack = [(raw, path, role)]
     while stack:
-        value, pointer = stack.pop()
+        value, pointer, role = stack.pop()
         if pointer is None:
             item, field, unit = value['__timing__']
             yield {**base, 'raw_value': item, 'raw_field': field, 'documented_unit': unit,
@@ -43,18 +43,32 @@ def _timings(raw, path, base):
                     name = str(key).casefold()
                     if any(word in name for word in ('duration', 'timeout', 'delay', 'time')):
                         unit = None
-                        if ((key == 'duration' and pointer.endswith('/transition'))
-                                or (key in ('timeout', 'delay') and pointer.endswith('/trigger'))
-                                or key == 'transitionDuration'):
+                        if ((role == 'transition' and key == 'duration')
+                                or (role == 'trigger' and key in ('timeout', 'delay'))
+                                or (role == 'legacy' and key == 'transitionDuration')):
                             unit = 'ms'
-                        elif key == 'mediaHitTime':
+                        elif role == 'trigger' and key == 'mediaHitTime':
                             unit = 's'
                         # Use the same DFS order for scalar and container fields.
-                        stack.append(({'__timing__': (item, field, unit)}, None))
+                        stack.append(({'__timing__': (item, field, unit)}, None, None))
                 elif isinstance(item, (dict, list)):
-                    stack.append((item, field))
+                    # Unknown containers never regain a documented role merely by
+                    # containing keys that resemble trigger/action schemas.
+                    child_role = None
+                    if role == 'interaction' and key in ('trigger', 'actions'):
+                        child_role = key
+                    elif role == 'action':
+                        if value.get('type') == 'NODE' and key == 'transition':
+                            child_role = 'transition'
+                        elif value.get('type') == 'CONDITIONAL' and key == 'conditionalBlocks':
+                            child_role = 'blocks'
+                    elif role == 'block' and key == 'actions':
+                        child_role = 'actions'
+                    stack.append((item, field, child_role))
         elif isinstance(value, list):
-            stack.extend((item, _pointer(pointer, index)) for index, item in reversed(list(enumerate(value))))
+            child_role = {'actions': 'action', 'blocks': 'block'}.get(role)
+            stack.extend((item, _pointer(pointer, index), child_role)
+                         for index, item in reversed(list(enumerate(value))))
 
 
 def extract_interactions(scope: LoadedScope) -> Collected:
@@ -169,7 +183,7 @@ def extract_interactions(scope: LoadedScope) -> Collected:
         legacy = {field: node[field] for field in _LEGACY_FIELDS if field in node}
         if legacy:
             data['legacy'].append({**base, 'raw': legacy, 'primary': not modern})
-            data['timings'].extend(_timings(legacy, '', base))
+            data['timings'].extend(_timings(legacy, '', base, role='legacy'))
             if modern:
                 def matches(edge):
                     transition = edge.get('transition')
