@@ -80,8 +80,21 @@
       }
     },
     {
-      "name": "figma-lookup",
+      "name": "figma-ops",
       "version": "1.0.0",
+      "source": {
+        "source": "local",
+        "path": "./plugins/figma-ops"
+      },
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "figma-lookup",
+      "version": "1.1.0",
       "source": {
         "source": "local",
         "path": "./plugins/figma-lookup"

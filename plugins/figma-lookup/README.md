@@ -1,57 +1,47 @@
-# figma-lookup
+# Figma Lookup — совместимое имя Figma Ops
 
-Чтение больших файлов Figma через подключённый MCP: поиск экранов, структура,
-размеры, скриншоты, растровые исходники, QR и проверка экспорта.
-
-## Установка
-
-Claude Code:
+Версия 1.1.0 сохраняет установку и вызов `figma-lookup`, добавляя workflow
+Figma Ops: чтение макетов через MCP, автономные REST поиск/обсуждения/экспорт
+и UI fallback. Каждый plugin root содержит собственный runtime, skill
+и references; установка соседнего `figma-ops` не требуется.
 
 ```sh
 claude plugin marketplace add YarikMix/agent-utils
 claude plugin install figma-lookup@yarikmix-plugins
-```
 
-Codex:
-
-```sh
 codex plugin marketplace add YarikMix/agent-utils
 codex plugin add figma-lookup@yarikmix-plugins
 ```
 
-Плагин добавляет инструкции. Figma MCP подключается отдельно; названия и параметры
-инструментов агент сверяет с текущим сервером. Примеры в навыке условные.
+Начни с [skill](skills/figma-lookup/SKILL.md).
+Для нового пользователя основное имя — `figma-ops`; достаточно одного из имён.
+Существующий `figma-lookup` продолжает обнаруживаться обоими клиентами через
+`./skills/`. Тело инструкции, references и runtime генерируются из канонического
+Figma Ops; не редактируй копии вручную.
 
-Попросите найти экран в Figma, разобрать макет, прочитать обсуждение или экспортировать
-ассет. Явный вызов: `/figma-lookup:figma-lookup` в Claude Code,
-`$figma-lookup:figma-lookup` в Codex.
-
-## Опциональный Peekaboo
-
-[peekaboo-control](../peekaboo-control/README.md) нужен только для задач, которые
-не решает текущий Figma MCP:
-
-- Просмотреть стрелку между экранами на канвасе и проверить её направление.
-- Экспортировать настоящий прозрачный PNG в 2× и проверить результат.
-- Прочитать полную ветку комментариев с ответами и контекстом pin.
-
-Установите его отдельно, если нужен этот путь:
+Python 3.10+ и системный curl; без pip/npm. CLI запускается из любого cwd:
 
 ```sh
-claude plugin install peekaboo-control@yarikmix-plugins
-codex plugin add peekaboo-control@yarikmix-plugins
+FIGMA_OPS_CLI='/absolute/path/to/installed/plugin/scripts/figma_ops.py'
+python3 "$FIGMA_OPS_CLI" --help
+python3 "$FIGMA_OPS_CLI" comments SyntheticKey --query 'Повторить' --status all
+python3 "$FIGMA_OPS_CLI" export SyntheticKey --node '1:2' --scale 2 --dest '/tmp/figma assets'
 ```
 
-Настройкой Desktop, Bridge, MCP и разрешений управляет `peekaboo-control` с учётом
-согласия пользователя. Без зависимости агент попросит нужный фрагмент канваса,
-экспорт или полную ветку вручную. Для обычного чтения макета Peekaboo не загружается.
-Комментарии читаются без отправки ответов, реакций и закрытия обсуждения.
+MCP подключается отдельно и не требует REST-токена. Для REST доступны только
+уже заданный `FIGMA_TOKEN` или существующий macOS Keychain service `figma-rest`,
+account `figma`; `.env` и конфиги не читаются. Операции первой версии read-only:
+полные комментарии/replies, ancestry, поиск текста/имён, проверка скачанных
+assets. Пустые metadata не доказывают отсутствия сценария, scale=2 не доказывает
+размер 2×, alpha-канал не доказывает прозрачность. Нет автоматической отправки
+комментариев, Resolve или изменения дизайна.
 
-## Границы проверки
+Детали: [auth](skills/figma-lookup/references/auth.md),
+[reading](skills/figma-lookup/references/reading.md),
+[comments](skills/figma-lookup/references/comments.md),
+[assets](skills/figma-lookup/references/assets.md).
 
-Инструкция сохраняет ограничения ранее проверенного MCP-пути; другой сервер может
-иметь иные возможности. Проверки переноса охватывают упаковку и выбор действий
-свежими агентами. Полные UI-сценарии в живой Figma для стрелок, экспорта и комментариев
-не проверены.
-
-Инструкция: [SKILL.md](skills/figma-lookup/SKILL.md). Лицензия: [MIT](LICENSE).
+Для сопровождения используй `plugins/figma-ops/scripts/sync-compat.py`
+в исходном репозитории. Сам установленный плагин этот скрипт не требует.
+Packaging tests сравнивают копии побайтово и проверяют автономный запуск
+обоих имён с synthetic transport; реальный host discovery проверяется отдельно.
