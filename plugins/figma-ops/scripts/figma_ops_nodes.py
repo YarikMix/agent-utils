@@ -108,10 +108,13 @@ def inspect(args, client: Client) -> dict:
 
 def search(args, client: Client) -> dict:
     target = parse_target(args.target)
-    page = parse_target(args.target, args.page).node_id if args.page is not None else None
-    response = load_nodes(client, Target(target.file_key, page))
+    selector = args.node if args.node is not None else args.page
+    scope_id = parse_target(args.target, selector).node_id if selector is not None else None
+    scope = ({'kind': 'node' if args.node is not None else 'page', 'node_id': scope_id}
+             if scope_id else {'kind': 'file'})
+    response = load_nodes(client, Target(target.file_key, scope_id))
     document = require_document(response)
-    root, prefix = find_node(document, page) if page else (document, [])
+    root, prefix = find_node(document, scope_id) if scope_id else (document, [])
     query = args.query.casefold()
     matches = []
     scanned = 0
@@ -135,7 +138,7 @@ def search(args, client: Client) -> dict:
     # The shared writer saves this envelope and emits only an artifact summary.
     # Keep the full collection for disk output; the limit bounds inline arrays.
     returned = matches if args.output is not None else matches[:args.limit]
-    coverage = _coverage({'kind': 'page', 'node_id': page} if page else {'kind': 'file'}, scanned)
+    coverage = _coverage(scope, scanned)
     coverage.update(total_matches=len(matches), returned=len(returned),
                     truncated=len(returned) < len(matches))
     return envelope('search', target.file_key, {'matches': returned}, response=response,

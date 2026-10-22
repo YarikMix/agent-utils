@@ -130,6 +130,78 @@ class NodeTests(unittest.TestCase):
         self.assertFalse(result['coverage']['complete'])
         self.assertTrue(result['warnings'])
 
+    def test_node_scope_excludes_dependencies_preserves_context_and_counts_subtree(self):
+        code, result = self.invoke(['search', 'Key', '--query', 'STRASSE', '--node', '2-2',
+                                    '--limit', '1'])
+        self.assertEqual(code, 0)
+        self.assertEqual(self.query(), {'ids': ['2:2']})
+        self.assertEqual(result['coverage']['scope'], {'kind': 'node', 'node_id': '2:2'})
+        self.assertEqual(result['coverage']['scanned_nodes'], 4)
+        self.assertEqual(result['coverage']['total_matches'], 2)
+        self.assertEqual(result['coverage']['returned'], 1)
+        self.assertTrue(result['coverage']['truncated'])
+        self.assertFalse(result['coverage']['complete'])
+        self.assertEqual(result['coverage']['completeness'], 'loaded-document-only')
+        self.assertTrue(result['warnings'])
+        row = result['data']['matches'][0]
+        self.assertEqual(row['id'], 'I2:3;4:5')
+        self.assertEqual(row['path'], ['Document', 'Screens', 'Screen', 'Card', 'Label'])
+        self.assertEqual(row['page']['id'], '2:1')
+        self.assertEqual(row['text'], 'Straße action')
+
+    def test_node_scope_searches_literal_characters_in_any_subtree(self):
+        frame = self.payload['document']['children'][1]['children'][0]
+        frame['children'][0]['children'][0]['characters'] = 'Press [A.*] here'
+        frame['children'][1]['characters'] = 'Press Aanything here'
+        code, result = self.invoke(['search', 'Key', '--query', '[a.*]', '--node', '2:3',
+                                    '--type', 'TEXT'])
+        self.assertEqual(code, 0)
+        self.assertEqual(self.query(), {'ids': ['2:3']})
+        self.assertEqual([row['id'] for row in result['data']['matches']], ['I2:3;4:5'])
+        self.assertEqual(result['data']['matches'][0]['matched_fields'], ['characters'])
+        self.assertIn('[A.*]', result['data']['matches'][0]['snippet'])
+        self.assertEqual(result['coverage']['scanned_nodes'], 2)
+
+    def test_missing_search_node_is_error(self):
+        code, result = self.invoke(['search', 'Key', '--query', 'STRASSE', '--node', '99:9'])
+        self.assertEqual(code, 1)
+        self.assertEqual(self.query(), {'ids': ['99:9']})
+        self.assertEqual(result['error']['code'], 'not_found_or_inaccessible')
+
+    def test_page_and_node_conflict_fails_before_client_creation(self):
+        with patch.object(cli, 'Client', side_effect=AssertionError('Client must not be created')):
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = cli.main(['search', 'Key', '--query', 'x', '--page', '2:1', '--node', '2:2'])
+        self.assertEqual(code, 2)
+        self.assertEqual(json.loads(out.getvalue())['error']['code'], 'invalid_argument')
+        self.assertEqual(self.boundary.calls, [])
+
+    def test_search_without_explicit_scope_keeps_url_node_filewide(self):
+        code, result = self.invoke(['search', 'https://www.figma.com/design/Key/?node-id=2-2',
+                                    '--query', 'STRASSE'])
+        self.assertEqual(code, 0)
+        self.assertEqual(self.query(), {})
+        self.assertEqual(result['coverage']['scope'], {'kind': 'file'})
+        self.assertEqual([row['id'] for row in result['data']['matches']],
+                         ['1:2', 'I2:3;4:5', '2:4'])
+
+    def test_node_scope_output_preserves_all_matches_despite_inline_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'scoped-search.json'
+            code, summary = self.invoke(['search', 'Key', '--query', 'STRASSE', '--node', '2:2',
+                                         '--limit', '1', '--output', str(output)])
+            self.assertEqual(code, 0)
+            full = json.loads(output.read_text())
+            self.assertEqual([row['id'] for row in full['data']['matches']], ['I2:3;4:5', '2:4'])
+            self.assertEqual(full['coverage']['scope'], {'kind': 'node', 'node_id': '2:2'})
+            self.assertEqual(full['coverage']['total_matches'], 2)
+            self.assertEqual(full['coverage']['returned'], 2)
+            self.assertFalse(full['coverage']['truncated'])
+            self.assertEqual(summary['data'], {'artifact': str(output.resolve()),
+                                              'bytes': output.stat().st_size})
+            self.assertEqual(summary['coverage'], full['coverage'])
+
     def test_output_artifact_preserves_all_matches_despite_inline_limit(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'search.json'
@@ -168,7 +240,8 @@ class NodeTests(unittest.TestCase):
         for argv in (['inspect', 'Key', '--depth', '0'], ['inspect', 'Key', '--node', ''],
                      ['search', 'Key', '--query', 'x', '--limit', '0'],
                      ['search', 'Key', '--query', ''], ['search', 'Key'],
-                     ['search', 'Key', '--query', 'x', '--page', '']):
+                     ['search', 'Key', '--query', 'x', '--page', ''],
+                     ['search', 'Key', '--query', 'x', '--node', '']):
             with self.subTest(argv=argv):
                 code, result = self.invoke(argv)
                 self.assertEqual(code, 2)
