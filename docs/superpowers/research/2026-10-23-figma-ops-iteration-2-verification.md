@@ -8,9 +8,15 @@ Packaging RED до правок release files: `python3 -B -m unittest discover 
 
 После sync той же командой — 5/5 OK. В двух изолированных roots, каждый без sibling, из cwd с пробелами выполнены по 10 операций и 11 help calls: всего 20 synthetic операций и 22 help calls. Дополнительно по одному malformed annotations case на root: status partial, exit0. Transport синтетический, без сети/Keychain; annotations/interactions raw и полный связанный thread проверены. Equality покрывает 11 runtime modules, пять references и тело skill; sync воспроизводим, stale runtime удаляется. Catalog/manifests и локальные ссылки references проверены для обоих хостов.
 
-Итоговый `python3 -B -m unittest discover -s plugins/figma-ops/tests -v` — 191 tests OK, exit0. `git diff --check` — пусто. AST `feature_version=(3,10)` — 23 canonical/generated runtime/sync files OK на фактическом Python 3.13.7; Python 3.10 runtime не запускался. Установленный `skill-creator/scripts/quick_validate.py` отдельно для обоих skill roots — exit0 / `Skill is valid!`; name/description/body/references дополнительно проверяются packaging tests.
+Перед итоговым ревью `python3 -B -m unittest discover -s plugins/figma-ops/tests -v` — 191 tests OK. После исправлений controller независимо выполнил ту же команду на `eed1bfe`: 196 tests за 5.163s, OK, exit0. `git diff --check` — пусто. AST `feature_version=(3,10)` — 23 canonical/generated runtime/sync files OK на фактическом Python 3.13.7; Python 3.10 runtime не запускался. Установленный `skill-creator/scripts/quick_validate.py` отдельно для обоих skill roots — exit0 / `Skill is valid!`; name/description/body/references дополнительно проверяются packaging tests. AST и оба validators повторно прошли на финальном runtime.
 
-Controller privacy scan известных приватных input values по 207 tracked и неигнорируемым новым files — 0 matching files, значения не выводились. Scan не требует копирования приватных payloads в публичные fixtures.
+Controller privacy scan известных приватных input values: первоначально 207 tracked и неигнорируемых новых files, после добавления отчёта — 208; в обоих случаях 0 matching files, значения не выводились. Scan не требует копирования приватных payloads в публичные fixtures.
+
+## Ревью ветки и исправления
+
+Все пять задач прошли отдельные spec/quality reviews. Итоговое whole-branch review по исходной спецификации выявило два замечания: Important — повреждённая привязка комментария могла прервать context, comments и thread; Minor — сводное состояние interactions после follow оставалось состоянием исходной ноды. Оба исправлены одним коммитом `eed1bfe`: malformed pins сохраняются raw, учитываются как unassigned с partial/warning без потери полезных секций; состояние interactions пересчитывается по общим counters.
+
+Регрессии RED→GREEN: 64 covering tests и packaging equality прошли. Единственное scoped re-review закрыло оба finding без новых регрессий; дополнительный probe семи нормальных/unassigned форм pin сохранил прежнее поведение. Открытых или отложенных замечаний нет. Финальный независимый полный suite — 196/196; этот отчёт дополнен после него без изменения runtime.
 
 ## Read-only live, выполненный controller
 
@@ -21,7 +27,7 @@ Controller privacy scan известных приватных input values по 
 | Context | exit0/ok; 2575 nodes, source/root точные, ancestry/page присутствуют; structure/annotations/prototype/comments collected; 1 thread с 2 replies; limit1/output сохранил полный dossier | Полнота всего файла/входящего графа не заявляется; annotations content не подтверждён |
 | Host motion | Официальный recursive get_motion_context успешно вернул 24 animated nodes и snippets языков css/motionDev; отдельный evidence artifact | Отдельное raw tracks field не наблюдалось; REST transitions не выдаются за keyframe tracks |
 
-У prototype все verified_unit/normalized_ms остались null, unit_basis=unverified; raw числа сохранены, complete=false. Это не калибровка единиц и не доказательство длительности UI. У context metadata сохранены: начальные source sections имеют согласованные timestamps, comments — независимый timestamp и version=null, snapshot_consistency=independent-requests. Motion/canvas_visual в CLI not_collected, общий complete=false, два warnings; это не недоступность MCP и не отсутствие motion в макете. Приватные raw ответы остались в локальных игнорируемых artifacts, не в git. Whole-page timeout не повторялся, дизайн не менялся, credentials не настраивались.
+У prototype все verified_unit/normalized_ms остались null, unit_basis=unverified; raw числа сохранены, complete=false. Это не калибровка единиц и не доказательство длительности UI. У context metadata сохранены: начальные source sections имеют согласованные timestamps, comments — независимый timestamp и version=null, snapshot_consistency=independent-requests. Motion/canvas_visual в CLI not_collected, общий complete=false, два warnings; это не недоступность MCP и не отсутствие motion в макете. Приватные raw ответы хранились только в локальных игнорируемых artifacts, не в git; временная папка этого SDD-плана удалена после завершения ревью. Whole-page timeout не повторялся, дизайн не менялся, credentials не настраивались.
 
 ## Свежая routing simulation
 
@@ -47,4 +53,4 @@ NEW также описал прямые context/prototype маршруты; OLD
 
 ## Ограничения приёмки
 
-Положительные annotation content, ненулевые live prototype destinations и реальное activation/discovery обоих host clients остаются непроверенными. Успех текущего motion tool не обещает raw tracks в каждом ответе. Фактический Python 3.10 runtime не запускался; AST feature_version=(3,10) проверяет только синтаксис. Task reviews и итоговое whole-branch review по исходной spec выполняются controller отдельно и не заменяются simulation. Ветка/worktree сохраняются; push, PR, merge и установка не выполнялись.
+Положительные annotation content, ненулевые live prototype destinations и реальное activation/discovery обоих host clients остаются непроверенными. Успех текущего motion tool не обещает raw tracks в каждом ответе. Фактический Python 3.10 runtime не запускался; AST feature_version=(3,10) проверяет только синтаксис. UI-калибровка единиц, визуальная полнота и полный fuzz произвольных повреждённых деревьев не проверялись; whole-file/incoming graph и исполнение actions исключены из scope. Task reviews и итоговое whole-branch review по исходной spec выполнены отдельно и не заменены simulation. Ветка/worktree сохраняются; push, PR, merge и установка не выполнялись.
