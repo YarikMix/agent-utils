@@ -45,7 +45,7 @@
 
 Проверять magic bytes PNG/JPG/PDF, SVG XML (без внешнего разрешения entities). Для PNG получать width,height, color type; по реально декодированным пикселям проверять прозрачность. Unsupported PNG encoding — явно alpha `unknown` с warning, не утверждать прозрачность. Для остальных форматов alpha не обещать. У каждого файла path,bytes,format,width/height nullable,alpha `transparent|opaque|unknown|not-applicable`, scale_requested. Не утверждать exact 2x без исходной геометрии; предупреждать о возможном downscale API. Не менять макет ради экспорта.
 
-`fills TARGET [--node ID] [--dest DIR]`: imageRef из выбранного subtree, URLs через GET files/key/images; без dest выдаёт refs/URLs, с dest скачивает originals без перерендера с теми же правилами файлов и credentials. Нет promise original uploaded bytes: указываем API image-fill source. Неполные/missing refs видны в warnings/coverage.
+`fills TARGET [--node ID] [--dest DIR]`: imageRef из выбранного subtree, URLs через GET files/key/images; без dest выдаёт refs/URLs, с dest скачивает originals без перерендера с теми же правилами файлов и credentials. Нет promise original uploaded bytes: указываем API image-fill source. Неполные/missing refs видны в warnings/coverage. Для fills поддерживать также GIF87a/GIF89a и WebP (RIFF/WEBP) по сигнатуре; alpha unknown с предупреждением, GIF dimensions из header, WebP dimensions nullable. Ограничение четырёх форматов относится к export API, не к исходным image fills.
 
 ## Скилл и упаковка
 
