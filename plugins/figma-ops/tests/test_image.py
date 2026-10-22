@@ -18,6 +18,17 @@ def png(raw=b'\x00\x10\x20\x30\xff', width=1, height=1, color=6, depth=8, extra=
             + extra + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b''))
 
 
+def large_png(width=4096, height=4096, depth=8, ending=b'', filter_id=0):
+    """Complete synthetic rows without allocating the entire decoded fixture."""
+    pixel = b'\x10\x20\x30\xff' if depth == 8 else struct.pack('>HHHH', 1, 2, 3, 65535)
+    row = bytes([filter_id]) + pixel * width
+    compressor = zlib.compressobj()
+    packed = b''.join(compressor.compress(row) for _ in range(height))
+    packed += compressor.compress(ending) + compressor.flush()
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, depth, 6, 0, 0, 0))
+            + chunk(b'IDAT', packed) + chunk(b'IEND', b''))
+
+
 class ImageTests(unittest.TestCase):
     def inspect(self, data, fmt='png'):
         from figma_ops_image import inspect_image
@@ -107,6 +118,35 @@ class ImageTests(unittest.TestCase):
         with self.assertRaises(OpsError) as raised:
             self.inspect(b'<?xml version="1.0" encoding="unknown"?><svg/>', 'svg')
         self.assertEqual(raised.exception.code, 'invalid_asset')
+
+    def test_svg_multibyte_xml_encodings_are_safe_invalid_asset_errors(self):
+        for encoding in ('UTF-32', 'Shift_JIS', 'UTF-7'):
+            with self.subTest(encoding=encoding):
+                with self.assertRaises(OpsError) as raised:
+                    self.inspect(('<?xml version="1.0" encoding="' + encoding + '"?><svg/>').encode(), 'svg')
+                self.assertEqual(raised.exception.code, 'invalid_asset')
+
+    def test_large_png_stream_is_checked_with_bounded_memory(self):
+        import tracemalloc
+        content = large_png(depth=16)
+        tracemalloc.start()
+        try:
+            result = self.inspect(content)
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        self.assertEqual((result['width'], result['height'], result['alpha']), (4096, 4096, 'unknown'))
+        self.assertTrue(any('alpha' in warning and 'unknown' in warning for warning in result['warnings']))
+        self.assertLess(peak, 8 * 1024 * 1024, 'Large-image validation must not buffer decoded pixels')
+
+    def test_large_png_rejects_bad_filter_extra_pixels_and_truncated_zlib(self):
+        content = large_png()
+        packed = content[41:-12-4]
+        truncated = content[:33] + chunk(b'IDAT', packed[:-1]) + chunk(b'IEND', b'')
+        for bad in (large_png(filter_id=5), large_png(ending=b'\x00'), truncated):
+            with self.subTest(size=len(bad)), self.assertRaises(OpsError) as raised:
+                self.inspect(bad)
+            self.assertEqual(raised.exception.code, 'invalid_asset')
 
     def test_other_formats_validate_signature_and_xml(self):
         for fmt, content in [('jpg', b'\xff\xd8\xff\xe0test\xff\xd9'), ('pdf', b'%PDF-1.7\n%%EOF'),

@@ -7,6 +7,9 @@ from figma_ops_core import OpsError
 
 PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
 MAX_DECODED = 64 * 1024 * 1024
+MAX_PNG_PIXELS = 100_000_000
+MAX_PNG_ROW = 8 * 1024 * 1024
+DECODE_BLOCK = 64 * 1024
 
 
 def _invalid():
@@ -17,6 +20,41 @@ def _paeth(a, b, c):
     p = a + b - c
     distances = (abs(p - a), abs(p - b), abs(p - c))
     return (a, b, c)[distances.index(min(distances))]
+
+
+def _validate_large_png(parts, scanlines):
+    """Check the entire zlib stream and row filters with bounded output buffers.
+
+    scanlines contains (row bytes including filter, row count) for each pass.
+    No pixel reconstruction or alpha claim is made on this path.
+    """
+    expected = sum(size * count for size, count in scanlines)
+    rows = (size for size, count in scanlines for _ in range(count))
+    next_filter = 0
+    total = 0
+    decoder = zlib.decompressobj()
+    try:
+        for part in parts:
+            for start in range(0, len(part), DECODE_BLOCK):
+                pending = part[start:start + DECODE_BLOCK]
+                while True:
+                    block = decoder.decompress(pending, DECODE_BLOCK)
+                    total += len(block)
+                    if total > expected or decoder.unused_data:
+                        raise _invalid()
+                    while next_filter < len(block):
+                        size = next(rows, None)
+                        if size is None or block[next_filter] > 4:
+                            raise _invalid()
+                        next_filter += size
+                    next_filter -= len(block)
+                    pending = decoder.unconsumed_tail
+                    if not pending and len(block) < DECODE_BLOCK:
+                        break
+        if total != expected or not decoder.eof or next_filter or next(rows, None) is not None:
+            raise _invalid()
+    except zlib.error:
+        raise _invalid() from None
 
 
 def _png(content):
@@ -68,8 +106,8 @@ def _png(content):
     stride = (width * channels[color] * depth + 7) // 8
     # The extra rows bound Adam7 overhead as well, without allocating by hostile dimensions.
     limit = (stride + 8) * (height + 8) if interlace else (stride + 1) * height
-    if limit > MAX_DECODED:
-        raise OpsError('asset_too_large', 'PNG decoded data exceeds the bounded inspection limit.')
+    if width * height > MAX_PNG_PIXELS or stride > MAX_PNG_ROW:
+        raise OpsError('asset_too_large', 'PNG exceeds the 100 megapixel or 8 MiB scanline validation limit.')
     palette = chunks.get(b'PLTE', [b''])[0]
     transparency = chunks.get(b'tRNS', [None])[0]
     if b'PLTE' in chunks and (not palette or len(palette) % 3 or len(palette) > 768 or color in (0,4)):
@@ -82,6 +120,21 @@ def _png(content):
             raise _invalid()
         if color in (0, 2) and any(sample >= 1 << depth for sample in struct.unpack('>' + 'H' * (len(transparency)//2), transparency)):
             raise _invalid()
+    result = {'width': width, 'height': height, 'color_type': color, 'alpha': 'opaque', 'warnings': []}
+    if limit > MAX_DECODED:
+        scanlines = [(stride + 1, height)]
+        if interlace:
+            scanlines = []
+            for x, y, dx, dy in [(0,0,8,8),(4,0,8,8),(0,4,4,8),(2,0,4,4),
+                                  (0,2,2,4),(1,0,2,2),(0,1,1,2)]:
+                pass_width = max(0, (width-x+dx-1)//dx)
+                pass_height = max(0, (height-y+dy-1)//dy)
+                if pass_width and pass_height:
+                    scanlines.append(((pass_width*channels[color]*depth+7)//8 + 1, pass_height))
+        _validate_large_png(chunks[b'IDAT'], scanlines)
+        result.update(alpha='unknown', warnings=[
+            'PNG stream and scanlines verified; the 64 MiB pixel-analysis budget was exceeded, so alpha is unknown.'])
+        return result
     try:
         decoder = zlib.decompressobj()
         raw = decoder.decompress(b''.join(chunks[b'IDAT']), limit + 1)
@@ -89,7 +142,6 @@ def _png(content):
             raise _invalid()
     except zlib.error:
         raise _invalid() from None
-    result = {'width': width, 'height': height, 'color_type': color, 'alpha': 'opaque', 'warnings': []}
     if interlace:
         # Validate Adam7 pass sizes and filter bytes without claiming decoded alpha.
         position = 0
@@ -183,7 +235,7 @@ def inspect_image(content: bytes, expected_format: str) -> dict:
             root = ET.fromstring(content)
             if root.tag not in ('svg', '{http://www.w3.org/2000/svg}svg'):
                 raise _invalid()
-        except (ET.ParseError, LookupError):
+        except (ET.ParseError, LookupError, ValueError):
             raise _invalid() from None
     else:
         raise OpsError('unsupported_format', 'Asset format is not supported for validation.')

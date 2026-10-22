@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from figma_ops_core import ApiResponse, Client, OpsError
-from test_image import png
+from test_image import large_png, png
 
 
 class FakeClient:
@@ -44,6 +44,29 @@ class AssetsTests(unittest.TestCase):
     def fills(self, args, client):
         from figma_ops_assets import fills
         return fills(args, client)
+
+    def test_large_rgba_export_is_saved_with_verified_dimensions_and_honest_alpha(self):
+        content = large_png()
+        with tempfile.TemporaryDirectory() as directory:
+            client = FakeClient({'images/Synthetic': {'images': {'1:2': 'https://assets.example/a'}}},
+                                {'https://assets.example/a': content})
+            result = self.export(arguments(directory), client)
+            self.assertEqual(result['status'], 'ok')
+            item = result['data']['files'][0]
+            self.assertEqual(Path(item['path']).read_bytes(), content)
+            self.assertEqual((item['bytes'], item['width'], item['height'], item['alpha']),
+                             (len(content), 4096, 4096, 'unknown'))
+            self.assertTrue(any('alpha' in warning and 'unknown' in warning for warning in result['warnings']))
+
+    def test_large_16bit_fill_is_saved_without_false_transparency(self):
+        content = large_png(depth=16)
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.fills(arguments(directory, node='1:2'), self.fill_client({'https://assets.example/a': content}))
+            item = result['data']['files'][0]
+            self.assertEqual(item['status'], 'ok')
+            self.assertEqual(Path(item['path']).read_bytes(), content)
+            self.assertEqual((item['width'], item['height'], item['alpha']), (4096, 4096, 'unknown'))
+            self.assertTrue(any('alpha' in warning and 'unknown' in warning for warning in result['warnings']))
 
     def test_mixed_null_valid_render_is_partial_after_pixel_verification(self):
         with tempfile.TemporaryDirectory() as directory:

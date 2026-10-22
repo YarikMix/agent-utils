@@ -44,6 +44,24 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result['data']['credential_source'], 'FIGMA_TOKEN')
         self.assertEqual(result['coverage'], {'endpoint': '/me', 'scopes_checked': False, 'mcp_checked': False})
 
+    def test_mixed_svg_encoding_errors_emit_partial_json_and_save_second_asset(self):
+        for encoding in ('UTF-32', 'Shift_JIS', 'UTF-7'):
+            with self.subTest(encoding=encoding):
+                destination = Path(self.temp.name) / encoding
+                self.boundary.responses = [
+                    (200, {'images': {'1:2': 'https://assets.example/bad', '2:3': 'https://assets.example/good'}}, {}),
+                    (200, ('<?xml version="1.0" encoding="' + encoding + '"?><svg/>').encode(), {}),
+                    (200, b'<svg/>', {})]
+                code, result, error = self.invoke(['export', 'Synthetic', '--node', '1:2', '--node', '2:3',
+                                                 '--format', 'svg', '--dest', str(destination), '--no-cache'])
+                self.assertEqual((code, result['status'], error), (0, 'partial', ''))
+                self.assertEqual(tuple(result['coverage'][key] for key in ('requested', 'succeeded', 'failed')), (2, 1, 1))
+                bad, good = result['data']['files']
+                self.assertEqual((bad['node_id'], bad['error']['code']), ('1:2', 'invalid_asset'))
+                self.assertEqual((good['node_id'], good['status']), ('2:3', 'ok'))
+                self.assertEqual(Path(good['path']).read_bytes(), b'<svg/>')
+                self.assertEqual(len(list(destination.iterdir())), 1)
+
     def test_common_flags_after_command_and_atomic_output(self):
         output = Path(self.temp.name) / 'report.json'
         code, compact, _ = self.invoke(['doctor', '--refresh', '--cache-dir', str(Path(self.temp.name) / 'cache'), '--output', str(output)])
