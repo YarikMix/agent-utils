@@ -62,27 +62,48 @@ def _snippet(text, query):
     return text[start:start + 200]
 
 
+def _bounded_subtree(node, depth):
+    """Copy child edges to local depth, without mutating the response cache."""
+    result = {key: value for key, value in node.items() if key != 'children'}
+    stack = [(node, result, depth)]
+    while stack:
+        source, destination, remaining = stack.pop()
+        if remaining > 0 and 'children' in source:
+            destination['children'] = []
+            for child in source['children']:
+                copied = {key: value for key, value in child.items() if key != 'children'}
+                destination['children'].append(copied)
+                stack.append((child, copied, remaining - 1))
+    return result
+
+
 def inspect(args, client: Client) -> dict:
     target = parse_target(args.target, args.node)
     params = {'ids': target.node_id} if target.node_id else {'depth': 1}
-    if target.node_id and args.depth is not None:
-        params['depth'] = args.depth
+    # /files depth starts at the document root; it can hide a deep selected node.
+    # Retrieve its ancestry without global depth, then bound the source locally.
     response = client.get_json(f'files/{target.file_key}', params)
     document = require_document(response)
+    warnings = [LIMITATION]
     if target.node_id:
         node, ancestors = find_node(document, target.node_id)
+        if args.depth is not None:
+            node = _bounded_subtree(node, args.depth)
+            warnings.append(f'Displayed source subtree is limited to depth {args.depth}; '
+                            'children beyond that depth are omitted.')
         data = {'node': node, 'ancestors': [_summary(n) for n in ancestors],
                 'containing_frame': _context(ancestors, 'FRAME'),
                 'page': _summary(node) if node.get('type') == 'CANVAS' else _context(ancestors, 'CANVAS'),
                 'children': node.get('children', [])}
         coverage = _coverage({'kind': 'node', 'node_id': target.node_id},
                              sum(1 for _ in walk_nodes(node)))
+        coverage.update(depth_requested=args.depth, depth_limited=args.depth is not None)
     else:
         data = {'pages': [_summary(n) for n in document.get('children', [])
                           if n.get('type') == 'CANVAS']}
         coverage = _coverage({'kind': 'page-catalog'}, len(data['pages']))
     return envelope('inspect', target.file_key, data, response=response,
-                    version=response.payload.get('version'), coverage=coverage, warnings=[LIMITATION])
+                    version=response.payload.get('version'), coverage=coverage, warnings=warnings)
 
 
 def search(args, client: Client) -> dict:

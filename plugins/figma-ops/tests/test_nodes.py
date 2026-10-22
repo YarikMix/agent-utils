@@ -66,11 +66,32 @@ class NodeTests(unittest.TestCase):
         self.assertEqual([p['id'] for p in result['data']['pages']], ['1:1', '2:1'])
         self.assertEqual(self.query(), {'depth': ['1']})
 
-    def test_inspect_depth_is_positive_and_passed_to_server(self):
+    def test_inspect_depth_is_positive_and_applied_to_target_subtree(self):
         code, result = self.invoke(['inspect', 'Key', '--node', '2:3', '--depth', '2'])
         self.assertEqual(code, 0)
-        self.assertEqual(self.query(), {'ids': ['2:3'], 'depth': ['2']})
+        self.assertEqual(self.query(), {'ids': ['2:3']})
         self.assertFalse(result['coverage']['complete'])
+        self.assertEqual(result['coverage']['depth_requested'], 2)
+        self.assertTrue(result['coverage']['depth_limited'])
+
+    def test_inspect_depth_one_preserves_deep_source_ancestors_and_bounds_children(self):
+        instance = self.payload['document']['children'][1]['children'][0]['children'][0]
+        instance['children'] = [{'id': '2:6', 'type': 'FRAME', 'name': 'Inner', 'children': [
+            {'id': '2:7', 'type': 'TEXT', 'name': 'Deep label', 'characters': 'Retained remotely'}]}]
+        code, result = self.invoke(['inspect', 'Key', '--node', '2:3', '--depth', '1'])
+        self.assertEqual(code, 0)
+        # /files depth is global, so sending it would hide this source below a frame.
+        self.assertEqual(self.query(), {'ids': ['2:3']})
+        self.assertEqual(result['data']['node']['id'], '2:3')
+        self.assertEqual(result['data']['node']['componentId'], '9:1')
+        self.assertEqual([n['id'] for n in result['data']['ancestors']], ['0:0', '2:1', '2:2'])
+        self.assertEqual([n['id'] for n in result['data']['children']], ['2:6'])
+        self.assertNotIn('children', result['data']['children'][0])
+        self.assertNotIn('children', result['data']['node']['children'][0])
+        self.assertEqual(result['coverage']['depth_requested'], 1)
+        self.assertTrue(result['coverage']['depth_limited'])
+        self.assertFalse(result['coverage']['complete'])
+        self.assertEqual(result['coverage']['scanned_nodes'], 2)
 
     def test_missing_target_is_error(self):
         code, result = self.invoke(['inspect', 'Key', '--node', '99:9'])
