@@ -92,7 +92,22 @@
 - [ ] Step 4: Implement assets handlers. No secret headers to asset hosts or insecure redirects. Download original fills as source assets without saying original upload bytes guaranteed; surface missing refs. --dest omitted returns URLs with coverage; supplied downloads atomically. Do not request Code Connect or design code.
 - [ ] Step 5: Run entire plugin suite, report exact counts, self-review and commit `feat: add verified Figma asset export`.
 
-### Task 4: Скилл, совместимость, упаковка и сценарии использования
+### Task 4: Ограниченный поиск после живого timeout большой страницы
+
+**Files:**
+- Modify `plugins/figma-ops/scripts/figma_ops.py`, `figma_ops_nodes.py`
+- Modify `plugins/figma-ops/tests/test_nodes.py`
+
+**Interfaces:**
+- Consumes existing search(args,client), parse_target, load_nodes/walk_nodes, envelope. Do not change public helper signatures.
+- CLI `search TARGET --query TEXT [--page ID | --node ID]`; new --node explicit, not implicit from URL. Existing no-scope and --page behavior preserved. --node can scope any actual subtree. Read GET files/key?ids=NODE and use exact source subtree, exclude returned dependencies. Coverage scope kind=node,node_id=NODE. Both selectors together are invalid arguments exit2 before network.
+- Existing --limit inline and full --output semantics remain unchanged. No timeout increase, repeated requests, chunking service, or new dependencies.
+
+- [ ] Step 1: Add regression tests for scoped frame search with dependency matches outside frame, literal characters match inside, descendant path/context, missing source node; confirm desired GET params ids=NODE. Test --page/--node conflict exit2/no request, no selectors preserves whole-file search, scoped --output all matches despite --limit1.
+- [ ] Step 2: Run focused test_nodes RED and record exact failures (flag missing). Implement parser mutual-exclusion group and shared scope resolution in search, no copied search algorithm.
+- [ ] Step 3: Run focused GREEN and full plugin unittest suite; self-review path and completeness contracts; local path-scoped commit `feat: scope Figma search to a selected subtree` and detailed report. Controller repeats live search scoped to known frame.
+
+### Task 5: Скилл, совместимость, упаковка и сценарии использования
 
 **Files:**
 - Create `plugins/figma-ops/.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`, LICENSE (copy existing MIT), README.md
@@ -102,7 +117,7 @@
 - Modify `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, root README.md
 
 **Interfaces:**
-- Consume actual CLI --help and contracts from Tasks 1–3, source all commands from verified existing CLI.
+- Consume actual CLI --help and contracts from Tasks 1–4, source all commands from verified existing CLI.
 - New plugin name figma-ops, version 1.0.0; old plugin name figma-lookup, version 1.1.0. Skill names match directory names. New skill auto-discoverable in both clients, no host-specific absolute paths.
 - Both plugins standalone: copytree to temp with no sibling then invoke helpers from arbitrary cwd with spaces. sync-compat.py copies canonical runtime .py (not itself or tests), references and canonical skill body with name adjusted; old name frontmatter clearly compatibility. Test byte-equivalence runtime and body/reference equivalence, not duplicated handwritten logic.
 - Marketplace formats follow existing entries, no global install or config edits.
