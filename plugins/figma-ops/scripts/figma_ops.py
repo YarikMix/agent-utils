@@ -7,6 +7,7 @@ import sys
 from figma_ops_core import Client, OpsError, atomic_write, envelope, serialize_json
 from figma_ops_nodes import inspect, search
 from figma_ops_comments import comments, thread
+from figma_ops_assets import export, fills
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -68,7 +69,21 @@ def build_parser():
     conversation.set_defaults(handler=thread)
     conversation.add_argument('target')
     conversation.add_argument('--comment', required=True, type=nonempty)
-    for command in (diagnostic, inspection, searching, discussions, conversation):
+    rendering = commands.add_parser('export', help='Download and verify node renders.')
+    rendering.set_defaults(handler=export)
+    rendering.add_argument('target')
+    rendering.add_argument('--node', action='append')
+    rendering.add_argument('--format', choices=('png', 'jpg', 'svg', 'pdf'), default='png')
+    rendering.add_argument('--scale', type=float, default=1.)
+    rendering.add_argument('--dest', type=Path, required=True)
+    rendering.add_argument('--overwrite', action='store_true')
+    sources = commands.add_parser('fills', help='List or download image-fill sources in a subtree.')
+    sources.set_defaults(handler=fills)
+    sources.add_argument('target')
+    sources.add_argument('--node')
+    sources.add_argument('--dest', type=Path)
+    sources.add_argument('--overwrite', action='store_true')
+    for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources):
         command.add_argument('--refresh', action='store_true', help='Fetch again and replace cached result.')
         command.add_argument('--no-cache', action='store_true', help='Do not read or write persistent cache.')
         command.add_argument('--cache-dir', type=Path)
