@@ -98,6 +98,8 @@ def build_parser():
     behavior.add_argument('target')
     behavior.add_argument('--node')
     behavior.add_argument('--limit', type=positive_integer, default=20)
+    behavior.add_argument('--follow', type=int, choices=range(4), default=0)
+    behavior.add_argument('--max-frames', type=int, choices=range(1, 51), default=20)
     for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources, notes, behavior):
         command.add_argument('--refresh', action='store_true', help='Fetch again and replace cached result.')
         command.add_argument('--no-cache', action='store_true', help='Do not read or write persistent cache.')

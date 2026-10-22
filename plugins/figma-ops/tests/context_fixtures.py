@@ -62,3 +62,18 @@ def interaction_payload() -> dict:
         {'type': 'BACK'}, {'type': 'NODE', 'destinationId': None, 'navigation': 'CHANGE_TO'}]}]
     node['children'][0]['interactions'] = []
     return body
+
+
+def graph_payload(root_id: str, destinations=(), *, version='v1', dependencies=()) -> dict:
+    """One graph root per response; dependencies precede it, never child edges."""
+    def node(node_id, targets):
+        return {'id': node_id, 'name': node_id, 'type': 'FRAME', 'interactions': [
+            {'trigger': {'type': 'ON_CLICK'}, 'actions': [
+                {'type': 'NODE', 'destinationId': target, 'navigation': 'NAVIGATE'}
+                for target in targets]}] if targets else []}
+    return {'version': version, 'document': {
+        'id': '0:0', 'name': 'Document', 'type': 'DOCUMENT', 'children': [
+            {'id': '9:0', 'name': 'Dependencies', 'type': 'CANVAS',
+             'children': [node(key, targets) for key, targets in dependencies]},
+            {'id': '1:0', 'name': 'Page', 'type': 'CANVAS',
+             'children': [node(root_id, destinations)]}]}}
