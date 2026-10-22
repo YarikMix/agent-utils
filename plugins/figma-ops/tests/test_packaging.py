@@ -12,7 +12,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[3]
 CANONICAL = ROOT / 'plugins' / 'figma-ops'
 LEGACY = ROOT / 'plugins' / 'figma-lookup'
-COMMANDS = ('doctor', 'inspect', 'search', 'comments', 'thread', 'export', 'fills', 'annotations')
+COMMANDS = ('doctor', 'inspect', 'search', 'comments', 'thread', 'export', 'fills', 'annotations', 'prototype')
 
 
 class PackagingTests(unittest.TestCase):
@@ -107,6 +107,7 @@ class PackagingTests(unittest.TestCase):
                     ['comments', 'SyntheticKey', '--query', 'reply'],
                     ['thread', 'SyntheticKey', '--comment', 'reply'],
                     ['annotations', 'SyntheticKey', '--node', '1:2'],
+                    ['prototype', 'SyntheticKey', '--node', '1:2'],
                     ['export', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'export')],
                     ['fills', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'fills')],
                 ]
@@ -136,7 +137,10 @@ if url.startswith('https://api.figma.com/'):
     assert 'synthetic-packaging-token' in sys.stdin.read()
 node = {'id': '1:2', 'name': 'Synthetic frame', 'type': 'FRAME', 'children': [],
         'fills': [{'type': 'IMAGE', 'imageRef': 'synthetic-image'}],
-        'annotations': [{'label': 'Synthetic note', 'properties': [{'type': 'width'}]}]}
+        'annotations': [{'label': 'Synthetic note', 'properties': [{'type': 'width'}]}],
+        'interactions': [{'trigger': {'type': 'ON_CLICK'}, 'actions': [
+            {'type': 'NODE', 'destinationId': '1:2', 'navigation': 'CHANGE_TO',
+             'transition': {'type': 'SMART_ANIMATE', 'duration': 0.2, 'easing': {'type': 'LINEAR'}}}]}]}
 document = {'id': '0:0', 'type': 'DOCUMENT', 'children': [
     {'id': '0:1', 'type': 'CANVAS', 'name': 'Synthetic page', 'children': [node]}]}
 path = urlsplit(url).path

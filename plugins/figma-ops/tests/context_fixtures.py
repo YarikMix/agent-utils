@@ -44,3 +44,21 @@ def invoke(argv: list[str], responses: list[tuple[int, dict, dict]]) -> tuple[in
     with patch.object(cli, 'Client', return_value=client), patch('subprocess.run', transport), contextlib.redirect_stdout(stdout):
         code = cli.main(argv)
     return code, json.loads(stdout.getvalue()), transport
+
+
+def interaction_payload() -> dict:
+    """Ordered synthetic actions with two possible external NODE destinations."""
+    body = payload()
+    node = body['document']['children'][1]['children'][0]['children'][0]
+    transition = {'type': 'SMART_ANIMATE', 'duration': 0.2,
+                  'easing': {'type': 'CUSTOM_CUBIC_BEZIER',
+                             'easingFunctionCubicBezier': {'x1': 0.1, 'y1': 0.2, 'x2': 0.3, 'y2': 1}}}
+    node['interactions'] = [{'trigger': {'type': 'ON_CLICK'}, 'actions': [
+        {'type': 'NODE', 'destinationId': '3:0', 'navigation': 'NAVIGATE', 'transition': transition},
+        {'type': 'CONDITIONAL', 'conditionalBlocks': [
+            {'condition': {'type': 'BOOLEAN', 'value': True}, 'actions': [
+                {'type': 'SET_VARIABLE', 'variableId': 'synthetic-variable', 'variableValue': {'value': 1}},
+                {'type': 'NODE', 'destinationId': '4:0', 'navigation': 'OVERLAY', 'transition': dict(transition)}]}]},
+        {'type': 'BACK'}, {'type': 'NODE', 'destinationId': None, 'navigation': 'CHANGE_TO'}]}]
+    node['children'][0]['interactions'] = []
+    return body

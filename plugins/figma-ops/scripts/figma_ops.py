@@ -9,6 +9,7 @@ from figma_ops_nodes import inspect, search
 from figma_ops_comments import comments, thread
 from figma_ops_assets import export, fills
 from figma_ops_annotations import annotations
+from figma_ops_prototype import prototype
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -92,7 +93,12 @@ def build_parser():
     notes.add_argument('--node')
     notes.add_argument('--query', type=nonempty)
     notes.add_argument('--limit', type=positive_integer, default=20)
-    for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources, notes):
+    behavior = commands.add_parser('prototype', help='Read prototype actions and raw timing in an exact subtree.')
+    behavior.set_defaults(handler=prototype)
+    behavior.add_argument('target')
+    behavior.add_argument('--node')
+    behavior.add_argument('--limit', type=positive_integer, default=20)
+    for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources, notes, behavior):
         command.add_argument('--refresh', action='store_true', help='Fetch again and replace cached result.')
         command.add_argument('--no-cache', action='store_true', help='Do not read or write persistent cache.')
         command.add_argument('--cache-dir', type=Path)
