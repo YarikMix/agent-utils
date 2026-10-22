@@ -62,21 +62,38 @@ def _warnings(threads):
             if count else [])
 
 
+def _root_pin(thread):
+    """Return an exact usable node ID and whether the raw pin is malformed."""
+    meta = (thread['root'] or {}).get('client_meta')
+    if meta is None:
+        return None, False
+    if not isinstance(meta, dict):
+        return None, True
+    node_id = meta.get('node_id')
+    if node_id is None or node_id == '':
+        return None, False
+    if not isinstance(node_id, str) or not node_id.strip():
+        return None, True
+    return node_id, False
+
+
 def select_threads(threads: list[dict], *, node_ids: set[str] | None = None,
                    query: str | None = None, author: str | None = None,
                    status: str = 'all') -> Collected:
     """Select complete branches using only their root pin and member text."""
     warnings = _warnings(threads)
-    unassigned = sum(not ((thread['root'] or {}).get('client_meta') or {}).get('node_id')
-                     for thread in threads)
+    pins = [_root_pin(thread) for thread in threads]
+    unassigned = sum(node_id is None for node_id, _ in pins)
+    invalid = any(malformed for _, malformed in pins)
+    if invalid:
+        warnings.append('invalid_root_pin')
     if node_ids is not None and unassigned:
         warnings.append(f'{unassigned} thread(s) have unassigned or coordinate-only root pins; '
                         'they are not covered by the node scope.')
     matched = []
-    for thread in threads:
+    for thread, (node_id, _) in zip(threads, pins):
         if node_ids is not None:
-            node_id = ((thread['root'] or {}).get('client_meta') or {}).get('node_id')
-            if not node_id or node_id not in node_ids:
+            if node_id is None or node_id not in node_ids:
                 continue
         members = _members(thread)
         if query is not None and not any(query.casefold() in item['message'].casefold() for item in members):
@@ -93,7 +110,7 @@ def select_threads(threads: list[dict], *, node_ids: set[str] | None = None,
     return Collected({'threads': matched},
                      {'total_threads': len(threads), 'matched_threads': len(matched),
                       'unassigned_count': unassigned}, warnings,
-                     any(thread['orphan'] for thread in threads))
+                     invalid or any(thread['orphan'] for thread in threads))
 
 
 def comments(args, client: Client) -> dict:
@@ -132,10 +149,11 @@ def thread(args, client: Client) -> dict:
                                                      for comment in _members(item))), None)
     if selected is None:
         raise OpsError('not_found_or_inaccessible', 'Requested comment was not found in this file.')
+    selection = select_threads([selected])
     return envelope('thread', target.file_key, {'thread': selected}, response=response,
                     coverage={'scope': {'kind': 'file'}, 'total_comments': total_comments,
                               'total_threads': len(threads), 'matched_threads': 1,
                               'returned_threads': 1, 'truncated': False},
-                    status='partial' if selected['orphan'] else 'ok',
-                    warnings=select_threads([selected]).warnings,
+                    status='partial' if selection.partial else 'ok',
+                    warnings=selection.warnings,
                     version=response.payload.get('version'))

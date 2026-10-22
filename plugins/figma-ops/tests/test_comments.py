@@ -23,6 +23,11 @@ def comment(cid, parent='', message='', author='A', created='2026-01-01T10:00:00
             'file_key': 'Key', 'order_id': '1'}
 
 
+MALFORMED_PINS = ('malformed', ['2:2'], 1, True, 0, False, [],
+                  {'node_id': ['2:2']}, {'node_id': {}}, {'node_id': 1},
+                  {'node_id': False}, {'node_id': 0}, {'node_id': '   '})
+
+
 def discussion():
     return {'comments': [
         comment('12', '10', 'Straße reply', 'B', '2026-01-01T10:02:00Z'),
@@ -103,6 +108,37 @@ class CommentTests(unittest.TestCase):
                 self.assertEqual([r['id'] for r in result['data']['thread']['replies']], ['11', '12'])
         self.assertEqual(len(self.boundary.calls), 2)
         self.assertTrue(all(urlsplit(call[0][-1]).path.endswith('/comments') for call in self.boundary.calls))
+
+    def test_malformed_root_pins_preserve_file_comments_and_exact_thread(self):
+        for pin in MALFORMED_PINS:
+            for operation in ('comments', 'thread'):
+                with self.subTest(pin=pin, operation=operation):
+                    self.payload['comments'][2]['client_meta'] = pin
+                    self.boundary.responses[:] = [(200, self.payload, {})]
+                    arguments = ([operation, 'Key', '--query', 'STRASSE'] if operation == 'comments'
+                                 else [operation, 'Key', '--comment', '12'])
+                    code, result = self.invoke(arguments)
+                    self.assertEqual((code, result['status']), (0, 'partial'))
+                    branch = (result['data']['threads'][0] if operation == 'comments'
+                              else result['data']['thread'])
+                    self.assertEqual(branch['root']['client_meta'], pin)
+                    self.assertEqual([reply['id'] for reply in branch['replies']], ['11', '12'])
+                    self.assertIn('invalid_root_pin', result['warnings'])
+        self.assertTrue(all(urlsplit(call[0][-1]).path.endswith('/comments')
+                            for call in self.boundary.calls))
+
+    def test_malformed_pin_output_keeps_full_raw_branch(self):
+        self.payload['comments'][2]['client_meta'] = {'node_id': ['2:2']}
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'comments.json'
+            code, summary = self.invoke(['comments', 'Key', '--limit', '1', '--output', str(output)])
+            full = json.loads(output.read_text())
+            self.assertEqual((code, full['status']), (0, 'partial'))
+            self.assertEqual(len(full['data']['threads']), 5)
+            branch = full['data']['threads'][0]
+            self.assertEqual(branch['root']['client_meta'], {'node_id': ['2:2']})
+            self.assertEqual([reply['id'] for reply in branch['replies']], ['11', '12'])
+            self.assertEqual(summary['coverage'], full['coverage'])
 
     def test_unknown_comment_is_error(self):
         code, result = self.invoke(['thread', 'Key', '--comment', '999'])
@@ -232,6 +268,21 @@ class PureSelectionTests(unittest.TestCase):
         self.assertEqual(selected.coverage['unassigned_count'], 3)
         self.assertTrue(selected.partial)
         self.assertTrue(selected.warnings)
+
+    def test_malformed_pins_are_unassigned_without_mutation_or_reply_reassignment(self):
+        for pin in MALFORMED_PINS:
+            with self.subTest(pin=pin):
+                body = discussion()
+                body['comments'][2]['client_meta'] = pin
+                threads = self.load(body)
+                selected = select_threads(threads, node_ids={'2:2', '2:3'})
+                self.assertEqual([t['root']['id'] for t in selected.data['threads']], ['30'])
+                self.assertEqual(selected.coverage['unassigned_count'], 3)
+                self.assertTrue(selected.partial)
+                self.assertIn('invalid_root_pin', selected.warnings)
+                file_scope = select_threads(threads)
+                self.assertEqual(file_scope.coverage['matched_threads'], 5)
+                self.assertEqual(file_scope.data['threads'][0]['root']['client_meta'], pin)
 
     def test_file_scope_keeps_unassigned_threads_and_root_status(self):
         selected = select_threads(self.load(discussion()))

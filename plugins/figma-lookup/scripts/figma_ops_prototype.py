@@ -229,6 +229,15 @@ def collect_prototype(scope: LoadedScope, client: Client, *, follow: int = 0,
     versions = list(dict.fromkeys(item['version'] for item in observations if item['version'] is not None))
     if len(versions) > 1:
         warnings.append('document_versions_differ')
+    # Recompute the extractor's field state over the full followed coverage.
+    if coverage['nodes_with_invalid_interactions']:
+        coverage['interactions_field_state'] = 'invalid'
+    elif coverage['nodes_without_interactions_field'] == coverage['scanned_nodes']:
+        coverage['interactions_field_state'] = 'missing'
+    elif coverage['nodes_with_empty_interactions'] == coverage['scanned_nodes']:
+        coverage['interactions_field_state'] = 'explicit-empty'
+    else:
+        coverage['interactions_field_state'] = 'present'
     coverage.update(follow=follow, max_frames=max_frames, requested_roots=requested,
                     successful_roots=successful, failed_roots=failed,
                     expanded_from_loaded_nodes=expanded_loaded, visited_ids=visited_ids,

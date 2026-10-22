@@ -125,6 +125,28 @@ class PrototypeGraphTests(unittest.TestCase):
                           ('4:0', 1, 'collected'), ('5:0', 2, 'collected')])
         self.assertEqual(len(result['data']['edges']), 5)
 
+    def test_follow_recomputes_field_state_from_source_and_destination_coverage(self):
+        for field, expected_state, expected_invalid in ((None, 'invalid', 1),
+                                                        ([], 'present', 0),
+                                                        ('missing', 'present', 0)):
+            with self.subTest(field=field):
+                destination = graph_payload('3:0')
+                node = destination['document']['children'][1]['children'][0]
+                if field == 'missing':
+                    node.pop('interactions')
+                else:
+                    node['interactions'] = field
+                code, result, transport = self.run_graph([
+                    (200, graph_payload('2:1', ['3:0']), {}), (200, destination, {})], '--follow', '1')
+                self.assertEqual(self.requests(transport), ['2:1', '3:0'])
+                self.assertEqual(result['coverage']['interactions_field_state'], expected_state)
+                self.assertEqual(result['coverage']['nodes_with_invalid_interactions'], expected_invalid)
+                self.assertEqual(result['coverage']['scanned_nodes'], 2)
+                self.assertEqual((code, result['status']), (0, 'partial' if expected_invalid else 'ok'))
+                self.assertEqual(result['data']['frontier'], [])
+                if expected_invalid:
+                    self.assertIn('invalid_interactions_field', result['warnings'])
+
     def test_follow0_only_reads_a_and_reports_depth_limit(self):
         _, result, transport = self.run_graph()
         self.assertEqual(self.requests(transport), ['2:1'])

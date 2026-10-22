@@ -9,6 +9,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from context_fixtures import payload, comment_payload, interaction_payload, invoke
 from test_core import core
+from test_comments import MALFORMED_PINS
 
 
 TARGET = 'https://figma.com/design/Key/Test?node-id=2-1'
@@ -96,6 +97,29 @@ class ContextTests(unittest.TestCase):
                 self.assertEqual(sections['comments']['error']['code'], error)
                 self.assertEqual(sections['structure']['state'], 'collected')
                 self.assertEqual(sections['annotations']['state'], 'collected')
+                self.assertEqual(len(transport.calls), 2)
+
+    def test_malformed_root_pin_preserves_useful_dossier_and_other_full_threads(self):
+        for pin in MALFORMED_PINS:
+            with self.subTest(pin=pin):
+                body = comment_payload()
+                malformed = copy.deepcopy(body['comments'][0])
+                malformed.update(id='malformed-root', client_meta=pin)
+                body['comments'].append(malformed)
+                code, result, transport = self.run_context(comments=(200, body, {}))
+                self.assertEqual((code, result['status']), (0, 'partial'))
+                sections = result['data']['sections']
+                for name in ('structure', 'annotations', 'prototype'):
+                    self.assertEqual(sections[name]['state'], 'collected')
+                    self.assertTrue(sections[name]['data'])
+                comments = sections['comments']
+                self.assertEqual(comments['state'], 'partial')
+                self.assertEqual(comments['coverage']['unassigned_count'], 2)
+                self.assertEqual(comments['coverage']['total_threads'], 4)
+                self.assertIsNone(comments['error'])
+                self.assertIn('invalid_root_pin', comments['warnings'])
+                self.assertEqual([t['root']['id'] for t in comments['data']['threads']], ['thread-root'])
+                self.assertEqual(len(comments['data']['threads'][0]['replies']), 2)
                 self.assertEqual(len(transport.calls), 2)
 
     def test_missing_fields_are_collected_but_malformed_annotations_are_partial(self):
