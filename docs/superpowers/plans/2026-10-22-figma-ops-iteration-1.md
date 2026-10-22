@@ -29,7 +29,7 @@
 2. Reply-only совпадение, orphan reply и pin на соседней ноде: полная ветка и честный scope, tests Task 2.
 3. Истёкший/повреждённый cache и другой пользователь: никакой смешанной выдачи или немого stale fallback, tests Task 1.
 4. Mixed render/null URL/HTML вместо PNG/opaque RGBA/существующий файл: частичная выдача и реальные проверки bytes, tests Task 3.
-5. Установка одного plugin в путь с пробелами и запуск вне repo: все helpers локальны, ссылки разрешимы, tests Task 4.
+5. Установка одного plugin в путь с пробелами и запуск вне repo: все helpers локальны, ссылки разрешимы, tests Task 5.
 
 ---
 
