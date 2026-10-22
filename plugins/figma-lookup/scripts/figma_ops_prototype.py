@@ -1,5 +1,6 @@
 """Bounded read-only prototype graph collection and independent projection."""
-from collections import deque
+from heapq import heappop, heappush
+from itertools import count
 
 from figma_ops_core import Client, OpsError, Target, envelope, parse_target
 from figma_ops_interactions import extract_interactions
@@ -94,9 +95,12 @@ def collect_prototype(scope: LoadedScope, client: Client, *, follow: int = 0,
     visited = set()
     visited_ids = []
     known = {}
-    queue = deque()
-    handled = set()
-    frontier = []
+    queue = []
+    sequence = count()
+    node_depths = {}
+    edges_by_node = {}
+    attempt_errors = {}
+    frontier = {}
     observations = [_observation(scope.root['id'], 0, scope.response)]
     coverage = None
     partial = False
@@ -104,57 +108,77 @@ def collect_prototype(scope: LoadedScope, client: Client, *, follow: int = 0,
     failed = expanded_loaded = 0
     rate_error = None
 
-    def index_loaded(loaded):
+    def enqueue(edge, depth):
+        heappush(queue, (depth, next(sequence), edge))
+
+    def index_loaded(response, root=None, prefix=None):
         # Prefer the selected subtree if a response repeats IDs in dependencies.
-        for root, prefix in ((loaded.root, loaded.root_ancestors),
-                             (require_document(loaded.response), [])):
+        roots = [(root, prefix)] if root is not None else []
+        roots.append((require_document(response), []))
+        for root, prefix in roots:
             for node, ancestors in walk_nodes(root):
-                known.setdefault(node.get('id'), (node, prefix + ancestors, loaded.response))
-        # A later response can make a previously deferred confirmed edge local.
-        for item in reversed(frontier):
+                known.setdefault(node.get('id'), (node, prefix + ancestors, response))
+        # A valid response can make an earlier confirmed edge locally available,
+        # including when its own requested root is missing from that response.
+        for item in frontier.values():
             if (item['depth'] <= follow and item['destination_id'] in known
-                    and item['destination_id'] not in visited):
-                queue.appendleft((item, item['depth']))
+                    and item['depth'] < node_depths.get(item['destination_id'], float('inf'))):
+                enqueue(item, item['depth'])
 
     def expand(loaded, depth):
         nonlocal coverage, partial
-        root = _unvisited_root(loaded.root, visited)
-        exact = LoadedScope(loaded.target, loaded.response, loaded.source,
-                            loaded.source_ancestors, root, loaded.root_ancestors)
-        extracted = extract_interactions(exact)
-        for node, _ in walk_nodes(root):
+        if loaded.root.get('id') not in visited:
+            root = _unvisited_root(loaded.root, visited)
+            exact = LoadedScope(loaded.target, loaded.response, loaded.source,
+                                loaded.source_ancestors, root, loaded.root_ancestors)
+            extracted = extract_interactions(exact)
+            for node, _ in walk_nodes(root):
+                node_id = node.get('id')
+                visited.add(node_id)
+                visited_ids.append(node_id)
+            if coverage is None:
+                coverage = dict(extracted.coverage)
+            else:
+                for key, value in extracted.coverage.items():
+                    if type(value) is int:
+                        coverage[key] += value
+            for name, records in extracted.data.items():
+                data[name].extend(records)
+            for edge in extracted.data['edges']:
+                edges_by_node.setdefault(edge['source_node_id'], []).append(edge)
+            for warning in extracted.warnings:
+                if warning not in warnings:
+                    warnings.append(warning)
+            partial = partial or extracted.partial
+        # A rescued root can shorten paths to previously collected nodes. Reuse
+        # their first evidence rows while propagating the improved graph depth.
+        for node, _ in walk_nodes(loaded.root):
             node_id = node.get('id')
-            visited.add(node_id)
-            visited_ids.append(node_id)
-        if coverage is None:
-            coverage = dict(extracted.coverage)
-        else:
-            for key, value in extracted.coverage.items():
-                if type(value) is int:
-                    coverage[key] += value
-        for name, records in extracted.data.items():
-            data[name].extend(records)
-        for warning in extracted.warnings:
-            if warning not in warnings:
-                warnings.append(warning)
-        partial = partial or extracted.partial
-        queue.extend((edge, depth + 1) for edge in extracted.data['edges'])
+            if node_id in visited and depth < node_depths.get(node_id, float('inf')):
+                node_depths[node_id] = depth
+                for edge in edges_by_node.get(node_id, []):
+                    enqueue(edge, depth + 1)
 
     def defer(edge, depth, reason, error=None):
-        frontier.append({key: edge[key] for key in (
+        destination = edge['destination_id']
+        if destination in frontier and frontier[destination]['depth'] <= depth:
+            return
+        frontier[destination] = {key: edge[key] for key in (
             'source_node_id', 'interaction_index', 'action_path', 'condition_path',
-            'destination_id', 'provenance')} | {'depth': depth, 'reason': reason, 'error': error})
+            'destination_id', 'provenance')} | {'depth': depth, 'reason': reason, 'error': error}
 
-    index_loaded(scope)
+    index_loaded(scope.response, scope.root, scope.root_ancestors)
     expand(scope, 0)
     while queue:
-        edge, depth = queue.popleft()
+        depth, _, edge = heappop(queue)
         destination = edge['destination_id']
         if destination in visited:
+            if depth < node_depths[destination]:
+                node, ancestors, response = known[destination]
+                loaded = LoadedScope(Target(scope.target.file_key, destination), response,
+                                     node, ancestors, node, ancestors)
+                expand(loaded, depth)
             continue
-        if destination in handled and not (destination in known and depth <= follow):
-            continue
-        handled.add(destination)
         if depth > follow:
             defer(edge, depth, 'depth_limit')
             continue
@@ -164,6 +188,10 @@ def collect_prototype(scope: LoadedScope, client: Client, *, follow: int = 0,
                                  node, ancestors, node, ancestors)
             expanded_loaded += 1
             expand(loaded, depth)
+            continue
+        if destination in attempt_errors:
+            reason, error = attempt_errors[destination]
+            defer(edge, depth, reason, error)
             continue
         if rate_error is not None:
             defer(edge, depth, 'rate_limited', rate_error)
@@ -176,6 +204,7 @@ def collect_prototype(scope: LoadedScope, client: Client, *, follow: int = 0,
         response = None
         try:
             response = client.get_json(f'files/{scope.target.file_key}', {'ids': destination})
+            index_loaded(response)
             node, ancestors = find_node(require_document(response), destination)
             loaded = LoadedScope(Target(scope.target.file_key, destination), response,
                                  node, ancestors, node, ancestors)
@@ -186,17 +215,17 @@ def collect_prototype(scope: LoadedScope, client: Client, *, follow: int = 0,
             observations.append(_observation(destination, depth, response, safe_error))
             reason = error.code if error.code in (
                 'forbidden', 'not_found_or_inaccessible', 'rate_limited', 'network_error') else 'network_error'
+            attempt_errors[destination] = (reason, safe_error)
             defer(edge, depth, reason, safe_error)
             if error.code == 'rate_limited':
                 rate_error = safe_error
             continue
         successful += 1
         observations.append(_observation(destination, depth, response))
-        index_loaded(loaded)
         expand(loaded, depth)
 
     # A later reached subtree can cover an earlier deferred destination.
-    frontier = [item for item in frontier if item['destination_id'] not in visited]
+    frontier = [item for item in frontier.values() if item['destination_id'] not in visited]
     versions = list(dict.fromkeys(item['version'] for item in observations if item['version'] is not None))
     if len(versions) > 1:
         warnings.append('document_versions_differ')

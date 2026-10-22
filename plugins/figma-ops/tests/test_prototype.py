@@ -300,6 +300,73 @@ class PrototypeGraphTests(unittest.TestCase):
         self.assertEqual([item['cache'] for item in result.data['observations']], ['miss', 'hit'])
         self.assertEqual([(item['destination_id'], item['reason']) for item in result.data['frontier']], [('4:0', 'frame_limit')])
 
+    def test_rescued_dependency_schedules_shortest_depth_before_pending_deeper_edges(self):
+        responses = [
+            (200, graph_payload('2:1', ['3:0', '4:0']), {}), (404, {}, {}),
+            (200, graph_payload('4:0', ['5:0']), {}),
+            (200, graph_payload('5:0', ['6:0'], dependencies=[('3:0', ['6:0'])]), {}),
+            (200, graph_payload('6:0', ['7:0']), {}),
+            (200, graph_payload('7:0'), {})]
+        code, result, transport = self.run_graph(responses, '--follow', '3')
+        self.assertEqual((code, result['status']), (0, 'ok'))
+        self.assertEqual(self.requests(transport), ['2:1', '3:0', '4:0', '5:0', '6:0', '7:0'])
+        self.assertEqual(result['data']['frontier'], [])
+        self.assertEqual([(o['requested_root_id'], o['depth']) for o in result['data']['observations']],
+                         [('2:1', 0), ('3:0', 1), ('4:0', 1), ('5:0', 2), ('6:0', 2), ('7:0', 3)])
+        self.assertEqual([result['coverage'][key] for key in
+                          ('requested_roots', 'successful_roots', 'failed_roots', 'expanded_from_loaded_nodes')],
+                         [6, 5, 1, 1])
+        self.assertEqual(result['coverage']['scanned_nodes'], 6)
+        self.assertEqual(len(result['data']['actions']), 6)
+        self.assertEqual(len(result['data']['interactions']), 5)
+        self.assertEqual(result['data']['observations'][1]['error']['code'], 'not_found_or_inaccessible')
+
+    def test_shorter_path_reprocesses_already_collected_edges_without_duplicate_rows(self):
+        responses = [
+            (200, graph_payload('2:1', ['3:0', '4:0']), {}), (404, {}, {}),
+            (200, graph_payload('4:0', ['5:0']), {}),
+            (200, graph_payload('5:0', ['6:0', '8:0']), {}),
+            (200, graph_payload('6:0', ['7:0'], version='first-e'), {}),
+            (200, graph_payload('8:0', dependencies=[('3:0', ['6:0'])], version='later'), {}),
+            (200, graph_payload('7:0'), {})]
+        _, result, transport = self.run_graph(responses, '--follow', '3')
+        self.assertEqual(result['status'], 'ok')
+        self.assertEqual(self.requests(transport), ['2:1', '3:0', '4:0', '5:0', '6:0', '8:0', '7:0'])
+        self.assertEqual(result['data']['frontier'], [])
+        self.assertEqual([result['coverage'][key] for key in
+                          ('requested_roots', 'successful_roots', 'failed_roots', 'scanned_nodes')], [7, 6, 1, 7])
+        self.assertEqual(len(result['data']['actions']), 7)
+        self.assertEqual(len(result['data']['interactions']), 5)
+        e_rows = [row for row in result['data']['actions'] if row['source_node_id'] == '6:0']
+        self.assertEqual(len(e_rows), 1)
+        self.assertEqual(e_rows[0]['provenance']['version'], 'first-e')
+        e_observations = [item for item in result['data']['observations'] if item['requested_root_id'] == '6:0']
+        self.assertEqual(len(e_observations), 1)
+        self.assertEqual((e_observations[0]['version'], e_observations[0]['depth']), ('first-e', 3))
+        self.assertEqual(result['data']['observations'][-1]['depth'], 3)
+
+    def test_missing_requested_root_still_indexes_confirmed_dependency_from_valid_document(self):
+        responses = [(200, graph_payload('2:1', ['3:0', '4:0']), {}),
+                     (200, graph_payload('4:0', ['2:1'], version='dependency-response', dependencies=[('8:0', ['9:0'])]), {})]
+        code, result, transport = self.run_graph(responses, '--follow', '1', '--max-frames', '2')
+        self.assertEqual((code, result['status']), (0, 'partial'))
+        self.assertEqual(self.requests(transport), ['2:1', '3:0'])
+        self.assertEqual(result['coverage']['visited_ids'], ['2:1', '4:0'])
+        self.assertEqual([result['coverage'][key] for key in
+                          ('requested_roots', 'successful_roots', 'failed_roots', 'expanded_from_loaded_nodes')],
+                         [2, 1, 1, 1])
+        self.assertEqual([(item['destination_id'], item['reason']) for item in result['data']['frontier']],
+                         [('3:0', 'not_found_or_inaccessible')])
+        observation = result['data']['observations'][1]
+        self.assertEqual((observation['requested_root_id'], observation['state'], observation['version']),
+                         ('3:0', 'failed', 'dependency-response'))
+        self.assertEqual(observation['error']['code'], 'not_found_or_inaccessible')
+        self.assertEqual(result['coverage']['scanned_nodes'], 2)
+        self.assertEqual(len(result['data']['actions']), 3)
+        c_rows = [row for row in result['data']['actions'] if row['source_node_id'] == '4:0']
+        self.assertEqual(len(c_rows), 1)
+        self.assertEqual(c_rows[0]['provenance']['version'], 'dependency-response')
+
     def test_invalid_traversal_flags_are_rejected_before_transport(self):
         for flag, value in [('--follow', '-1'), ('--follow', '4'),
                             ('--max-frames', '0'), ('--max-frames', '51')]:
