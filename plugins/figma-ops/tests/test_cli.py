@@ -148,3 +148,17 @@ class CliTests(unittest.TestCase):
             os.chdir(old_cwd)
         self.assertEqual(caught.exception.code, 0)
         self.assertEqual(json.loads(out.getvalue())['status'], 'ok')
+
+    def test_context_common_flags_after_command_preserve_full_artifact(self):
+        from context_fixtures import payload, comment_payload
+        output = Path(self.temp.name) / 'context.json'
+        self.boundary.responses = [(200, payload(), {}), (200, comment_payload(), {})]
+        code, result, error = self.invoke(['context', 'Synthetic', '--node', '2:1', '--scope-root', '2:0',
+                                          '--limit', '1', '--no-cache', '--refresh',
+                                          '--cache-dir', str(Path(self.temp.name) / 'cache'), '--output', str(output)])
+        self.assertEqual((code, error), (0, ''))
+        full = json.loads(output.read_text())
+        self.assertEqual(full['operation'], 'context')
+        self.assertEqual(len(full['data']['sections']['structure']['data']['texts']), 2)
+        self.assertEqual(result['data'], {'artifact': str(output.resolve()), 'bytes': output.stat().st_size})
+        self.assertEqual(len(self.boundary.calls), 2)

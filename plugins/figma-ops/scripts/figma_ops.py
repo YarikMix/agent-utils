@@ -8,6 +8,9 @@ from figma_ops_core import Client, OpsError, atomic_write, envelope, serialize_j
 from figma_ops_nodes import inspect, search
 from figma_ops_comments import comments, thread
 from figma_ops_assets import export, fills
+from figma_ops_annotations import annotations
+from figma_ops_prototype import prototype
+from figma_ops_context import context
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -85,7 +88,27 @@ def build_parser():
     sources.add_argument('--node')
     sources.add_argument('--dest', type=Path)
     sources.add_argument('--overwrite', action='store_true')
-    for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources):
+    notes = commands.add_parser('annotations', help='Read Dev Mode annotations in an exact subtree.')
+    notes.set_defaults(handler=annotations)
+    notes.add_argument('target')
+    notes.add_argument('--node')
+    notes.add_argument('--query', type=nonempty)
+    notes.add_argument('--limit', type=positive_integer, default=20)
+    behavior = commands.add_parser('prototype', help='Read prototype actions and raw timing in an exact subtree.')
+    behavior.set_defaults(handler=prototype)
+    behavior.add_argument('target')
+    behavior.add_argument('--node')
+    behavior.add_argument('--limit', type=positive_integer, default=20)
+    behavior.add_argument('--follow', type=int, choices=range(4), default=0)
+    behavior.add_argument('--max-frames', type=int, choices=range(1, 51), default=20)
+    dossier = commands.add_parser('context', help='Assemble a scoped REST dossier and complete discussions.')
+    dossier.set_defaults(handler=context)
+    dossier.add_argument('target')
+    dossier.add_argument('--node')
+    dossier.add_argument('--scope-root')
+    dossier.add_argument('--without-comments', action='store_true')
+    dossier.add_argument('--limit', type=positive_integer, default=20)
+    for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources, notes, behavior, dossier):
         command.add_argument('--refresh', action='store_true', help='Fetch again and replace cached result.')
         command.add_argument('--no-cache', action='store_true', help='Do not read or write persistent cache.')
         command.add_argument('--cache-dir', type=Path)
