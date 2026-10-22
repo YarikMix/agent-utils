@@ -27,11 +27,15 @@ def payload() -> dict:
 
 def comment_payload() -> dict:
     return {'comments': [
-        {'id': 'root', 'parent_id': '', 'message': 'Synthetic root',
+        {'id': 'thread-root', 'parent_id': '', 'message': 'Synthetic root',
          'client_meta': {'node_id': '2:1'}, 'created_at': '2026-01-01T00:00:00Z',
          'user': {'id': 'user-a', 'handle': 'A'}},
-        {'id': 'reply', 'parent_id': 'root', 'message': 'Synthetic reply',
+        {'id': 'reply', 'parent_id': 'thread-root', 'message': 'Synthetic reply',
          'created_at': '2026-01-01T01:00:00Z', 'user': {'id': 'user-b', 'handle': 'B'}},
+        {'id': 'reply-two', 'parent_id': 'thread-root', 'message': 'STRASSE second reply',
+         'created_at': '2026-01-01T01:30:00Z', 'user': {'id': 'user-b', 'handle': 'B'}},
+        {'id': 'unassigned', 'parent_id': '', 'message': 'Coordinate-only root',
+         'client_meta': {'x': 1, 'y': 2}, 'created_at': '2026-01-01T03:00:00Z'},
         {'id': 'neighbor', 'parent_id': '', 'message': 'Synthetic neighbor',
          'client_meta': {'node_id': '9:9'}, 'created_at': '2026-01-01T02:00:00Z',
          'user': {'id': 'user-c', 'handle': 'C'}}]}

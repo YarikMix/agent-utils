@@ -12,7 +12,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[3]
 CANONICAL = ROOT / 'plugins' / 'figma-ops'
 LEGACY = ROOT / 'plugins' / 'figma-lookup'
-COMMANDS = ('doctor', 'inspect', 'search', 'comments', 'thread', 'export', 'fills', 'annotations', 'prototype')
+COMMANDS = ('doctor', 'inspect', 'search', 'comments', 'thread', 'export', 'fills', 'annotations', 'prototype', 'context')
 
 
 class PackagingTests(unittest.TestCase):
@@ -108,6 +108,7 @@ class PackagingTests(unittest.TestCase):
                     ['thread', 'SyntheticKey', '--comment', 'reply'],
                     ['annotations', 'SyntheticKey', '--node', '1:2'],
                     ['prototype', 'SyntheticKey', '--node', '1:2'],
+                    ['context', 'SyntheticKey', '--node', '1:2'],
                     ['export', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'export')],
                     ['fills', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'fills')],
                 ]
@@ -119,6 +120,9 @@ class PackagingTests(unittest.TestCase):
                     self.assertEqual(response['status'], 'ok', response)
                     self.assertEqual(response['operation'], arguments[0])
                     self.assertNotIn('synthetic-packaging-token', result.stdout + result.stderr)
+                    if arguments[0] == 'context':
+                        self.assertEqual(response['data']['sections']['comments']['data']['threads'][0]['root']['id'], 'root')
+                        self.assertEqual(len(response['data']['sections']['comments']['data']['threads'][0]['replies']), 1)
                 self.assertEqual(len(list((cwd / 'export').glob('*.png'))), 1)
                 self.assertEqual(len(list((cwd / 'fills').glob('*'))), 1)
 
@@ -148,7 +152,7 @@ if path.endswith('/me'):
     payload = {'id': 'synthetic-user'}
 elif path.endswith('/comments'):
     payload = {'comments': [
-        {'id': 'root', 'parent_id': '', 'message': 'Synthetic root', 'created_at': '2026-01-01T00:00:00Z', 'user': {'handle': 'A'}},
+        {'id': 'root', 'parent_id': '', 'message': 'Synthetic root', 'client_meta': {'node_id': '1:2'}, 'created_at': '2026-01-01T00:00:00Z', 'user': {'handle': 'A'}},
         {'id': 'reply', 'parent_id': 'root', 'message': 'Synthetic reply', 'created_at': '2026-01-01T01:00:00Z', 'user': {'handle': 'B'}}]}
 elif path.startswith('/v1/images/'):
     payload = {'images': {'1:2': 'https://assets.example.test/image.png'}}

@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 from test_core import CurlBoundary, core
 from test_nodes import document
 import figma_ops as cli
+from figma_ops_comments import load_threads, select_threads
 
 
 def comment(cid, parent='', message='', author='A', created='2026-01-01T10:00:00Z',
@@ -201,3 +202,39 @@ class CommentTests(unittest.TestCase):
                 self.assertEqual(code, 2)
                 self.assertEqual(result['error']['code'], 'invalid_argument')
         self.assertEqual(self.boundary.calls, [])
+
+
+class PureSelectionTests(unittest.TestCase):
+    def load(self, body):
+        transport = CurlBoundary([(200, body, {})])
+        with patch('subprocess.run', transport):
+            response, threads, count = load_threads(core.Client(token='synthetic-secret', no_cache=True),
+                                                    core.parse_target('Key'))
+        self.assertEqual(len(transport.calls), 1)
+        self.assertEqual(count, len(body['comments']))
+        return threads
+
+    def test_reply_query_keeps_full_thread_without_node_scope(self):
+        selected = select_threads(self.load(discussion()), query='STRASSE')
+        self.assertEqual(selected.data['threads'][0]['root']['id'], '10')
+        self.assertEqual([r['id'] for r in selected.data['threads'][0]['replies']], ['11', '12'])
+        self.assertEqual(selected.coverage['total_threads'], 5)
+        self.assertEqual(selected.coverage['matched_threads'], 1)
+        self.assertEqual(selected.coverage['unassigned_count'], 2)
+        self.assertFalse(selected.partial)
+
+    def test_scope_uses_root_pin_and_counts_orphan_unassigned(self):
+        body = discussion()
+        body['comments'][2]['client_meta'] = {'node_id': '2:5'}
+        body['comments'].append(comment('91', '90', 'Orphan'))
+        selected = select_threads(self.load(body), node_ids={'2:2', '2:3'})
+        self.assertEqual([t['root']['id'] for t in selected.data['threads']], ['30'])
+        self.assertEqual(selected.coverage['unassigned_count'], 3)
+        self.assertTrue(selected.partial)
+        self.assertTrue(selected.warnings)
+
+    def test_file_scope_keeps_unassigned_threads_and_root_status(self):
+        selected = select_threads(self.load(discussion()))
+        self.assertEqual(selected.coverage['matched_threads'], 5)
+        resolved = select_threads(selected.data['threads'], status='resolved')
+        self.assertEqual([t['root']['id'] for t in resolved.data['threads']], ['30'])
