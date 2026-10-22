@@ -183,7 +183,7 @@ def inspect_image(content: bytes, expected_format: str) -> dict:
             root = ET.fromstring(content)
             if root.tag not in ('svg', '{http://www.w3.org/2000/svg}svg'):
                 raise _invalid()
-        except ET.ParseError:
+        except (ET.ParseError, LookupError):
             raise _invalid() from None
     else:
         raise OpsError('unsupported_format', 'Asset format is not supported for validation.')

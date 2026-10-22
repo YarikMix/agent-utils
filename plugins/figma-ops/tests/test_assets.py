@@ -58,6 +58,26 @@ class AssetsTests(unittest.TestCase):
             self.assertEqual(bad['status'], 'error')
             self.assertTrue(any('downscale' in w for w in result['warnings']))
 
+    def test_unknown_svg_encoding_does_not_abort_following_valid_asset(self):
+        # A parser LookupError must stay a per-node error, so the next file is saved.
+        with tempfile.TemporaryDirectory() as directory:
+            client = FakeClient({'images/Synthetic': {'images': {
+                '1:2': 'https://assets.example/bad', '2:3': 'https://assets.example/good'}}}, {
+                'https://assets.example/bad': b'<?xml version="1.0" encoding="unknown"?><svg/>',
+                'https://assets.example/good': b'<svg/>'})
+            result = self.export(arguments(directory, node=['1:2','2:3'], format='svg'), client)
+            self.assertEqual(result['status'], 'partial')
+            self.assertEqual((result['coverage']['requested'], result['coverage']['succeeded'],
+                              result['coverage']['failed']), (2,1,1))
+            bad, good = result['data']['files']
+            self.assertEqual((bad['node_id'], bad['status'], bad['error']['code']),
+                             ('1:2','error','invalid_asset'))
+            self.assertEqual((good['node_id'],good['status']), ('2:3','ok'))
+            self.assertEqual(Path(good['path']).read_bytes(), b'<svg/>')
+            self.assertEqual(len(list(Path(directory).iterdir())), 1)
+            from figma_ops_core import serialize_json
+            self.assertIn('"status": "partial"', serialize_json(result))
+
     def test_no_url_or_failed_download_never_counts_as_export(self):
         for asset in [None, OpsError('network_error','Failed'), b'<html>error</html>']:
             with self.subTest(asset=type(asset).__name__), tempfile.TemporaryDirectory() as directory:

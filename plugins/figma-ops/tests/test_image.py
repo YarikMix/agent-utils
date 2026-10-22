@@ -103,6 +103,11 @@ class ImageTests(unittest.TestCase):
             with self.assertRaises(OpsError):
                 self.inspect(content,fmt)
 
+    def test_svg_unknown_xml_encoding_is_a_safe_invalid_asset_error(self):
+        with self.assertRaises(OpsError) as raised:
+            self.inspect(b'<?xml version="1.0" encoding="unknown"?><svg/>', 'svg')
+        self.assertEqual(raised.exception.code, 'invalid_asset')
+
     def test_other_formats_validate_signature_and_xml(self):
         for fmt, content in [('jpg', b'\xff\xd8\xff\xe0test\xff\xd9'), ('pdf', b'%PDF-1.7\n%%EOF'),
                              ('svg', b'<svg xmlns="http://www.w3.org/2000/svg" width="1"/>')]:
