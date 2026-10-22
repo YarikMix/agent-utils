@@ -111,8 +111,11 @@ def search(args, client: Client) -> dict:
                         'matched_fields': fields, 'text': text, 'snippet': _snippet(snippet_source, query),
                         'url': f'https://www.figma.com/design/{target.file_key}/?' +
                                urlencode({'node-id': node.get('id', '')})})
+    # The shared writer saves this envelope and emits only an artifact summary.
+    # Keep the full collection for disk output; the limit bounds inline arrays.
+    returned = matches if args.output is not None else matches[:args.limit]
     coverage = _coverage({'kind': 'page', 'node_id': page} if page else {'kind': 'file'}, scanned)
-    coverage.update(total_matches=len(matches), returned=min(len(matches), args.limit),
-                    truncated=len(matches) > args.limit)
-    return envelope('search', target.file_key, {'matches': matches[:args.limit]}, response=response,
+    coverage.update(total_matches=len(matches), returned=len(returned),
+                    truncated=len(returned) < len(matches))
+    return envelope('search', target.file_key, {'matches': returned}, response=response,
                     version=response.payload.get('version'), coverage=coverage, warnings=[LIMITATION])

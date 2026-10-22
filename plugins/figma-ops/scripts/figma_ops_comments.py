@@ -103,9 +103,11 @@ def comments(args, client: Client) -> dict:
             if resolved != (args.status == 'resolved'):
                 continue
         matched.append(thread)
-    coverage.update(matched_threads=len(matched), returned_threads=min(len(matched), args.limit),
-                    truncated=len(matched) > args.limit)
-    return envelope('comments', target.file_key, {'threads': matched[:args.limit]}, response=response,
+    # --output preserves all matches in the artifact; stdout becomes a summary.
+    returned = matched if args.output is not None else matched[:args.limit]
+    coverage.update(matched_threads=len(matched), returned_threads=len(returned),
+                    truncated=len(returned) < len(matched))
+    return envelope('comments', target.file_key, {'threads': returned}, response=response,
                     coverage=coverage, warnings=warnings,
                     status='partial' if any(t['orphan'] for t in threads) else 'ok',
                     version=response.payload.get('version'))

@@ -3,6 +3,8 @@ from contextlib import redirect_stdout
 import importlib
 import io
 import json
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
@@ -106,6 +108,22 @@ class NodeTests(unittest.TestCase):
         self.assertEqual(result['coverage']['scope'], {'kind': 'page', 'node_id': '2:1'})
         self.assertFalse(result['coverage']['complete'])
         self.assertTrue(result['warnings'])
+
+    def test_output_artifact_preserves_all_matches_despite_inline_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'search.json'
+            code, summary = self.invoke(['search', 'Key', '--query', 'STRASSE', '--limit', '1',
+                                         '--output', str(output)])
+            self.assertEqual(code, 0)
+            full = json.loads(output.read_text())
+            self.assertEqual([row['id'] for row in full['data']['matches']],
+                             ['1:2', 'I2:3;4:5', '2:4'])
+            self.assertEqual(full['coverage']['total_matches'], 3)
+            self.assertEqual(full['coverage']['returned'], 3)
+            self.assertFalse(full['coverage']['truncated'])
+            self.assertEqual(summary['data'], {'artifact': str(output.resolve()),
+                                              'bytes': output.stat().st_size})
+            self.assertEqual(summary['coverage'], full['coverage'])
 
     def test_missing_page_is_error(self):
         code, result = self.invoke(['search', 'Key', '--query', 'x', '--page', '9:9'])

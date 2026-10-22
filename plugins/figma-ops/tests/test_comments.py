@@ -2,6 +2,8 @@
 from contextlib import redirect_stdout
 import io
 import json
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
@@ -172,6 +174,23 @@ class CommentTests(unittest.TestCase):
         self.assertEqual(result['coverage']['total_threads'], 26)
         self.assertEqual(result['coverage']['returned_threads'], 20)
         self.assertTrue(result['coverage']['truncated'])
+
+    def test_output_artifact_preserves_all_threads_despite_inline_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'comments.json'
+            code, summary = self.invoke(['comments', 'Key', '--limit', '1', '--output', str(output)])
+            self.assertEqual(code, 0)
+            full = json.loads(output.read_text())
+            self.assertEqual([thread['root']['id'] for thread in full['data']['threads']],
+                             ['10', '20', '30', '40', '50'])
+            self.assertEqual([reply['id'] for reply in full['data']['threads'][0]['replies']],
+                             ['11', '12'])
+            self.assertEqual(full['coverage']['matched_threads'], 5)
+            self.assertEqual(full['coverage']['returned_threads'], 5)
+            self.assertFalse(full['coverage']['truncated'])
+            self.assertEqual(summary['data'], {'artifact': str(output.resolve()),
+                                              'bytes': output.stat().st_size})
+            self.assertEqual(summary['coverage'], full['coverage'])
 
     def test_invalid_filters_fail_before_network(self):
         for argv in (['comments', 'Key', '--limit', '0'], ['comments', 'Key', '--status', 'bad'],
