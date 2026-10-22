@@ -94,6 +94,31 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result['status'], 'error')
         self.assertEqual(json.loads(output.read_text())['error']['code'], 'forbidden')
 
+    def test_exponent_overflow_returns_strict_error_json_and_artifact(self):
+        output = Path(self.temp.name) / 'overflow.json'
+        self.boundary.responses = [(200, b'{"nested": [{"number": 1e999}]}', {})]
+        code, result, _ = self.invoke(['doctor', '--no-cache', '--output', str(output)])
+        self.assertEqual(code, 1)
+        self.assertEqual(result['error']['code'], 'invalid_response')
+        full = json.loads(output.read_text())
+        self.assertEqual(full['status'], 'error')
+        json.dumps(full, allow_nan=False)
+
+    def test_nonfinite_handler_result_becomes_safe_error_before_serialization(self):
+        # A synthetic registered handler exercises the final output boundary even
+        # when future command computations produce a nonfinite number locally.
+        for extra in ([], ['--output', str(Path(self.temp.name) / 'handler.json')]):
+            with self.subTest(extra=extra), patch.object(cli, 'doctor', return_value={
+                    'status': 'ok', 'data': {'nested': [float('inf')]}}):
+                code, result, _ = self.invoke(['doctor', '--no-cache'] + extra)
+            self.assertEqual(code, 1)
+            self.assertEqual(result['error']['code'], 'invalid_response')
+            json.dumps(result, allow_nan=False)
+            if extra:
+                full = json.loads(Path(extra[1]).read_text())
+                self.assertEqual(full['status'], 'error')
+                json.dumps(full, allow_nan=False)
+
     def test_entrypoint_from_temporary_cwd(self):
         old_cwd = Path.cwd()
         out = io.StringIO()

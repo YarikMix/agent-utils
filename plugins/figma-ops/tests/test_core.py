@@ -147,6 +147,28 @@ class CoreTests(unittest.TestCase):
             self.client(no_cache=True).get_json('me')
         self.assertEqual(caught.exception.code, 'invalid_response')
 
+    def test_exponent_overflow_in_nested_json_is_invalid_and_not_cached(self):
+        for number in ('1e999', '-1e999'):
+            self.boundary.responses = [(200, ('{"nested": [{"number": ' + number + '}]}').encode(), {})]
+            with self.subTest(number=number):
+                with self.assertRaises(core.OpsError) as caught:
+                    self.client().get_json('me')
+                self.assertEqual(caught.exception.code, 'invalid_response')
+                self.assertFalse(self.cache.exists())
+
+    def test_exponent_overflow_in_cached_payload_refetches(self):
+        self.boundary.responses = [(200, {'number': 1}, {}), (200, {'number': 2}, {})]
+        self.client().get_json('me')
+        cache_file = next(self.cache.glob('*.json'))
+        cache_file.write_text(cache_file.read_text().replace('"number": 1', '"number": 1e999'))
+        result = self.client().get_json('me')
+        self.assertEqual((result.cache, result.payload['number']), ('miss', 2))
+
+    def test_large_finite_json_float_is_supported(self):
+        self.boundary.responses = [(200, b'{"number": 1e308}', {})]
+        result = self.client(no_cache=True).get_json('me')
+        self.assertEqual(result.payload['number'], 1e308)
+
     def test_network_failures_are_redacted(self):
         self.boundary.responses = [subprocess.TimeoutExpired(['curl'], 35, stderr='synthetic-secret'), OSError('synthetic-secret')]
         for _ in range(2):

@@ -21,6 +21,21 @@ def _reject_json_constant(value):
     raise ValueError('Nonfinite JSON number.')
 
 
+def _finite_json_float(value):
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError('Nonfinite JSON number.')
+    return number
+
+
+def serialize_json(data: object, indent: int | None = None) -> str:
+    """Strict final encoding guard for cache, stdout, and output artifacts."""
+    try:
+        return json.dumps(data, ensure_ascii=False, indent=indent, allow_nan=False)
+    except (ValueError, TypeError):
+        raise OpsError('invalid_response', 'Result could not be represented as valid JSON.') from None
+
+
 class OpsError(Exception):
     def __init__(self, code: str, message: str, http_status: int | None = None,
                  retry_after: str | None = None):
@@ -213,7 +228,8 @@ class Client:
             try:
                 os.chmod(self.cache_dir, 0o700)
                 os.chmod(cache_path, 0o600)
-                entry = json.loads(cache_path.read_text(), parse_constant=_reject_json_constant)
+                entry = json.loads(cache_path.read_text(), parse_constant=_reject_json_constant,
+                                   parse_float=_finite_json_float)
                 age = time.time() - entry['stored_at']
                 fetched = datetime.fromisoformat(entry['fetched_at'].replace('Z', '+00:00'))
                 if (isinstance(entry['stored_at'], (int, float)) and math.isfinite(age)
@@ -227,7 +243,8 @@ class Client:
                 pass
         body = self._request(url, token)
         try:
-            payload = json.loads(body, parse_constant=_reject_json_constant)
+            payload = json.loads(body, parse_constant=_reject_json_constant,
+                                 parse_float=_finite_json_float)
             if not isinstance(payload, dict):
                 raise ValueError
         except (ValueError, UnicodeDecodeError):
@@ -238,8 +255,8 @@ class Client:
             try:
                 self.cache_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
                 os.chmod(self.cache_dir, 0o700)
-                atomic_write(cache_path, json.dumps({'stored_at': now, 'fetched_at': response.fetched_at,
-                                                    'payload': payload}, ensure_ascii=False).encode())
+                atomic_write(cache_path, serialize_json({'stored_at': now, 'fetched_at': response.fetched_at,
+                                                        'payload': payload}).encode())
             except OSError:
                 raise OpsError('cache_error', 'Could not write the private response cache.') from None
         return response

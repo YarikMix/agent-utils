@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Read-only Figma operations CLI, runnable from any working directory."""
 import argparse
-import json
 from pathlib import Path
 import sys
 
-from figma_ops_core import Client, OpsError, atomic_write, envelope
+from figma_ops_core import Client, OpsError, atomic_write, envelope, serialize_json
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -43,6 +42,7 @@ def main(argv: list[str] | None = None) -> int:
         operation = args.command
         client = Client(cache_dir=args.cache_dir, refresh=args.refresh, no_cache=args.no_cache)
         result = args.handler(args, client)
+        serialize_json(result)
         code = 1 if result['status'] == 'error' else 0
     except OpsError as error:
         result = envelope(operation or 'unknown', None, None, status='error',
@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
         code = 2 if error.code == 'invalid_argument' else 1
     if args is not None and args.output is not None:
         try:
-            content = (json.dumps(result, ensure_ascii=False, indent=2) + '\n').encode()
+            content = (serialize_json(result, indent=2) + '\n').encode()
             output = args.output.resolve()
             atomic_write(output, content)
             result = {**result, 'data': {'artifact': str(output), 'bytes': len(content)}}
@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
                               error={'code': 'output_error', 'message': 'Could not write JSON output artifact.',
                                      'http_status': None, 'retry_after': None})
             code = 1
-    print(json.dumps(result, ensure_ascii=False))
+    print(serialize_json(result))
     return code
 
 
