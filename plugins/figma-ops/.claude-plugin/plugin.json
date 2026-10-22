@@ -1,0 +1,10 @@
+{
+  "name": "figma-ops",
+  "version": "1.0.0",
+  "description": "Чтение Figma: поиск, полные обсуждения и проверенный экспорт через MCP и REST",
+  "skills": "./skills/",
+  "author": {
+    "name": "Yaroslav Mihalev"
+  },
+  "license": "MIT"
+}

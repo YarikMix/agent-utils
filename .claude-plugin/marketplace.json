@@ -98,9 +98,19 @@
       "category": "productivity"
     },
     {
-      "name": "figma-lookup",
+      "name": "figma-ops",
       "version": "1.0.0",
-      "description": "Чтение макетов Figma, комментариев и экспорт ассетов с опциональным Peekaboo",
+      "description": "Чтение Figma: поиск, полные обсуждения и проверенный экспорт через MCP и REST",
+      "author": {
+        "name": "Yaroslav Mihalev"
+      },
+      "source": "./plugins/figma-ops",
+      "category": "productivity"
+    },
+    {
+      "name": "figma-lookup",
+      "version": "1.1.0",
+      "description": "Совместимое имя Figma Ops: чтение, обсуждения и проверенный экспорт",
       "author": {
         "name": "Yaroslav Mihalev"
       },

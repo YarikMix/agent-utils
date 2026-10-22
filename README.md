@@ -10,7 +10,7 @@ Selectel и TypeScript LSP предназначены для Claude Code,
 claude plugin marketplace add YarikMix/agent-utils
 claude plugin install apple-notes-folder@yarikmix-plugins
 claude plugin install peekaboo-control@yarikmix-plugins
-claude plugin install figma-lookup@yarikmix-plugins
+claude plugin install figma-ops@yarikmix-plugins
 claude plugin install iphone-control@yarikmix-plugins
 claude plugin install setup-iphone-control@yarikmix-plugins
 
@@ -18,7 +18,7 @@ codex plugin marketplace add YarikMix/agent-utils
 codex plugin add apple-notes-folder@yarikmix-plugins
 codex plugin add codex-disable-skill@yarikmix-plugins
 codex plugin add peekaboo-control@yarikmix-plugins
-codex plugin add figma-lookup@yarikmix-plugins
+codex plugin add figma-ops@yarikmix-plugins
 codex plugin add iphone-control@yarikmix-plugins
 codex plugin add setup-iphone-control@yarikmix-plugins
 ```
@@ -32,7 +32,8 @@ Codex — `$apple-notes-folder:setup`.
 
 | Плагин | Возможности | Клиенты |
 |---|---|---|
-| [figma-lookup](plugins/figma-lookup/README.md) | Чтение Figma через MCP; стрелки, прозрачный PNG 2× и комментарии через опциональный Peekaboo | Claude Code, Codex |
+| [figma-ops](plugins/figma-ops/README.md) | Чтение Figma через MCP/REST, поиск текста, полные обсуждения и проверенный экспорт | Claude Code, Codex |
+| [figma-lookup](plugins/figma-lookup/README.md) | Совместимое имя Figma Ops с автономными runtime и skill | Claude Code, Codex |
 | [peekaboo-control](plugins/peekaboo-control/README.md) | Управление macOS через Peekaboo MCP и Desktop Bridge | Claude Code, Codex |
 | [iphone-control](plugins/iphone-control/README.md) | Управление физическим iPhone через Appium MCP | Claude Code, Codex |
 | [setup-iphone-control](plugins/setup-iphone-control/README.md) | Настройка Appium MCP и подписи WDA на Mac | Claude Code, Codex |
@@ -54,6 +55,8 @@ Peekaboo Control добавляет инструкции и не подключ�
 выполняется отдельно: агент запрашивает согласие на недостающие компоненты,
 учитывая разрешения текущей сессии.
 
-Figma Lookup использует уже подключённый Figma MCP. Для отдельных UI-задач можно
-дополнительно установить `peekaboo-control`; оба плагина добавляют инструкции,
-а подключение MCP и системные разрешения настраиваются отдельно.
+Figma Ops использует уже подключённый Figma MCP; REST CLI требует Python 3.10+,
+системный curl и существующий `FIGMA_TOKEN` либо macOS Keychain `figma-rest/figma`.
+REST необязателен для MCP. Для недоступных другим путём UI-задач можно использовать
+`peekaboo-control`; подключение MCP и системные разрешения настраиваются отдельно.
+Старое имя `figma-lookup` остаётся рабочим без установки соседнего плагина.
