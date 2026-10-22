@@ -5,6 +5,8 @@ from pathlib import Path
 import sys
 
 from figma_ops_core import Client, OpsError, atomic_write, envelope, serialize_json
+from figma_ops_nodes import inspect, search
+from figma_ops_comments import comments, thread
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -21,12 +23,52 @@ def doctor(args, client):
                     coverage={'endpoint': '/me', 'scopes_checked': False, 'mcp_checked': False})
 
 
+def positive_integer(value):
+    try:
+        number = int(value)
+    except ValueError:
+        raise OpsError('invalid_argument', 'Expected a positive integer.') from None
+    if number <= 0:
+        raise OpsError('invalid_argument', 'Expected a positive integer.')
+    return number
+
+
+def nonempty(value):
+    if not value or not value.strip():
+        raise OpsError('invalid_argument', 'Expected nonempty text.')
+    return value
+
+
 def build_parser():
     parser = ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     diagnostic = commands.add_parser('doctor', help='Probe only GET /me identity and authentication.')
     diagnostic.set_defaults(handler=doctor)
-    for command in (diagnostic,):
+    inspection = commands.add_parser('inspect', help='Inspect a node or list pages.')
+    inspection.set_defaults(handler=inspect)
+    inspection.add_argument('target')
+    inspection.add_argument('--node')
+    inspection.add_argument('--depth', type=positive_integer)
+    searching = commands.add_parser('search', help='Search names and text in the loaded document.')
+    searching.set_defaults(handler=search)
+    searching.add_argument('target')
+    searching.add_argument('--query', required=True, type=nonempty)
+    searching.add_argument('--page')
+    searching.add_argument('--type')
+    searching.add_argument('--limit', type=positive_integer, default=20)
+    discussions = commands.add_parser('comments', help='Read and filter full comment threads.')
+    discussions.set_defaults(handler=comments)
+    discussions.add_argument('target')
+    discussions.add_argument('--query', type=nonempty)
+    discussions.add_argument('--author', type=nonempty)
+    discussions.add_argument('--status', choices=('open', 'resolved', 'all'), default='all')
+    discussions.add_argument('--node')
+    discussions.add_argument('--limit', type=positive_integer, default=20)
+    conversation = commands.add_parser('thread', help='Read a full thread by root or reply ID.')
+    conversation.set_defaults(handler=thread)
+    conversation.add_argument('target')
+    conversation.add_argument('--comment', required=True, type=nonempty)
+    for command in (diagnostic, inspection, searching, discussions, conversation):
         command.add_argument('--refresh', action='store_true', help='Fetch again and replace cached result.')
         command.add_argument('--no-cache', action='store_true', help='Do not read or write persistent cache.')
         command.add_argument('--cache-dir', type=Path)
