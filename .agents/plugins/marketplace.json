@@ -28,6 +28,19 @@
       }
     },
     {
+      "name": "codex-vscode-sessions",
+      "version": "1.0.0",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-vscode-sessions"
+      },
+      "category": "Development",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
       "name": "apple-notes-folder",
       "version": "2.0.0",
       "source": {

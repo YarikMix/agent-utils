@@ -17,6 +17,7 @@ claude plugin install setup-iphone-control@yarikmix-plugins
 codex plugin marketplace add YarikMix/agent-utils
 codex plugin add apple-notes-folder@yarikmix-plugins
 codex plugin add codex-disable-skill@yarikmix-plugins
+codex plugin add codex-vscode-sessions@yarikmix-plugins
 codex plugin add peekaboo-control@yarikmix-plugins
 codex plugin add figma-ops@yarikmix-plugins
 codex plugin add iphone-control@yarikmix-plugins
@@ -40,6 +41,7 @@ Codex — `$apple-notes-folder:setup`.
 | [karabiner-layout-switch](plugins/karabiner-layout-switch/README.md) | Настройка Cmd+Shift для английской и русской раскладок macOS, включая Keychron K8 Pro | Claude Code, Codex |
 | [apple-notes-folder](plugins/apple-notes-folder/README.md) | Apple Notes в одной папке: чтение, поиск, правка, картинки | Claude Code, Codex |
 | [codex-disable-skill](plugins/codex-disable-skill/README.md) | Отключение отдельных скиллов и их подсказок | Codex |
+| [codex-vscode-sessions](plugins/codex-vscode-sessions/README.md) | Поиск и открытие существующих сессий Codex в терминале текущего окна VS Code | Codex |
 | [typescript-native-lsp](plugins/typescript-native-lsp/README.md) | TypeScript 7 через `tsc --lsp` | Claude Code |
 | [selectel-ops](plugins/selectel-ops/README.md) | облако Selectel: доступ, API, DNS, Pulumi и Ansible | Claude Code |
 
