@@ -84,3 +84,23 @@ def bindings_payload() -> dict:
     source['styleOverrideTable'] = {'1/~': {'boundVariables': {'fontSize': alias('v.override')}}}
     source['componentProperties']['Label#prop']['boundVariables'] = {'value': alias('v.property')}
     return body
+
+
+def variable_payload() -> dict:
+    """Fresh synthetic Variables API metadata, independent of document snapshots."""
+    variables = {}
+    for name, value in [('A', {'type': 'VARIABLE_ALIAS', 'id': 'B'}),
+                        ('B', {'type': 'VARIABLE_ALIAS', 'id': 'A'}), ('C', False)]:
+        variables[name] = {
+            'id': name, 'key': 'stable-' + name, 'name': name,
+            'variableCollectionId': 'c', 'resolvedType': 'COLOR',
+            'valuesByMode': {'m': value}, 'remote': False, 'description': '',
+            'hiddenFromPublishing': False, 'scopes': ['ALL_SCOPES'],
+            'codeSyntax': {'WEB': 'var(--token)', 'ANDROID': 'token', 'iOS': 'Token'},
+            'future': {'zero': 0, 'empty': '', 'flag': False}}
+    return {'status': 200, 'error': False, 'meta': {
+        'variables': variables, 'variableCollections': {
+            'c': {'id': 'c', 'key': 'stable-c', 'name': 'Collection',
+                  'modes': [{'modeId': 'm', 'name': 'Default'}], 'defaultModeId': 'm',
+                  'remote': False, 'hiddenFromPublishing': False,
+                  'variableIds': ['A', 'B', 'C']}}}}
