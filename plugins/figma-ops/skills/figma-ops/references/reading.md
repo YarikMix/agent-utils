@@ -17,6 +17,10 @@ python3 "$FIGMA_OPS_CLI" search SyntheticKey --query 'Повторить' --node
 
 Кандидата сверяй screenshot точного экрана. `get_design_context` нужен для реализации, а не разведки: выдача может обрезаться; сначала загрузи `figma-design-to-code`. Большие ответы сохраняй в файл и читай нужные поля. MCP text blocks в JSON извлекай через `json.load`, затем разбирай `text`; сырые файлы могут содержать `name=\"...\"`. Отступы дерева дают стек предков: при новом узле убери из стека элементы с отступом >= текущего. Не ограничивай длину имени regex и не теряй составные ID.
 
+## Привязки дизайн-системы
+
+Для used components/styles, полных instance property keys и variable aliases используй [bindings](bindings.md): `bindings` точного subtree или `context --with-bindings` переиспользуют существующий source/root. `componentId`, metadata `key` и TARGET file key — разные идентификаторы; remote key не разрешает читать другой файл. Полный response catalog не означает, что все его entries использованы в scope. Style metadata не даёт computed CSS, explicit mode map не даёт effective mode. Отдельное MCP `get_variable_defs` требует discovery текущей схемы; evidence сохраняется отдельно от REST IDs.
+
 ## Инстансы и геометрия
 
 Пустой вложенный instance **внутри уже найденного объекта** раскрывай точным ID из родительской выдачи: `I101:200;301:400`, глубже `I101:200;301:400;501:600`. Сохрани `I` и все части после `;`. Это другой случай, чем пришедшая извне нода-подложка, где нужны предки.

@@ -20,7 +20,7 @@ class PackagingTests(unittest.TestCase):
         for host, catalog in (('.claude-plugin', '.claude-plugin/marketplace.json'),
                               ('.codex-plugin', '.agents/plugins/marketplace.json')):
             entries = json.loads((ROOT / catalog).read_text())['plugins']
-            for name, version in (('figma-ops', '1.1.0'), ('figma-lookup', '1.2.0')):
+            for name, version in (('figma-ops', '1.2.0'), ('figma-lookup', '1.3.0')):
                 with self.subTest(host=host, name=name):
                     entry, = [item for item in entries if item['name'] == name]
                     source = entry['source']
@@ -43,7 +43,7 @@ class PackagingTests(unittest.TestCase):
                 skill = plugin / 'skills' / plugin.name / 'SKILL.md'
                 self.assertTrue(skill.is_file())
                 references = list((skill.parent / 'references').glob('*.md'))
-                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md', 'context.md'})
+                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md', 'context.md', 'bindings.md'})
                 for path in [skill, *references]:
                     for target in re.findall(r'\]\(([^)]+)\)', path.read_text()):
                         if '://' in target or target.startswith('#'):
@@ -58,7 +58,7 @@ class PackagingTests(unittest.TestCase):
     def test_generated_runtime_references_and_body_match(self):
         runtime = {p.name: p.read_bytes() for p in (CANONICAL / 'scripts').glob('*.py') if p.name != 'sync-compat.py'}
         copied = {p.name: p.read_bytes() for p in (LEGACY / 'scripts').glob('*.py')}
-        self.assertTrue(runtime)
+        self.assertEqual(len(runtime), 15)
         self.assertEqual(copied, runtime)
         for source in (CANONICAL / 'skills/figma-ops/references').glob('*.md'):
             self.assertEqual((LEGACY / 'skills/figma-lookup/references' / source.name).read_bytes(), source.read_bytes())
@@ -110,7 +110,41 @@ class PackagingTests(unittest.TestCase):
                 curl = binary / 'curl'
                 curl.write_text('#!' + sys.executable + '\n' + FAKE_CURL)
                 curl.chmod(0o700)
-                environment = dict(os.environ, FIGMA_TOKEN='synthetic-packaging-token', PATH=str(binary) + os.pathsep + os.defpath)
+                request_log = root / 'requests.jsonl'
+                environment = dict(os.environ, FIGMA_TOKEN='synthetic-packaging-token',
+                                   FIGMA_PACKAGING_REQUEST_LOG=str(request_log),
+                                   PATH=str(binary) + os.pathsep + os.defpath)
+
+                def invoke(arguments):
+                    request_log.write_text('')
+                    result = subprocess.run([sys.executable, str(script), *arguments, '--no-cache'], cwd=cwd,
+                                            env=environment, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                    self.assertNotIn('synthetic-packaging-token', result.stdout + result.stderr)
+                    return json.loads(result.stdout), request_log.read_text().splitlines()
+
+                def assert_inventory(response, *, root_id='1:2', definition_state='not_requested', file_key='SyntheticKey'):
+                    self.assertEqual(response['file_key'], file_key)
+                    self.assertEqual(response['data']['source_node']['id'], '1:2')
+                    self.assertEqual(response['data']['scope_root']['id'], root_id)
+                    inventory = response['data']['sections']['bindings']['data']
+                    instance, = inventory['instances']
+                    self.assertEqual(instance['node']['id'], '1:2')
+                    self.assertEqual(instance['component_id'], '5:1')
+                    self.assertEqual(instance['component_properties']['Enabled#1']['value'], False)
+                    self.assertEqual(instance['component_properties']['Label#2']['value'], '')
+                    self.assertEqual(instance['component_properties']['Content#3']['value'],
+                                     {'guid': {'sessionID': 7, 'localID': 8}})
+                    component, = inventory['components']
+                    self.assertEqual((component['id'], component['metadata']['key']), ('5:1', 'component-key'))
+                    self.assertEqual([row['id'] for row in inventory['styles']], ['style:1'])
+                    self.assertEqual(inventory['styles'][0]['metadata']['key'], 'style-key')
+                    usage, = inventory['style_usages']
+                    self.assertEqual((usage['node']['id'], usage['style_id']), ('1:2', 'style:1'))
+                    binding, = inventory['variable_bindings']
+                    self.assertEqual(binding['reference_id'], 'A')
+                    self.assertEqual(binding['definition_state'], definition_state)
+
                 examples = [
                     ['doctor'], ['inspect', 'SyntheticKey', '--node', '1:2', '--depth', '1'],
                     ['search', 'SyntheticKey', '--node', '1:2', '--query', 'Synthetic'],
@@ -119,45 +153,76 @@ class PackagingTests(unittest.TestCase):
                     ['annotations', 'SyntheticKey', '--node', '1:2'],
                     ['prototype', 'SyntheticKey', '--node', '1:2'],
                     ['context', 'SyntheticKey', '--node', '1:2'],
-                    ['bindings', 'SyntheticKey', '--node', '1:2', '--with-variables'],
+                    ['bindings', 'SyntheticKey', '--node', '1:2'],
                     ['export', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'export')],
                     ['fills', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'fills')],
                 ]
                 operation_count = 0
                 for arguments in examples:
-                    result = subprocess.run([sys.executable, str(script), *arguments, '--no-cache'], cwd=cwd,
-                                            env=environment, capture_output=True, text=True)
-                    self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-                    response = json.loads(result.stdout)
+                    response, requests = invoke(arguments)
                     self.assertEqual(response['status'], 'ok', response)
                     self.assertEqual(response['operation'], arguments[0])
-                    self.assertNotIn('synthetic-packaging-token', result.stdout + result.stderr)
                     operation_count += 1
                     if arguments[0] == 'annotations':
                         self.assertEqual(response['data']['annotations'][0]['raw']['label'], 'Synthetic note')
                     if arguments[0] == 'prototype':
                         self.assertEqual(response['data']['interactions'][0]['raw']['actions'][0]['destinationId'], '1:2')
                     if arguments[0] == 'bindings':
-                        sections = response['data']['sections']
-                        self.assertEqual(sections['bindings']['data']['instances'][0]['component_id'], '5:1')
-                        self.assertEqual(sections['bindings']['data']['styles'][0]['id'], 'style:1')
-                        self.assertEqual(len(sections['variables']['data']['alias_links']), 1)
-                        self.assertEqual(sections['bindings']['data']['variable_bindings'][0]['definition_state'], 'available')
+                        assert_inventory(response)
+                        self.assertEqual(response['data']['sections']['variables']['state'], 'not_requested')
+                        self.assertEqual(requests, ['/v1/files/SyntheticKey?ids=1%3A2'])
                     if arguments[0] == 'context':
+                        self.assertEqual(len(response['data']['sections']), 6)
+                        self.assertEqual(len(response['data']['next_actions']), 2)
                         self.assertEqual(response['data']['sections']['comments']['data']['threads'][0]['root']['id'], 'root')
                         self.assertEqual(len(response['data']['sections']['comments']['data']['threads'][0]['replies']), 1)
                 self.assertEqual(operation_count, 11)
-                partial = subprocess.run(
-                    [sys.executable, str(script), 'annotations', 'PartialKey', '--node', '1:2', '--no-cache'],
-                    cwd=cwd, env=environment, capture_output=True, text=True)
-                self.assertEqual(partial.returncode, 0, partial.stderr + partial.stdout)
-                self.assertEqual(json.loads(partial.stdout)['status'], 'partial')
+                additional_count = 0
+                partial, _ = invoke(['annotations', 'PartialKey', '--node', '1:2'])
+                self.assertEqual(partial['status'], 'partial')
+                additional_count += 1
+                for operation, flags in [('bindings', []), ('context', ['--with-bindings'])]:
+                    if operation == 'context':
+                        response, requests = invoke([operation, 'SyntheticKey', '--node', '1:2',
+                                                     '--scope-root', '1:1', *flags])
+                        assert_inventory(response, root_id='1:1')
+                        self.assertEqual(len(requests), 2)
+                        self.assertEqual(sum('/variables/' in path for path in requests), 0)
+                        self.assertEqual(sum('?ids=' in path for path in requests), 1)
+                        self.assertEqual(len(response['data']['sections']), 8)
+                        self.assertEqual(len(response['data']['next_actions']), 4)
+                        thread, = response['data']['sections']['comments']['data']['threads']
+                        self.assertEqual((thread['root']['id'], len(thread['replies'])), ('root', 1))
+                        additional_count += 1
+                    for target in ['SyntheticKey', 'ForbiddenKey']:
+                        response, requests = invoke([operation, target, '--node', '1:2', *flags, '--with-variables'])
+                        variables = response['data']['sections']['variables']
+                        self.assertEqual(len(requests), 2 if operation == 'bindings' else 3)
+                        self.assertEqual(sum('?ids=' in path for path in requests), 1)
+                        self.assertEqual(sum('/variables/local' in path for path in requests), 1)
+                        self.assertIsNone(variables['version'])
+                        self.assertEqual(variables['coverage']['request_scope'], 'file-variable-metadata')
+                        if target == 'ForbiddenKey':
+                            self.assertEqual(response['status'], 'partial')
+                            self.assertEqual(variables['state'], 'failed')
+                            self.assertEqual(variables['error']['http_status'], 403)
+                            assert_inventory(response, definition_state='unresolved', file_key=target)
+                        else:
+                            self.assertEqual(response['status'], 'ok')
+                            self.assertEqual(len(variables['data']['alias_links']), 1)
+                            self.assertEqual([row['raw']['id'] for row in variables['data']['variables']], ['A', 'B'])
+                            assert_inventory(response, definition_state='available')
+                        additional_count += 1
+                self.assertEqual(additional_count, 6)
+                print(f'{source.name}: {operation_count} base operations, {help_count} help calls, '
+                      f'{additional_count} additional enrichment/partial/context cases')
                 self.assertEqual(len(list((cwd / 'export').glob('*.png'))), 1)
                 self.assertEqual(len(list((cwd / 'fills').glob('*'))), 1)
 
 
 FAKE_CURL = r'''
 import json
+import os
 from pathlib import Path
 import sys
 from urllib.parse import urlsplit
@@ -174,11 +239,20 @@ node = {'id': '1:2', 'name': 'Synthetic frame', 'type': 'FRAME', 'children': [],
         'interactions': [{'trigger': {'type': 'ON_CLICK'}, 'actions': [
             {'type': 'NODE', 'destinationId': '1:2', 'navigation': 'CHANGE_TO',
              'transition': {'type': 'SMART_ANIMATE', 'duration': 0.2, 'easing': {'type': 'LINEAR'}}}]}]}
-node.update(type='INSTANCE', componentId='5:1', componentProperties={}, styles={'fill': 'style:1'},
+node.update(type='INSTANCE', componentId='5:1', componentProperties={
+                'Enabled#1': {'type': 'BOOLEAN', 'value': False},
+                'Label#2': {'type': 'TEXT', 'value': ''},
+                'Content#3': {'type': 'SLOT', 'value': {'guid': {'sessionID': 7, 'localID': 8}}}},
+            styles={'fill': 'style:1'},
             boundVariables={'opacity': {'type': 'VARIABLE_ALIAS', 'id': 'A'}})
 document = {'id': '0:0', 'type': 'DOCUMENT', 'children': [
-    {'id': '0:1', 'type': 'CANVAS', 'name': 'Synthetic page', 'children': [node]}]}
-path = urlsplit(url).path
+    {'id': '0:1', 'type': 'CANVAS', 'name': 'Synthetic page', 'children': [{'id': '1:1', 'type': 'FRAME', 'children': [node]}]}]}
+parsed = urlsplit(url)
+path = parsed.path
+if url.startswith('https://api.figma.com/'):
+    with Path(os.environ['FIGMA_PACKAGING_REQUEST_LOG']).open('a') as log:
+        log.write(path + ('?' + parsed.query if parsed.query else '') + '\n')
+http_status = 200
 if '/PartialKey' in path:
     node['annotations'] = 'malformed synthetic field'
 if path.endswith('/me'):
@@ -188,6 +262,8 @@ elif path.endswith('/comments'):
         {'id': 'root', 'parent_id': '', 'message': 'Synthetic root', 'client_meta': {'node_id': '1:2'}, 'created_at': '2026-01-01T00:00:00Z', 'user': {'handle': 'A'}},
         {'id': 'reply', 'parent_id': 'root', 'message': 'Synthetic reply', 'created_at': '2026-01-01T01:00:00Z', 'user': {'handle': 'B'}}]}
 elif path.endswith('/variables/local'):
+    if '/ForbiddenKey/' in path:
+        http_status = 403
     payload = {'status': 200, 'error': False, 'meta': {'variables': {
         'A': {'id': 'A', 'variableCollectionId': 'c', 'valuesByMode': {'m': {'type': 'VARIABLE_ALIAS', 'id': 'B'}}},
         'B': {'id': 'B', 'variableCollectionId': 'c', 'valuesByMode': {'m': 0}}},
@@ -198,8 +274,10 @@ elif path.endswith('/images'):
     payload = {'meta': {'images': {'synthetic-image': 'https://assets.example.test/image.png'}}}
 else:
     payload = {'document': document, 'version': 'synthetic-version',
-               'components': {'5:1': {'key': 'component-key', 'name': 'Synthetic component'}},
-               'styles': {'style:1': {'key': 'style-key', 'name': 'Synthetic fill', 'styleType': 'FILL'}}}
+               'components': {'5:1': {'key': 'component-key', 'name': 'Synthetic component'},
+                              'unused-component': {'key': 'unused-key', 'name': 'Unused component'}},
+               'styles': {'style:1': {'key': 'style-key', 'name': 'Synthetic fill', 'styleType': 'FILL'},
+                          'unused-style': {'key': 'unused-style-key', 'name': 'Unused style'}}}
 if url.startswith('https://assets.example.test/'):
     def chunk(kind, data):
         return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
@@ -207,8 +285,8 @@ if url.startswith('https://assets.example.test/'):
 else:
     body = json.dumps(payload).encode()
 Path(arguments[arguments.index('--output') + 1]).write_bytes(body)
-Path(arguments[arguments.index('--dump-header') + 1]).write_text('HTTP/1.1 200 OK\r\n\r\n')
-print('200', end='')
+Path(arguments[arguments.index('--dump-header') + 1]).write_text(f'HTTP/1.1 {http_status} Synthetic\r\n\r\n')
+print(str(http_status), end='')
 '''
 
 if __name__ == '__main__':

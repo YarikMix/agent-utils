@@ -1,6 +1,6 @@
 ---
 name: figma-lookup
-description: Compatibility alias for figma-ops. Use when reading Figma designs, finding screens or text, checking node ancestry, discussions and replies, prototype or motion settings, exporting assets, decoding QR, or comparing implementation with a design.
+description: Compatibility alias for figma-ops. Use when reading Figma designs, finding screens or text, checking node ancestry, discussions and replies, prototype or motion settings, design-system components, styles or variable bindings, exporting assets, decoding QR, or comparing implementation with a design.
 ---
 
 # Figma Ops
@@ -15,6 +15,7 @@ description: Compatibility alias for figma-ops. Use when reading Figma designs, 
 |---|---|
 | Найти экран, текст или предков внешней ноды | MCP metadata/screenshot либо CLI `inspect`/`search`; [reading](references/reading.md) |
 | Контекст точной ноды и выбранного экрана, Dev Mode annotations | Настроенный REST `context`/`annotations` либо доступные MCP-чтения; [context](references/context.md) |
+| Использованные компоненты, instance properties, styles, variable aliases/modes и Code Connect | CLI `bindings` либо `context --with-bindings`; definitions отдельно через доступный `get_variable_defs`; [bindings](references/bindings.md) |
 | Обсуждения, поиск фразы в ответах, конкретная ветка | MCP с полной историей; иначе настроенный REST `comments`/`thread` до UI fallback; [comments](references/comments.md) |
 | PNG 2×, вектор, image fills, замеры, QR | Поддерживаемый MCP-экспорт с проверкой файла; иначе настроенный REST `export`/`fills` до UI fallback; [assets](references/assets.md) |
 | Прототип: trigger, actions, destination, raw transition | Настроенный REST `prototype` с явным follow budget либо read-only `use_figma`; [reading](references/reading.md). Это не комментарии и не keyframe tracks |
@@ -25,7 +26,7 @@ description: Compatibility alias for figma-ops. Use when reading Figma designs, 
 
 UI нужен для действия, недоступного MCP/REST, или визуального контекста канваса. Тогда загрузи доступный `peekaboo-control`, проверь точный файл/страницу/ноду по свежему наблюдению. Сохрани и восстанови свои изменения UI-состояния, не затирая новые действия пользователя. Отказ policy не обходи другим транспортом. При недоступном UI укажи недостающие материалы.
 
-Для dossier: `context` точного source → явный `--scope-root`/screenshot при необходимости → annotations/prototype и полные threads → отдельное motion-чтение по задаче. Расширяя охват, сохраняй source, не заменяй его через `--node`. Храни MCP evidence artifacts рядом со ссылкой на REST dossier. Детали source/root, sections и missing-vs-empty — [context](references/context.md).
+Для dossier: `context` точного source → явный `--scope-root`/screenshot при необходимости → annotations/prototype и полные threads → `bindings` использованных design-system entities → отдельное `get_variable_defs` по тому же root → подтверждённое сопоставление с repository tokens/components или read-only Code Connect. Motion читается отдельно по задаче. Если нужны bindings вместе с dossier, выбирай `context --with-bindings`: он переиспользует source response. При доступе только к content добавь `--without-comments`, явно оставляя threads непроверенными. Расширяя охват, сохраняй source, не заменяй его через `--node`. Храни MCP evidence artifacts рядом со ссылкой на REST dossier. Детали source/root, sections и missing-vs-empty — [context](references/context.md).
 
 ## Запуск CLI
 
@@ -35,6 +36,7 @@ UI нужен для действия, недоступного MCP/REST, или
 python3 "$FIGMA_OPS_CLI" inspect SyntheticKey
 python3 "$FIGMA_OPS_CLI" inspect SyntheticKey --node '1:2' --depth 1
 python3 "$FIGMA_OPS_CLI" context DemoFile --node '31:8' --scope-root '31:4' --output '/tmp/figma dossier.json'
+python3 "$FIGMA_OPS_CLI" bindings SyntheticKey --node '1:2'
 python3 "$FIGMA_OPS_CLI" search SyntheticKey --query 'Повторить' --page '0:1' --output '/tmp/figma matches.json'
 python3 "$FIGMA_OPS_CLI" comments SyntheticKey --query 'Повторить' --status all
 python3 "$FIGMA_OPS_CLI" thread SyntheticKey --comment 'example-reply-id'
@@ -51,6 +53,7 @@ Python 3.10+ и системный `curl`, без pip/npm. TARGET — file key �
 - Комментарии: совпадение в ответе возвращает всю ветку. Прочитай root и все ответы, сверь автора/порядок/время и pin. Предложение и resolved не равны утверждённому требованию; `--node` не покрывает соседние и unassigned pins.
 - Export готов после скачивания и проверки фактического файла. `scale_requested=2` не доказывает 2×; наличие alpha-канала не доказывает прозрачность. Сверь реальные пиксели, размеры и точную ноду по [assets](references/assets.md).
 - REST timings сохраняются raw: без подтверждённой калибровки `verified_unit`/`normalized_ms` — null. Не угадывай единицу по величине числа. Prototype transition не является motion track; отсутствие переходов в metadata не доказывает отсутствие прототипа или timeline.
+- Bindings сохраняет точные IDs, raw properties/aliases и mode observations. Style metadata не равно visual values, mode observation не равно effective mode; metadata key не file key. REST 403 не доказывает отсутствие definitions через MCP. Подробности optional GET, отдельного evidence и границ mapping — [bindings](references/bindings.md).
 - `motion`/`canvas_visual: not_collected` описывают границу CLI, не доступность MCP. При missing token/tools или unsupported motion продолжай доступное и отметь конкретные непроверенные секции.
 
 В ответе укажи точные file/node ID, подтверждённое наблюдение и границу охвата. Общие документы меняй только в пределах поручения и после проверки фактов.
