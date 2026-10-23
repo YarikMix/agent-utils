@@ -136,6 +136,7 @@ def extract_variables(response: ApiResponse, file_key: str, reference_ids: list[
     visited_refs, emitted_variables, selected_variables = set(), set(), set()
     visited_collections, emitted_collections = set(), set()
     selected_collections = []
+    processed_collections = set()
     processed_overrides = set()
     relations = {}
 
@@ -228,16 +229,20 @@ def extract_variables(response: ApiResponse, file_key: str, reference_ids: list[
             if len(candidates) != 1:
                 warn('ambiguous_collection' if candidates else 'collection_not_returned', '/meta/variableCollections')
             for mapping_key in candidates:
-                if mapping_key in emitted_collections:
-                    continue
-                emitted_collections.add(mapping_key)
                 raw = collections[mapping_key]
                 pointer = '/meta/variableCollections/' + _escape(mapping_key)
-                data['variable_collections'].append({'mapping_key': mapping_key, 'raw': raw,
-                                                    'provenance': provenance(pointer)})
+                if mapping_key not in emitted_collections:
+                    emitted_collections.add(mapping_key)
+                    data['variable_collections'].append({'mapping_key': mapping_key, 'raw': raw,
+                                                        'provenance': provenance(pointer)})
                 if len(candidates) != 1 or not isinstance(raw, dict):
                     warn('malformed_collection', pointer)
                     continue
+                # Ambiguous lookup can emit raw first; a later exact lookup still
+                # selects this collection and must discover its modes/relations.
+                if mapping_key in processed_collections:
+                    continue
+                processed_collections.add(mapping_key)
                 if not _valid_collection(raw):
                     warn('malformed_collection', pointer)
                 selected_collections.append(mapping_key)

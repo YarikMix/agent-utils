@@ -206,6 +206,33 @@ class VariablesTests(unittest.TestCase):
         self.assertEqual([r['mapping_key'] for r in result.data['variables']], ['A', 'B', 'C'])
         self.assertEqual(len(result.data['alias_links']), 2)
 
+    def test_unique_collection_lookup_processes_previously_emitted_ambiguous_candidate(self):
+        body = variable_payload()
+        variables = body['meta']['variables']
+        variables['A'].update(variableCollectionId='c1', valuesByMode={'m': False})
+        variables['B']['valuesByMode'] = {'m': 0}
+        collections = body['meta']['variableCollections']
+        template = collections['c']
+        collections['c1'] = dict(template, id='c1', subscribed_id='shared',
+            parentVariableCollectionId='parent',
+            variableOverrides={'A': {'m': alias('B')}})
+        collections['c2'] = dict(template, id='c2', subscribed_id='shared',
+            parentVariableCollectionId='unused-parent',
+            variableOverrides={'A': {'m': alias('C')}})
+        collections['parent'] = dict(template, id='parent')
+        result = collect(body, collections=['shared'])
+        self.assertEqual([r['mapping_key'] for r in result.data['variables']], ['A', 'B'])
+        rows = result.data['variable_collections']
+        self.assertEqual([r['mapping_key'] for r in rows], ['c1', 'c2', 'parent', 'c'])
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(len(result.data['alias_links']), 1)
+        link = result.data['alias_links'][0]
+        self.assertEqual(link['reference_id'], 'B')
+        self.assertEqual(link['source_collection_id'], 'c1')
+        self.assertEqual(link['json_pointer'], '/meta/variableCollections/c1/variableOverrides/A/m')
+        self.assertEqual(result.coverage['fields']['modes']['present'], 3)
+        self.assertTrue(result.partial)
+
     def test_collection_parent_cycle_is_bounded_partial(self):
         body = variable_payload()
         original = body['meta']['variableCollections']['c']
