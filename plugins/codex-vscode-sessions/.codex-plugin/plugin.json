@@ -1,6 +1,6 @@
 {
   "name": "codex-vscode-sessions",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Поиск и открытие сессий Codex в терминале текущего окна VS Code",
   "skills": "./skills/",
   "interface": {
