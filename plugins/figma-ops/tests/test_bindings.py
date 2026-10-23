@@ -102,6 +102,47 @@ class BindingsTests(unittest.TestCase):
                     self.assertIsNone(result.data['variable_bindings'][0]['raw'])
                     self.assertEqual(result.data['variable_bindings'][0]['provenance']['json_pointer'], '/boundVariables')
 
+    def test_nonempty_binding_container_with_empty_wrappers_retains_frame_raw(self):
+        for raw in ({'componentProperties': {}, 'fills': []},
+                    {'size': {}, 'individualStrokeWeights': {}, 'fontSize': [], 'textRangeFills': []}):
+            with self.subTest(raw=raw):
+                scope = loaded_scope(source_id='2:2', root_id='2:2')
+                scope.root['type'] = 'FRAME'
+                scope.root['boundVariables'] = raw
+                result = extract_bindings(scope)
+                self.assertEqual(result.data['instances'], [])
+                self.assertFalse(result.partial, result.warnings)
+                self.assertEqual(referenced_variable_ids(result), [])
+                self.assertEqual(result.coverage['fields']['boundVariables'],
+                                 {'absent': 0, 'empty': 0, 'present': 1, 'invalid': 0})
+                self.assertEqual(len(result.data['variable_bindings']), 1)
+                row = result.data['variable_bindings'][0]
+                self.assertEqual(row['raw_container'], raw)
+                self.assertEqual(row['raw'], raw)
+                self.assertIsNone(row['reference_id'])
+                self.assertEqual(row['node']['id'], '2:2')
+                self.assertEqual(row['node']['type'], 'FRAME')
+                self.assertEqual(row['container_role'], 'node')
+                self.assertEqual(row['container_pointer'], '/boundVariables')
+                self.assertEqual(row['provenance']['node_id'], '2:2')
+                self.assertEqual(row['provenance']['pointer_basis'], 'node')
+                self.assertEqual(row['provenance']['json_pointer'], '/boundVariables')
+                self.assertEqual(row['definition_state'], 'not_requested')
+
+    def test_empty_wrappers_with_valid_alias_do_not_duplicate_binding_rows(self):
+        scope = loaded_scope(source_id='2:2', root_id='2:2')
+        scope.root['type'] = 'FRAME'
+        raw = {'componentProperties': {}, 'fills': [], 'width': alias('v.width')}
+        scope.root['boundVariables'] = raw
+        result = extract_bindings(scope)
+        self.assertFalse(result.partial, result.warnings)
+        self.assertEqual(referenced_variable_ids(result), ['v.width'])
+        self.assertEqual(len(result.data['variable_bindings']), 1)
+        row = result.data['variable_bindings'][0]
+        self.assertEqual(row['raw_container'], raw)
+        self.assertEqual(row['raw'], alias('v.width'))
+        self.assertEqual(row['provenance']['json_pointer'], '/boundVariables/width')
+
     def test_alias_looking_external_payload_is_not_binding(self):
         scope = loaded_scope(bindings_payload())
         for key in ('pluginData', 'annotations', 'interactions', 'future'):

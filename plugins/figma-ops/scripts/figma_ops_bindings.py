@@ -85,6 +85,7 @@ def extract_bindings(scope: LoadedScope) -> Collected:
             binding_row(node, identity, raw, pointer, raw, pointer, role)
             return
         # State distinguishes documented wrappers from arbitrary JSON nesting.
+        initial_rows = len(data['variable_bindings'])
         stack = [(value, pointer + '/' + _escape(key), role, key, 'field')
                  for key, value in reversed(list(raw.items()))]
         while stack:
@@ -115,6 +116,8 @@ def extract_bindings(scope: LoadedScope) -> Collected:
             else:
                 warn('invalid_variable_alias', value_pointer)
                 binding_row(node, identity, raw, pointer, value, value_pointer, value_role)
+        if raw and len(data['variable_bindings']) == initial_rows:
+            binding_row(node, identity, raw, pointer, raw, pointer, role)
 
     def property_container(node, identity, raw, pointer, role):
         stack = [(raw, pointer, role, False)]
