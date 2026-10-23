@@ -12,7 +12,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[3]
 CANONICAL = ROOT / 'plugins' / 'figma-ops'
 LEGACY = ROOT / 'plugins' / 'figma-lookup'
-COMMANDS = ('doctor', 'inspect', 'search', 'comments', 'thread', 'export', 'fills', 'annotations', 'prototype', 'context')
+COMMANDS = ('doctor', 'inspect', 'search', 'comments', 'thread', 'export', 'fills', 'annotations', 'prototype', 'context', 'bindings')
 
 
 class PackagingTests(unittest.TestCase):
@@ -103,7 +103,7 @@ class PackagingTests(unittest.TestCase):
                     result = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
                     help_count += 1
-                self.assertEqual(help_count, 11)
+                self.assertEqual(help_count, 12)
                 # A fake transport executes the installed runtime, without network or Keychain.
                 binary = root / 'fake bin'
                 binary.mkdir()
@@ -119,6 +119,7 @@ class PackagingTests(unittest.TestCase):
                     ['annotations', 'SyntheticKey', '--node', '1:2'],
                     ['prototype', 'SyntheticKey', '--node', '1:2'],
                     ['context', 'SyntheticKey', '--node', '1:2'],
+                    ['bindings', 'SyntheticKey', '--node', '1:2', '--with-variables'],
                     ['export', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'export')],
                     ['fills', 'SyntheticKey', '--node', '1:2', '--dest', str(cwd / 'fills')],
                 ]
@@ -136,10 +137,16 @@ class PackagingTests(unittest.TestCase):
                         self.assertEqual(response['data']['annotations'][0]['raw']['label'], 'Synthetic note')
                     if arguments[0] == 'prototype':
                         self.assertEqual(response['data']['interactions'][0]['raw']['actions'][0]['destinationId'], '1:2')
+                    if arguments[0] == 'bindings':
+                        sections = response['data']['sections']
+                        self.assertEqual(sections['bindings']['data']['instances'][0]['component_id'], '5:1')
+                        self.assertEqual(sections['bindings']['data']['styles'][0]['id'], 'style:1')
+                        self.assertEqual(len(sections['variables']['data']['alias_links']), 1)
+                        self.assertEqual(sections['bindings']['data']['variable_bindings'][0]['definition_state'], 'available')
                     if arguments[0] == 'context':
                         self.assertEqual(response['data']['sections']['comments']['data']['threads'][0]['root']['id'], 'root')
                         self.assertEqual(len(response['data']['sections']['comments']['data']['threads'][0]['replies']), 1)
-                self.assertEqual(operation_count, 10)
+                self.assertEqual(operation_count, 11)
                 partial = subprocess.run(
                     [sys.executable, str(script), 'annotations', 'PartialKey', '--node', '1:2', '--no-cache'],
                     cwd=cwd, env=environment, capture_output=True, text=True)
@@ -167,6 +174,8 @@ node = {'id': '1:2', 'name': 'Synthetic frame', 'type': 'FRAME', 'children': [],
         'interactions': [{'trigger': {'type': 'ON_CLICK'}, 'actions': [
             {'type': 'NODE', 'destinationId': '1:2', 'navigation': 'CHANGE_TO',
              'transition': {'type': 'SMART_ANIMATE', 'duration': 0.2, 'easing': {'type': 'LINEAR'}}}]}]}
+node.update(type='INSTANCE', componentId='5:1', componentProperties={}, styles={'fill': 'style:1'},
+            boundVariables={'opacity': {'type': 'VARIABLE_ALIAS', 'id': 'A'}})
 document = {'id': '0:0', 'type': 'DOCUMENT', 'children': [
     {'id': '0:1', 'type': 'CANVAS', 'name': 'Synthetic page', 'children': [node]}]}
 path = urlsplit(url).path
@@ -178,12 +187,19 @@ elif path.endswith('/comments'):
     payload = {'comments': [
         {'id': 'root', 'parent_id': '', 'message': 'Synthetic root', 'client_meta': {'node_id': '1:2'}, 'created_at': '2026-01-01T00:00:00Z', 'user': {'handle': 'A'}},
         {'id': 'reply', 'parent_id': 'root', 'message': 'Synthetic reply', 'created_at': '2026-01-01T01:00:00Z', 'user': {'handle': 'B'}}]}
+elif path.endswith('/variables/local'):
+    payload = {'status': 200, 'error': False, 'meta': {'variables': {
+        'A': {'id': 'A', 'variableCollectionId': 'c', 'valuesByMode': {'m': {'type': 'VARIABLE_ALIAS', 'id': 'B'}}},
+        'B': {'id': 'B', 'variableCollectionId': 'c', 'valuesByMode': {'m': 0}}},
+        'variableCollections': {'c': {'id': 'c', 'modes': [{'modeId': 'm', 'name': 'Default'}]}}}}
 elif path.startswith('/v1/images/'):
     payload = {'images': {'1:2': 'https://assets.example.test/image.png'}}
 elif path.endswith('/images'):
     payload = {'meta': {'images': {'synthetic-image': 'https://assets.example.test/image.png'}}}
 else:
-    payload = {'document': document, 'version': 'synthetic-version'}
+    payload = {'document': document, 'version': 'synthetic-version',
+               'components': {'5:1': {'key': 'component-key', 'name': 'Synthetic component'}},
+               'styles': {'style:1': {'key': 'style-key', 'name': 'Synthetic fill', 'styleType': 'FILL'}}}
 if url.startswith('https://assets.example.test/'):
     def chunk(kind, data):
         return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))

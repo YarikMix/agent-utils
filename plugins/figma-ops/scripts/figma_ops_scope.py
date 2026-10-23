@@ -46,3 +46,29 @@ def node_identity(node: dict, ancestors: list[dict], file_key: str) -> dict:
             'path': [item.get('name', '') for item in ancestors + [node]],
             'page': {key: page.get(key) for key in ('id', 'name', 'type')} if page is not None else None,
             'url': f'https://www.figma.com/design/{file_key}/?' + urlencode({'node-id': node.get('id', '')})}
+
+
+def collected_section(result: Collected, response: ApiResponse, *, version: str | None = None) -> dict:
+    """Wrap a collected section using only its endpoint's snapshot metadata."""
+    return {'state': 'partial' if result.partial else 'collected', 'source': 'figma-rest',
+            'fetched_at': response.fetched_at, 'version': version,
+            'coverage': result.coverage, 'data': result.data,
+            'warnings': result.warnings, 'error': None}
+
+
+def empty_section(state: str, source: str = 'figma-rest') -> dict:
+    """Keep the existing context shape for uncollected or failed sections."""
+    return {'state': state, 'source': source, 'fetched_at': None, 'version': None,
+            'coverage': {'complete': False}, 'data': None, 'warnings': [], 'error': None}
+
+
+def scope_context(scope: LoadedScope, *, url_node_id: str | None) -> dict:
+    """Describe exact source/root identity without widening the semantic scope."""
+    file_key = scope.target.file_key
+    source = node_identity(scope.source, scope.source_ancestors, file_key)
+    root = node_identity(scope.root, scope.root_ancestors, file_key)
+    ancestors = [node_identity(node, scope.source_ancestors[:index], file_key)
+                 for index, node in enumerate(scope.source_ancestors)]
+    return {'source_node': source, 'scope_root': root, 'url_node_id': url_node_id,
+            'ancestors': ancestors, 'page': source['page'],
+            'suggested_context_roots': [node for node in ancestors if node['type'] == 'FRAME']}

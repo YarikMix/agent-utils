@@ -104,3 +104,16 @@ def variable_payload() -> dict:
                   'modes': [{'modeId': 'm', 'name': 'Default'}], 'defaultModeId': 'm',
                   'remote': False, 'hiddenFromPublishing': False,
                   'variableIds': ['A', 'B', 'C']}}}}
+
+
+def design_system_payload() -> dict:
+    """CLI fixture: available alias cycle plus a second direct definition."""
+    body = library_payload()
+    root = body['document']['children'][1]['children'][0]
+    root['explicitVariableModes'] = {'c': 'm'}
+    source = root['children'][0]
+    source['boundVariables'] = {
+        'width': {'type': 'VARIABLE_ALIAS', 'id': 'A'},
+        'height': {'type': 'VARIABLE_ALIAS', 'id': 'C'},
+        'opacity': {'type': 'VARIABLE_ALIAS', 'id': 'B'}}
+    return body

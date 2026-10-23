@@ -162,3 +162,17 @@ class CliTests(unittest.TestCase):
         self.assertEqual(len(full['data']['sections']['structure']['data']['texts']), 2)
         self.assertEqual(result['data'], {'artifact': str(output.resolve()), 'bytes': output.stat().st_size})
         self.assertEqual(len(self.boundary.calls), 2)
+
+
+class BindingsCliParserTests(unittest.TestCase):
+    def test_bindings_registered_with_all_common_and_scope_flags(self):
+        arguments = cli.build_parser().parse_args([
+            'bindings', 'BranchKey', '--node', 'I2:1;3:7', '--scope-root', '2:0',
+            '--with-variables', '--limit', '1', '--refresh', '--no-cache',
+            '--cache-dir', '/tmp/synthetic-cache', '--output', '/tmp/synthetic-result.json'])
+        self.assertEqual((arguments.command, arguments.target, arguments.node, arguments.scope_root),
+                         ('bindings', 'BranchKey', 'I2:1;3:7', '2:0'))
+        self.assertTrue(arguments.with_variables and arguments.refresh and arguments.no_cache)
+        self.assertEqual(arguments.limit, 1)
+        self.assertEqual(arguments.output, Path('/tmp/synthetic-result.json'))
+        self.assertEqual(arguments.cache_dir, Path('/tmp/synthetic-cache'))
