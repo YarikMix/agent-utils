@@ -125,7 +125,11 @@ def extract_library(scope: LoadedScope) -> Collected:
         elif node.get('type') in ('COMPONENT', 'COMPONENT_SET'):
             request('components' if node['type'] == 'COMPONENT' else 'component_sets', node_id)
         styles = observe(node, 'styles', lambda v: isinstance(v, dict), str(node_id))
-        if isinstance(styles, dict):
+        if 'styles' in node and not isinstance(styles, dict):
+            data['style_usages'].append({'record_type': 'invalid_container', 'node': identity,
+                                         'style_type': None, 'style_id': None, 'raw': styles,
+                                         'provenance': provenance('node', '/styles', node_id)})
+        elif isinstance(styles, dict):
             for style_type, style_id in styles.items():
                 if not _reference(style_id):
                     warn('invalid_style_reference', str(node_id) + '/styles/' + _escape(style_type))

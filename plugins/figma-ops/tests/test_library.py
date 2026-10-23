@@ -164,6 +164,30 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(result.data['style_usages'][1]['style_id'], [])
         self.assertEqual([r['id'] for r in result.data['styles']], ['s.fill', 's.text'])
 
+    def test_malformed_non_instance_styles_preserve_raw_container_evidence(self):
+        for node_kind, node_id in [('TEXT', 'I2:1;3:1'), ('FRAME', '2:0')]:
+            with self.subTest(node_kind=node_kind):
+                scope = loaded_scope()
+                node = scope.source['children'][0] if node_kind == 'TEXT' else scope.root
+                node['styles'] = ['malformed-style-evidence']
+                result = extract_library(scope)
+                self.assertTrue(result.partial)
+                self.assertEqual(result.coverage['fields']['styles']['invalid'], 1)
+                evidence = [row for row in result.data['style_usages']
+                            if row.get('record_type') == 'invalid_container']
+                self.assertEqual(len(evidence), 1)
+                self.assertEqual(evidence[0]['node']['id'], node_id)
+                self.assertEqual(evidence[0]['raw'], ['malformed-style-evidence'])
+                self.assertIsNone(evidence[0]['style_type'])
+                self.assertIsNone(evidence[0]['style_id'])
+                self.assertEqual(evidence[0]['provenance']['pointer_basis'], 'node')
+                self.assertEqual(evidence[0]['provenance']['json_pointer'], '/styles')
+                self.assertEqual(evidence[0]['provenance']['node_id'], node_id)
+                self.assertEqual([row['id'] for row in result.data['styles']],
+                                 ['s.fill'] if node_kind == 'TEXT' else ['s.fill', 's.text'])
+                self.assertEqual(set(result.data),
+                                 {'instances', 'components', 'component_sets', 'style_usages', 'styles'})
+
     def test_definition_properties_are_validated_without_scanning_children(self):
         body = library_payload()
         body['document']['children'][0]['children'][1]['componentPropertyDefinitions']['Bad'] = {'type': 'TEXT', 'defaultValue': []}
