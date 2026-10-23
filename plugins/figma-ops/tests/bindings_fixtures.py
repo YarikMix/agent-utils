@@ -54,3 +54,33 @@ def loaded_scope(body: dict | None = None, *, source_id: str = '2:1', root_id: s
     root, root_ancestors = find_node(body['document'], root_id)
     return LoadedScope(Target('Key', source_id), ApiResponse(body, '2026-01-01T00:00:00Z', 'miss'),
                        source, source_ancestors, root, root_ancestors)
+
+
+def bindings_payload() -> dict:
+    """Fresh library fixture with only explicit bindings and mode observations."""
+    body = library_payload()
+    root = body['document']['children'][1]['children'][0]
+    source = root['children'][0]
+    alias = lambda reference: {'type': 'VARIABLE_ALIAS', 'id': reference}
+    body['document']['children'][1]['explicitVariableModes'] = {'c': 'c:dark'}
+    root['explicitVariableModes'] = {'c': 'c:light'}
+    source['explicitVariableModes'] = {'c': 'c:contrast'}
+    source['children'][0]['explicitVariableModes'] = {'c': 'c:text'}
+    source['boundVariables'] = {
+        'size': {'x': alias('v.width'), 'y': alias('v.height')},
+        'individualStrokeWeights': {'top': alias('v.top'), 'bottom': alias('v.bottom'),
+                                    'left': alias('v.left'), 'right': alias('v.right')},
+        'componentProperties': {'Label/~#prop': alias('v.label')},
+        'fontSize': [alias('v.font')], 'fills': [alias('v.fill')],
+        'textRangeFills': [alias('v.range')]}
+    source['fills'] = [{'type': 'GRADIENT_LINEAR', 'boundVariables': {'color': alias('v.color')},
+                        'gradientStops': [{'position': 0, 'boundVariables': {'color': alias('v.stop')}}]}]
+    source['strokes'] = [{'type': 'SOLID', 'boundVariables': {'color': alias('v.stroke')}}]
+    source['background'] = [{'type': 'SOLID', 'boundVariables': {'color': alias('v.background')}}]
+    source['backgrounds'] = [{'type': 'SOLID', 'boundVariables': {'color': alias('v.backgrounds')}}]
+    source['effects'] = [{'type': 'DROP_SHADOW', 'boundVariables': {'radius': alias('v.effect')}}]
+    source['layoutGrids'] = [{'pattern': 'GRID', 'boundVariables': {'sectionSize': alias('v.grid')}}]
+    source['style'] = {'boundVariables': {'fontSize': alias('v.style')}}
+    source['styleOverrideTable'] = {'1/~': {'boundVariables': {'fontSize': alias('v.override')}}}
+    source['componentProperties']['Label#prop']['boundVariables'] = {'value': alias('v.property')}
+    return body
