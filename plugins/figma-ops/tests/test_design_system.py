@@ -237,3 +237,27 @@ class DesignSystemTests(unittest.TestCase):
                 coverage = result['data']['sections']['bindings']['coverage']
                 self.assertEqual(coverage.get('variable_references'), expected)
                 self.assertEqual(coverage['collections']['variable_bindings']['total'], 4)
+
+    def test_whitespace_reference_keeps_exact_identity_and_requested_state_before_projection(self):
+        body = design_system_payload()
+        source = body['document']['children'][1]['children'][0]['children'][0]
+        source['boundVariables'] = {'width': {'type': 'VARIABLE_ALIAS', 'id': ' '},
+                                    'height': {'type': 'VARIABLE_ALIAS', 'id': 'A'}}
+        for variables in (None, (403, {}, {})):
+            with self.subTest(endpoint_failed=variables is not None):
+                code, result, transport = self.run_bindings(['--with-variables', '--limit', '1'], body, variables)
+                self.assertEqual((code, result['status']), (0, 'partial'))
+                self.assertEqual(paths(transport), ['/v1/files/Key', '/v1/files/Key/variables/local'])
+                sections = result['data']['sections']
+                row, = sections['bindings']['data']['variable_bindings']
+                self.assertEqual(row['reference_id'], ' ')
+                self.assertEqual(row['definition_state'], 'unresolved')
+                self.assertEqual(sections['bindings']['coverage']['variable_references'],
+                                 {'referenced': 2, 'not_requested': 0,
+                                  'available': 1 if variables is None else 0,
+                                  'unresolved': 1 if variables is None else 2})
+                self.assertEqual(sections['bindings']['coverage']['collections']['variable_bindings'],
+                                 {'total': 2, 'returned': 1, 'truncated': True})
+                if variables is None:
+                    self.assertEqual(sections['variables']['coverage']['reference_states'][' '], 'unresolved')
+                    self.assertEqual(sections['variables']['data']['unresolved_references'][0]['reference_id'], ' ')

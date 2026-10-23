@@ -47,7 +47,7 @@ def collect_design_system(scope: LoadedScope, client: Client, *, with_variables:
     inventory.coverage['variable_references'] = counts
     for row in inventory.data['variable_bindings']:
         reference = row['reference_id']
-        if isinstance(reference, str) and reference.strip():
+        if isinstance(reference, str) and bool(reference):
             row['definition_state'] = (reference_states.get(reference, 'unresolved')
                                        if with_variables else 'not_requested')
     sections = {'bindings': collected_section(project_prototype(inventory, limit), scope.response,
