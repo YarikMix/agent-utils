@@ -242,3 +242,64 @@ class ContextTests(unittest.TestCase):
         result['data']['sections']['annotations']['data']['annotations'][0]['raw']['properties'].clear()
         result['data']['sections']['comments']['data']['threads'][0]['root']['client_meta'].clear()
         self.assertEqual((body, comments), original)
+
+
+class ContextBindingsTests(unittest.TestCase):
+    def test_context_enrichment_reuses_already_loaded_scope(self):
+        from bindings_fixtures import design_system_payload, variable_payload
+        code, result, transport = invoke(['context', TARGET, '--scope-root', '2:0', '--with-bindings',
+                                         '--with-variables', '--no-cache'],
+                                        [(200, design_system_payload(), {}), (200, comment_payload(), {}),
+                                         (200, variable_payload(), {})])
+        self.assertEqual((code, result['status']), (0, 'ok'))
+        self.assertEqual([urlsplit(c[0][-1]).path for c in transport.calls],
+                         ['/v1/files/Key', '/v1/files/Key/comments', '/v1/files/Key/variables/local'])
+        sections = result['data']['sections']
+        self.assertEqual(set(sections), {'structure', 'annotations', 'prototype', 'comments', 'motion',
+                                         'canvas_visual', 'bindings', 'variables'})
+        self.assertEqual(len(sections['comments']['data']['threads'][0]['replies']), 2)
+        self.assertIsNone(sections['variables']['version'])
+        self.assertEqual(len(result['data']['next_actions']), 4)
+        actions = result['data']['next_actions']
+        self.assertEqual([a['kind'] for a in actions[:2]], ['motion_context', 'canvas_visual'])
+        self.assertTrue(all(a['node_id'] == '2:0' and a['file_key'] == 'Key' and a['prerequisites']
+                            for a in actions))
+        self.assertIn('get_variable_defs', json.dumps(actions))
+        self.assertIn('Code Connect', json.dumps(actions))
+
+    def test_context_without_comments_only_enriches_on_opt_in(self):
+        from bindings_fixtures import design_system_payload, variable_payload
+        for variables in (False, True):
+            with self.subTest(variables=variables):
+                responses = [(200, design_system_payload(), {})]
+                flags = ['--without-comments', '--with-bindings']
+                if variables:
+                    flags.append('--with-variables')
+                    responses.append((200, variable_payload(), {}))
+                code, result, transport = invoke(['context', TARGET, *flags], responses)
+                self.assertEqual((code, result['status'], len(transport.calls)), (0, 'ok', 2 if variables else 1))
+                self.assertEqual(result['data']['sections']['comments']['state'], 'not_requested')
+                self.assertEqual(result['data']['sections']['variables']['state'],
+                                 'collected' if variables else 'not_requested')
+        code, result, _ = invoke(['context', TARGET, '--without-comments'], [(200, payload(), {})])
+        self.assertEqual(len(result['data']['sections']), 6)
+        self.assertEqual(len(result['data']['next_actions']), 2)
+
+    def test_comments_and_variables_fail_independently(self):
+        from bindings_fixtures import design_system_payload, variable_payload
+        for comments_status, variables_status in ((403, 200), (200, 403), (403, 429)):
+            with self.subTest(comments_status=comments_status, variables_status=variables_status):
+                code, result, transport = invoke(['context', TARGET, '--with-bindings', '--with-variables'],
+                                                [(200, design_system_payload(), {}),
+                                                 (comments_status, comment_payload(), {}),
+                                                 (variables_status, variable_payload(), {})])
+                self.assertEqual((code, result['status']), (0, 'partial'))
+                sections = result['data']['sections']
+                self.assertEqual(sections['comments']['state'], 'collected' if comments_status == 200 else 'failed')
+                self.assertEqual(sections['variables']['state'], 'collected' if variables_status == 200 else 'failed')
+                self.assertEqual(sections['bindings']['state'], 'collected')
+                self.assertEqual(len(transport.calls), 3)
+
+    def test_failed_source_prevents_context_enrichment(self):
+        code, result, transport = invoke(['context', TARGET, '--with-bindings', '--with-variables'], [(403, {}, {})])
+        self.assertEqual((code, result['error']['code'], len(transport.calls)), (1, 'forbidden', 1))

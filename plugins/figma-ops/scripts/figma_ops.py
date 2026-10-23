@@ -11,6 +11,7 @@ from figma_ops_assets import export, fills
 from figma_ops_annotations import annotations
 from figma_ops_prototype import prototype
 from figma_ops_context import context
+from figma_ops_design_system import bindings
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -107,8 +108,17 @@ def build_parser():
     dossier.add_argument('--node')
     dossier.add_argument('--scope-root')
     dossier.add_argument('--without-comments', action='store_true')
+    dossier.add_argument('--with-bindings', action='store_true')
+    dossier.add_argument('--with-variables', action='store_true')
     dossier.add_argument('--limit', type=positive_integer, default=20)
-    for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources, notes, behavior, dossier):
+    inventory = commands.add_parser('bindings', help='Read scoped component, style and variable bindings.')
+    inventory.set_defaults(handler=bindings)
+    inventory.add_argument('target')
+    inventory.add_argument('--node')
+    inventory.add_argument('--scope-root')
+    inventory.add_argument('--with-variables', action='store_true')
+    inventory.add_argument('--limit', type=positive_integer, default=20)
+    for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources, notes, behavior, dossier, inventory):
         command.add_argument('--refresh', action='store_true', help='Fetch again and replace cached result.')
         command.add_argument('--no-cache', action='store_true', help='Do not read or write persistent cache.')
         command.add_argument('--cache-dir', type=Path)

@@ -26,6 +26,20 @@ IDs здесь условные. `context TARGET [--node ID] [--scope-root ID] [
 
 `--limit` отдельно ограничивает inline texts, annotations, interactions и threads; каждый список сообщает total/returned/truncated. Ancestry/identity и replies внутри возвращённой ветки не обрезаются. `--output` сохраняет полный собранный envelope без этих inline limits; сетевые budgets сохраняются. Renders/image fills автоматически не запрашиваются.
 
+## Bindings по явному запросу
+
+По умолчанию `context` сохраняет прежние шесть sections (`structure`, `annotations`, `prototype`, `comments`, `motion`, `canvas_visual`) и две next-action hints. `--with-bindings` добавляет `bindings` и `variables`, плюс hints для отдельного MCP definitions и read-only Code Connect. Сбор использует тот же LoadedScope: source/root/ancestry и nodes response не перечитываются; comments сохраняют полные threads.
+
+```sh
+python3 "$FIGMA_OPS_CLI" context SyntheticKey --node '1:2' --with-bindings
+python3 "$FIGMA_OPS_CLI" context SyntheticKey --node '1:2' --with-bindings --with-variables
+python3 "$FIGMA_OPS_CLI" context SyntheticKey --node '1:2' --with-bindings --without-comments
+```
+
+Без variables новых GET нет: один source/root и, если запрошены, один comments GET. `--with-variables` требует `--with-bindings` (иначе invalid_argument до сети) и добавляет максимум один file-wide `/variables/local` GET. Variables имеют собственные timestamp/cache, `version=null` и `request_scope=file-variable-metadata`. Отказ/403 или malformed optional data даёт общий partial, сохраняя bindings и остальные sections; незапрошенные definitions остаются `not_requested` и сами по себе не partial. Snapshot остаётся `independent-requests`, совпадение timestamps не означает атомарность.
+
+Inline limit применяется отдельно к верхнеуровневым bindings/variables collections, counts собираются до проекции; raw properties и replies не обрезаются. Полный контракт и ограничения ID/mode/value interpretation — [bindings](bindings.md).
+
 ## Annotations
 
 ```sh

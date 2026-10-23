@@ -4,7 +4,9 @@ from figma_ops_comments import load_threads, select_threads
 from figma_ops_core import Client, OpsError, envelope, parse_target
 from figma_ops_nodes import walk_nodes
 from figma_ops_prototype import collect_prototype, project_prototype
-from figma_ops_scope import Collected, LoadedScope, load_scope, node_identity
+from figma_ops_scope import (Collected, LoadedScope, collected_section, empty_section,
+                             load_scope, node_identity, scope_context)
+from figma_ops_design_system import collect_design_system
 
 
 def _structure(scope: LoadedScope) -> Collected:
@@ -31,18 +33,6 @@ def _structure(scope: LoadedScope) -> Collected:
                      {'scope': 'loaded-subtree', 'scanned_nodes': total, 'complete': False}, [])
 
 
-def _section(result: Collected, response, *, version=None) -> dict:
-    return {'state': 'partial' if result.partial else 'collected', 'source': 'figma-rest',
-            'fetched_at': response.fetched_at, 'version': version,
-            'coverage': result.coverage, 'data': result.data,
-            'warnings': result.warnings, 'error': None}
-
-
-def _uncollected(state, source='figma-rest') -> dict:
-    return {'state': state, 'source': source, 'fetched_at': None, 'version': None,
-            'coverage': {'complete': False}, 'data': None, 'warnings': [], 'error': None}
-
-
 def _project(result: Collected, limit: int | None, *, name=None, returned_key=None) -> Collected:
     # All local collection precedes projection. The projector copies raw JSON too.
     projected = project_prototype(result, limit)
@@ -53,6 +43,8 @@ def _project(result: Collected, limit: int | None, *, name=None, returned_key=No
 
 
 def context(args, client: Client) -> dict:
+    if args.with_variables and not args.with_bindings:
+        raise OpsError('invalid_argument', '--with-variables requires --with-bindings.')
     target = parse_target(args.target, args.node)
     url_node_id = parse_target(args.target).node_id
     scope = load_scope(client, target, root_id=args.scope_root)
@@ -62,10 +54,10 @@ def context(args, client: Client) -> dict:
     annotations = _project(extract_annotations(scope), limit,
                            name='annotations', returned_key='returned')
     prototype = project_prototype(collect_prototype(scope, client, follow=0), limit)
-    sections = {name: _section(result, scope.response, version=version)
+    sections = {name: collected_section(result, scope.response, version=version)
                 for name, result in (('structure', structure), ('annotations', annotations),
                                      ('prototype', prototype))}
-    sections['comments'] = _uncollected('not_requested')
+    sections['comments'] = empty_section('not_requested')
     if not args.without_comments:
         try:
             response, threads, total_comments = load_threads(client, target)
@@ -76,19 +68,16 @@ def context(args, client: Client) -> dict:
                                      complete=False)
             projected = _project(selected, limit, name='threads', returned_key='returned_threads')
             # The comments endpoint never supplies a document snapshot version.
-            sections['comments'] = _section(projected, response)
+            sections['comments'] = collected_section(projected, response)
         except OpsError as error:
-            sections['comments'] = {**_uncollected('failed'),
+            sections['comments'] = {**empty_section('failed'),
                                     'error': {'code': error.code, 'message': error.message,
                                               'http_status': error.http_status,
                                               'retry_after': error.retry_after}}
     for name in ('motion', 'canvas_visual'):
-        sections[name] = {**_uncollected('not_collected', 'figma-mcp'),
+        sections[name] = {**empty_section('not_collected', 'figma-mcp'),
                           'reason': 'requires-host-tool'}
-    source = node_identity(scope.source, scope.source_ancestors, target.file_key)
-    root = node_identity(scope.root, scope.root_ancestors, target.file_key)
-    ancestors = [node_identity(node, scope.source_ancestors[:index], target.file_key)
-                 for index, node in enumerate(scope.source_ancestors)]
+    identity = scope_context(scope, url_node_id=url_node_id)
     next_actions = [
         {'kind': 'motion_context', 'file_key': target.file_key, 'node_id': scope.root['id'],
          'purpose': 'Read motion inventory, tracks, easing and code snippets for the selected scope.',
@@ -99,15 +88,17 @@ def context(args, client: Client) -> dict:
          'purpose': 'Inspect the selected scope visually, including drawn arrows and layout.',
          'prerequisites': ['Discover a suitable Figma visual read tool in the host.']},
     ]
+    if args.with_bindings:
+        design_system = collect_design_system(scope, client, with_variables=args.with_variables, limit=limit)
+        sections.update(design_system['sections'])
+        next_actions.extend(design_system['next_actions'])
     warnings = list(dict.fromkeys(warning for section in sections.values() for warning in section['warnings']))
     partial = any(section['state'] in ('partial', 'failed') for section in sections.values())
     return envelope('context', target.file_key,
-                    {'source_node': source, 'scope_root': root, 'url_node_id': url_node_id,
-                     'ancestors': ancestors, 'page': source['page'],
-                     'suggested_context_roots': [node for node in ancestors if node['type'] == 'FRAME'],
+                    {**identity,
                      'snapshot_consistency': 'independent-requests', 'sections': sections,
                      'next_actions': next_actions},
                     response=scope.response, version=version,
-                    coverage={'scope': 'loaded-subtree', 'root': root,
+                    coverage={'scope': 'loaded-subtree', 'root': identity['scope_root'],
                               'scanned_nodes': structure.coverage['scanned_nodes'], 'complete': False},
                     warnings=warnings, status='partial' if partial else 'ok')
