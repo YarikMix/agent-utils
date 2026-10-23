@@ -88,6 +88,16 @@
       "category": "development"
     },
     {
+      "name": "setup-bash-blesh",
+      "version": "1.0.0",
+      "description": "Настройка интерактивного Bash с ble.sh в Ubuntu под WSL по явному запросу разработчика",
+      "author": {
+        "name": "Yaroslav Mihalev"
+      },
+      "source": "./plugins/setup-bash-blesh",
+      "category": "development"
+    },
+    {
       "name": "peekaboo-control",
       "version": "1.0.0",
       "description": "Управление macOS через Peekaboo MCP и Desktop Bridge",

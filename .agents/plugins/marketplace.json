@@ -80,6 +80,19 @@
       }
     },
     {
+      "name": "setup-bash-blesh",
+      "version": "1.0.0",
+      "source": {
+        "source": "local",
+        "path": "./plugins/setup-bash-blesh"
+      },
+      "category": "Development",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
       "name": "peekaboo-control",
       "version": "1.0.0",
       "source": {
