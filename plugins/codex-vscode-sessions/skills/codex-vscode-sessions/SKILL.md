@@ -26,6 +26,18 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass \
 
 The helper's success message confirms that the extension accepted the request. Inspect the new terminal when UI access is available, or check for a newly started `codex resume <UUID>` process when possible. If only the helper response is visible, report acceptance rather than claiming the session is ready.
 
-## If the environment is missing
+## If the environment is missing from a tool command
 
-The extension injects these variables into **new** integrated terminals after activation. If they are missing, still identify the session when possible and give the user its UUID. Tell the user to open a new WSL terminal in the desired VS Code window, start Codex there, and ask it to open that UUID. An already running Codex process does not gain the new variables. Do not extract an endpoint from another process, another terminal, or a hardcoded port: with multiple VS Code windows that can open the session in the wrong window. Do not use `code -n`, Windows Terminal, or desktop automation as a substitute for the window-scoped bridge.
+Still identify the requested session when possible and give the user its UUID. Missing variables in a Codex shell tool do **not** prove that its VS Code terminal is old: the CLI may use a shared background app-server whose tool commands inherit the server's environment instead of the terminal's. Opening another terminal and starting plain `codex` can repeat the failure.
+
+If their status in the terminal shell is unknown, ask the user to check it without printing the endpoint:
+
+```sh
+printf 'helper=%s endpoint=%s\n' \
+  "${CODEX_TERMINAL_TOOL_HELPER:+set}" \
+  "${CODEX_TERMINAL_TOOL_ENDPOINT:+set}"
+```
+
+If both are set, give the current Codex session UUID (for example, `CODEX_SESSION_ID` in the tool environment). Tell the user to exit that Codex session and resume it **in the same terminal** with `codex resume <current-session-UUID> --no-daemon`, then retry opening the requested UUID. The `--no-daemon` flag keeps tool commands in the terminal's environment. If either variable is missing in the terminal shell, open a new WSL integrated terminal in the desired VS Code window after the extension activates, then start Codex there with `codex --no-daemon`. If the variables are still missing, check the extension's installation and activation in that window.
+
+Do not extract an endpoint from another process, another terminal, or a hardcoded port: with multiple VS Code windows that can open the session in the wrong window. Do not use `code -n`, Windows Terminal, or desktop automation as a substitute for the window-scoped bridge.
