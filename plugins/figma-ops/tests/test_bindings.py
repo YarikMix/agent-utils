@@ -44,6 +44,34 @@ class BindingsTests(unittest.TestCase):
         override = next(r for r in result.data['variable_bindings'] if r['reference_id'] == 'v.override')
         self.assertEqual(override['provenance']['json_pointer'], '/styleOverrideTable/1~1~0/boundVariables/fontSize')
 
+    def test_documented_wrapper_keys_id_and_type_do_not_hide_alias_neighbors(self):
+        for wrapper in ('componentProperties', 'size', 'individualStrokeWeights'):
+            with self.subTest(wrapper=wrapper):
+                scope = loaded_scope(source_id='2:2', root_id='2:2')
+                neighbor = 'Label#prop' if wrapper == 'componentProperties' else 'x' if wrapper == 'size' else 'top'
+                raw = {'id': alias('v.id'), 'type': alias('v.type'), neighbor: alias('v.neighbor')}
+                scope.root['boundVariables'] = {wrapper: raw}
+                result = extract_bindings(scope)
+                self.assertEqual(referenced_variable_ids(result), ['v.id', 'v.type', 'v.neighbor'])
+                self.assertEqual(len(result.data['variable_bindings']), 3)
+                self.assertEqual([row['provenance']['json_pointer'] for row in result.data['variable_bindings']],
+                                 ['/boundVariables/' + wrapper + '/id',
+                                  '/boundVariables/' + wrapper + '/type',
+                                  '/boundVariables/' + wrapper + '/' + neighbor])
+                self.assertEqual(result.data['variable_bindings'][0]['raw_container'],
+                                 {wrapper: raw})
+                self.assertEqual(result.partial, wrapper != 'componentProperties')
+
+    def test_malformed_documented_wrapper_member_does_not_hide_valid_neighbor(self):
+        scope = loaded_scope(source_id='2:2', root_id='2:2')
+        scope.root['boundVariables'] = {'componentProperties': {'id': None, 'type': False,
+                                                              'Label#prop': alias('v.label')}}
+        result = extract_bindings(scope)
+        self.assertTrue(result.partial)
+        self.assertEqual(referenced_variable_ids(result), ['v.label'])
+        self.assertEqual([row['raw'] for row in result.data['variable_bindings']],
+                         [None, False, alias('v.label')])
+
     def test_malformed_alias_neighbors_are_preserved_without_false_references(self):
         scope = loaded_scope(root_id='2:1')
         scope.source['boundVariables'] = {'valid': alias('v.good'), 'id': alias([]),
@@ -122,6 +150,25 @@ class BindingsTests(unittest.TestCase):
         self.assertEqual(result.coverage['scanned_nodes'], 2)
         self.assertEqual([(r['node']['id'], r['location']) for r in result.data['mode_observations']],
                          [('1:0', 'ancestor'), ('2:0', 'ancestor'), ('2:1', 'scope'), ('I2:1;3:1', 'scope')])
+
+    def test_mode_field_counters_describe_scope_nodes_without_ancestor_observations(self):
+        for ancestor_value in ('absent', {}, {'c': 'mode'}, None):
+            with self.subTest(ancestor_value=ancestor_value):
+                scope = loaded_scope(source_id='2:2', root_id='2:2')
+                self.assertEqual(len(scope.root_ancestors), 3)
+                if ancestor_value != 'absent':
+                    for ancestor in scope.root_ancestors:
+                        ancestor['explicitVariableModes'] = ancestor_value
+                result = extract_bindings(scope)
+                self.assertEqual(result.coverage['scanned_nodes'], 1)
+                self.assertEqual(result.coverage['fields']['explicitVariableModes'],
+                                 {'absent': 1, 'empty': 0, 'present': 0, 'invalid': 0})
+                self.assertEqual(sum(result.coverage['fields']['explicitVariableModes'].values()),
+                                 result.coverage['scanned_nodes'])
+                rows = result.data['mode_observations']
+                self.assertEqual(len(rows), 3 if ancestor_value in (None, {'c': 'mode'}) else 0)
+                self.assertTrue(all(row['location'] == 'ancestor' for row in rows))
+                self.assertEqual(result.partial, ancestor_value is None)
 
     def test_malformed_mode_maps_keep_neighbors_and_exact_collection_ids(self):
         scope = loaded_scope()

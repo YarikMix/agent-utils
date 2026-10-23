@@ -89,15 +89,15 @@ def extract_bindings(scope: LoadedScope) -> Collected:
                  for key, value in reversed(list(raw.items()))]
         while stack:
             value, value_pointer, value_role, field, state = stack.pop()
-            if isinstance(value, dict) and ('type' in value or 'id' in value):
+            known = state == 'field' and isinstance(value, (dict, list)) and (
+                isinstance(value, list) or field in _WRAPPERS or field == 'componentProperties')
+            if not known and isinstance(value, dict) and ('type' in value or 'id' in value):
                 reference = value.get('id')
                 if value.get('type') != 'VARIABLE_ALIAS' or not _reference(reference):
                     reference = None
                     warn('invalid_variable_alias', value_pointer)
                 binding_row(node, identity, raw, pointer, value, value_pointer, value_role, reference)
             elif isinstance(value, (dict, list)):
-                known = state == 'field' and (
-                    isinstance(value, list) or field in _WRAPPERS or field == 'componentProperties')
                 if not known:
                     value_role = 'unknown'
                     warn('unknown_binding_container', value_pointer)
@@ -155,12 +155,15 @@ def extract_bindings(scope: LoadedScope) -> Collected:
 
     def modes(node, ancestors, location):
         pointer = '/explicitVariableModes'
-        observe(node, 'explicitVariableModes', dict, pointer)
+        if location == 'scope':
+            observe(node, 'explicitVariableModes', dict, pointer)
         if 'explicitVariableModes' not in node:
             return
         raw = node['explicitVariableModes']
         identity = node_identity(node, ancestors, file_key)
         if not isinstance(raw, dict):
+            if location == 'ancestor':
+                warn('invalid_explicitVariableModes', pointer)
             data['mode_observations'].append({
                 'node': identity, 'collection_id': None, 'mode_id': None, 'raw': raw,
                 'location': location, 'provenance': provenance(node, pointer)})
