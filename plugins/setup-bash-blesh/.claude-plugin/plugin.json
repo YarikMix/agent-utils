@@ -1,0 +1,10 @@
+{
+  "name": "setup-bash-blesh",
+  "version": "1.0.0",
+  "description": "Настройка интерактивного Bash с ble.sh в Ubuntu под WSL по явному запросу разработчика",
+  "skills": "./skills/",
+  "author": {
+    "name": "Yaroslav Mihalev"
+  },
+  "license": "MIT"
+}

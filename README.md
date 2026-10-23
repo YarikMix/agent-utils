@@ -1,6 +1,6 @@
 # agent-utils
 
-Плагины для Claude Code и Codex. Apple Notes, Karabiner, Figma, Peekaboo и Appium-скиллы работают в обоих клиентах;
+Плагины для Claude Code и Codex. Apple Notes, Karabiner, Figma, Peekaboo, Appium-скиллы и Setup Bash + ble.sh работают в обоих клиентах;
 Selectel и TypeScript LSP предназначены для Claude Code,
 а Codex Disable Skill — для Codex.
 
@@ -13,6 +13,7 @@ claude plugin install peekaboo-control@yarikmix-plugins
 claude plugin install figma-ops@yarikmix-plugins
 claude plugin install iphone-control@yarikmix-plugins
 claude plugin install setup-iphone-control@yarikmix-plugins
+claude plugin install setup-bash-blesh@yarikmix-plugins
 
 codex plugin marketplace add YarikMix/agent-utils
 codex plugin add apple-notes-folder@yarikmix-plugins
@@ -22,6 +23,7 @@ codex plugin add peekaboo-control@yarikmix-plugins
 codex plugin add figma-ops@yarikmix-plugins
 codex plugin add iphone-control@yarikmix-plugins
 codex plugin add setup-iphone-control@yarikmix-plugins
+codex plugin add setup-bash-blesh@yarikmix-plugins
 ```
 
 Добавление каталога ещё не устанавливает плагин: выполните и команду установки.
@@ -38,6 +40,7 @@ Codex — `$apple-notes-folder:setup`.
 | [peekaboo-control](plugins/peekaboo-control/README.md) | Управление macOS через Peekaboo MCP и Desktop Bridge | Claude Code, Codex |
 | [iphone-control](plugins/iphone-control/README.md) | Управление физическим iPhone через Appium MCP | Claude Code, Codex |
 | [setup-iphone-control](plugins/setup-iphone-control/README.md) | Настройка Appium MCP и подписи WDA на Mac | Claude Code, Codex |
+| [setup-bash-blesh](plugins/setup-bash-blesh/README.md) | Настройка интерактивного Bash с ble.sh в Ubuntu под WSL | Claude Code, Codex |
 | [karabiner-layout-switch](plugins/karabiner-layout-switch/README.md) | Настройка Cmd+Shift для английской и русской раскладок macOS, включая Keychron K8 Pro | Claude Code, Codex |
 | [apple-notes-folder](plugins/apple-notes-folder/README.md) | Apple Notes в одной папке: чтение, поиск, правка, картинки | Claude Code, Codex |
 | [codex-disable-skill](plugins/codex-disable-skill/README.md) | Отключение отдельных скиллов и их подсказок | Codex |
@@ -51,6 +54,15 @@ Apple Notes 2.0.0 принимает картинки только из подт
 
 Appium-плагины добавляют инструкции; подключение MCP выполняется отдельно через
 `setup-iphone-control` по запросу пользователя.
+
+Setup Bash + ble.sh добавляет инструкции и при установке не меняет dotfiles.
+Явный вызов: Claude Code — `/setup-bash-blesh:setup-bash-blesh`,
+Codex — `$setup-bash-blesh:setup-bash-blesh`.
+Скилл предназначен для Ubuntu под WSL: агент сначала проверяет среду и предлагает
+изменения; настройка выполняется по явному поручению разработчика.
+Смена профиля новых терминалов удалённого VS Code на Bash — отдельный
+необязательный шаг; VS Code не требуется для основной настройки.
+Живая интеграция с Claude Code не проверена.
 
 Peekaboo Control добавляет инструкции и не подключает MCP автоматически.
 [Подключение MCP/Bridge](plugins/peekaboo-control/skills/peekaboo-control/references/setup.md)
