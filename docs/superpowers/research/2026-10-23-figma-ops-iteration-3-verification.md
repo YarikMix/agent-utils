@@ -25,7 +25,8 @@ Canonical release — `figma-ops 1.2.0`, standalone compatibility — `figma-loo
   побайтово совпадают. Skill body одинаков, меняется только compatibility
   frontmatter; maintenance sync tool не входит в установленный legacy runtime.
 - Полный `python3 -B -m unittest discover -s plugins/figma-ops/tests -v`:
-  **280 tests OK** на Python 3.13.7. `git diff --check` — пусто.
+  **282 tests OK** на Python 3.13.7 после final fix (`406baa7`, независимый
+  controller run 6.207s). До final fix Task5 suite: 280 OK. `git diff --check` — пусто.
 - AST `feature_version=(3,10)` — **31 Python-файл**: 15 canonical runtime,
   15 generated runtime и sync tool. Это проверка синтаксиса, runtime Python 3.10
   недоступен и не проверялся.
@@ -34,7 +35,7 @@ Canonical release — `figma-ops 1.2.0`, standalone compatibility — `figma-loo
 
 ## Live read-only evidence контроллера
 
-Проверки выполнены контроллером на ранее разрешённом участке с runtime `02dfe33`.
+Проверки выполнены контроллером на ранее разрешённом участке с итоговым runtime `406baa7`; три CLI-проверки повторены после final fix.
 Публикуются только technical counts. Точные file/node, payloads и значения
 остаются в игнорируемых приватных artifacts, не в fixtures или этом отчёте.
 
@@ -42,13 +43,18 @@ Canonical release — `figma-ops 1.2.0`, standalone compatibility — `figma-loo
 |---|---|
 | Узкий `bindings` | exit0/ok; один source GET; source=root; 94 scanned nodes, 34 instances, 23 used components, 14 sets, 8 style usages, 5 styles, 84 binding rows, 20 unique variable refs, 3 mode observations; variables not_requested, single-response |
 | Узкий `bindings --with-variables` | exit0/partial; ровно source + Variables GET; Variables HTTP403, причина неизвестна; тот же полезный inventory, 20 refs unresolved, variables version null, independent-requests; fallback/retry нет |
-| `context --with-bindings` с явным ancestor root | exit0/ok; source сохранён, root расширен; ровно source + comments GET; 2575 scanned nodes, 906 instances, 78 used components, 32 sets, 424 style usages, 18 styles, 2573 binding rows, 67 unique refs; одна полная thread с двумя replies; variables not_requested |
+| `context --with-bindings` с явным ancestor root | exit0/ok; source сохранён, root расширен; ровно source + comments GET; 2575 scanned nodes, 906 instances, 78 used components, 32 sets, 424 style usages, 18 styles, 2611 binding rows, 67 unique refs; одна полная thread с двумя replies; variables not_requested |
 | Отдельный официальный MCP `get_variable_defs` | Успех на том же точном source: 11 entries, значения строковые. ID/mode mapping не подтверждён; evidence отдельно, не импортировано в REST graph |
 
 Live commands с `--limit 1 --output` сохранили полные collections, а не одну
 запись, в приватных artifacts. На узком scope все 23 component definitions
 `not_loaded`; на расширенном root одна definition — `loaded_dependency`, 77 —
 `not_loaded`. Dependency не расширяет scanned scope. Дизайн не редактировался.
+
+После final fix расширенный context сохраняет 38 null-reference raw observations
+пустых wrappers; остальные 2573 rows содержат aliases. До исправления эти
+наблюдения терялись. Они не создают variable IDs или partial, 67 unique refs
+сохранены. Узкий scope по-прежнему возвращает 84 aliases и 20 unique refs.
 
 Положительный Variables REST, alias closure этого endpoint, SLOT и extended
 collections не проверены live: для них нет доступного подходящего источника.
@@ -83,9 +89,41 @@ comments или Variables GET. Это описательное упрощени�
 simulation, host activation/discovery ими не подтверждены. Количественный gain
 или измеренная экономия tokens/time не заявляются.
 
-На момент Task5 implementation rulings отсутствуют. Итоговые review rulings с
-затратами, если возникнут, и private-identifier scan дополняет контроллер после
-review; task reviews/whole-branch review не подменяются routing simulation.
+Все пять task reviews завершены. Whole-branch review охватил исходную spec и
+диапазон от merge base до выпуска. Найден один Minor: потеря raw binding
+container с одними пустыми wrappers. Он исправлен в `406baa7`, две новые
+регрессии прошли RED→GREEN, единственный scoped re-review подтвердил ADDRESSED
+и отсутствие новых дефектов. Открытых или отложенных findings нет.
+
+Независимая controller suite после исправления: 282/282 OK, включая 22 base
+operations, 24 help calls и 12 дополнительных standalone cases. Повторный AST
+проверил 31 файл; 15 runtime modules каждого root идентичны. Skill/references
+не менялись после frozen NEW и двух успешных validators.
+
+Controller проверил 44 изменённых tracked-файла по 17 известным private/held-out
+идентификаторам: совпадений нет. Это проверка заданного набора идентификаторов,
+а не доказательство отсутствия любых возможных чувствительных данных.
+
+## Принятые границы итогового ревью
+
+Reviewer отдельно перечислил три явно исключённые возможности; контроллер
+принял каждое исключение по исходной spec:
+
+1. Effective modes, alias values и полный inherited instance diff остаются вне
+   evaluator. Цена, если объём выбран неверно: вычисленные значения и inherited
+   diff потребуют отдельной итерации; текущий результат даёт evidence.
+2. Полный resolver с загрузкой remote libraries/других files не добавляется.
+   Цена, если неверно: недоступные удалённые definitions остаются unresolved
+   до отдельного чтения.
+3. Создание Code Connect mappings и запись в Figma не добавляются к read-only
+   scope. Цена, если неверно: создание mappings и изменения дизайна потребуют
+   отдельного поручения/итерации.
+
+Иных controller rulings, parked findings или deferred minors нет. Ветка
+`figma-ops-iteration-3` и worktree сохраняются. Временные приватные payloads,
+снимки routing и служебные отчёты текущего плана удаляются при завершении;
+санитизированный результат и реализация остаются в git. Установленная версия
+остаётся на merged main до следующего merge.
 
 ## Границы разрешений
 
