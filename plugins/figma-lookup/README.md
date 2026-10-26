@@ -1,7 +1,7 @@
 # Figma Lookup — совместимое имя Figma Ops
 
-Версия 1.4.0 сохраняет установку и вызов `figma-lookup` с workflow
-Figma Ops 1.3.0: targeted Southleft Bridge для обычного live чтения,
+Версия 1.5.0 сохраняет установку и вызов `figma-lookup` с workflow
+Figma Ops 1.4.0: targeted Southleft Bridge для обычного live чтения,
 официальный Figma MCP для design-to-code/Code Connect/motion и автономный
 REST CLI для headless, dossier и полных обсуждений. Каждый plugin root содержит собственный runtime, skill
 и references; установка соседнего `figma-ops` не требуется.
@@ -31,6 +31,29 @@ python3 "$FIGMA_OPS_CLI" context SyntheticKey --node '1:2' --with-bindings --wit
 python3 "$FIGMA_OPS_CLI" comments SyntheticKey --query 'Повторить' --status all
 python3 "$FIGMA_OPS_CLI" export SyntheticKey --node '1:2' --scale 2 --dest '/tmp/figma assets'
 ```
+
+Native PNG workflow: точный Southleft capture → exclusive host save (`xb`)
+без перезаписи существующего destination → standalone offline verify.
+[Native assets](skills/figma-lookup/references/native-assets.md) содержит оба
+исполняемых recipe и границы snapshot/provenance. Capture receipt сохраняется
+отдельно; новый helper поддерживает только PNG и не требует PAT/MCP/curl/Node:
+
+```sh
+FIGMA_ASSET_VERIFY='/absolute/path/to/installed/plugin/scripts/figma_asset_verify.py'
+python3 "$FIGMA_ASSET_VERIFY" '/tmp/native asset.png' --expect-width 640 --expect-height 360 --require-transparency
+```
+
+Нужен Python 3.10+ stdlib. Оба expected размера задаются вместе и означают
+независимо подтверждённые pixels. Requested scale/geometry/preview не доказывают
+2×. Helper читает обычный файл до 64 MiB + sentinel, не пишет файлы, печатает
+JSON `source=local-file`, всегда `provenance_verified=false`; происхождение,
+version и полнота capture не подтверждаются pixels. Native version — null.
+Exit0 — требования прошли, exit1 — ошибка проверки/файла, exit2 — аргументы.
+Прозрачность подтверждают декодированные pixels; unknown не удовлетворяет
+`--require-transparency`, без требования допустим с warnings.
+Native raw cap по умолчанию 1 MiB, максимум 4 MiB до base64; oversize возвращает
+`partial/export_size_limit` без binary/downscale. Это не лимит buffer Figma.
+Потеря transport оставляет завершение capture неизвестным.
 
 MCP-серверы подключаются отдельно: manifests их не устанавливают.
 Сначала discovery реальных capabilities и schemas; для Southleft — active
@@ -95,5 +118,7 @@ Aliases/modes arrays/SLOT сохраняются raw; effective values не вы
 в исходном репозитории. Сам установленный плагин этот скрипт не требует.
 Packaging tests сравнивают копии побайтово и проверяют автономный запуск
 обоих имён с synthetic transport (11 операций и 12 help calls на root, плюс
-6 дополнительных enrichment/partial/context cases на root); реальный host discovery проверяется отдельно.
-Sanitized проверки и ограничения — [verification report](../../docs/superpowers/research/2026-10-26-figma-ops-mcp-routing-verification.md).
+6 дополнительных enrichment/partial/context cases на root). Отдельный helper:
+6 cases и 2 help calls суммарно; 16 runtime modules и 8 references на root.
+Test harness и sync tool не входят в installed runtime; реальный host discovery проверяется отдельно.
+Sanitized проверки и ограничения — [verification report](../../docs/superpowers/research/2026-10-26-figma-ops-native-assets-verification.md).

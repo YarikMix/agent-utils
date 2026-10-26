@@ -1,57 +1,19 @@
 """Execute the published Bridge recipes, without Node becoming a CLI dependency."""
 import json
 from pathlib import Path
-import re
-import shutil
-import subprocess
 import unittest
+
+from recipe_harness import NODE, run_js_recipe
 
 
 REFERENCE = Path(__file__).resolve().parents[1] / "skills/figma-ops/references/mcp-routing.md"
-NODE = shutil.which("node")
 
 
 @unittest.skipUnless(NODE, "Node is unavailable; executable Markdown recipes require Node")
 class MarkdownRecipesTest(unittest.TestCase):
     def run_recipe(self, marker, fixture, **inputs):
-        self.assertTrue(REFERENCE.exists(), "MCP routing recipes are not published yet")
-        pattern = rf"<!-- recipe:{re.escape(marker)} -->\s*```js\n(.*?)\n```"
-        match = re.search(pattern, REFERENCE.read_text(), re.S)
-        self.assertIsNotNone(match, f"Missing executable recipe: {marker}")
-        # Real API boundary double only; recipe code is never duplicated here.
-        harness = r"""
-const fs = require('fs');
-const {code, fixture, input} = JSON.parse(fs.readFileSync(0, 'utf8'));
-const accesses = [];
-const nodes = new Map(fixture.nodes.map(n => [n.id, {...n}]));
-for (const node of nodes.values()) {
-  node.parent = nodes.get(node.parentId) || null;
-  if (node.childrenIds) node.children = node.childrenIds.map(id => nodes.get(id));
-  if (node.lazy) Object.defineProperty(node, 'children', {get() {throw Error('unloaded');}});
-  node.toJSON = () => {throw Error('SceneNode serialization is forbidden');};
-}
-const figma = {
-  fileKey: fixture.fileKey || 'DemoFile',
-  get currentPage() {
-    accesses.push('selection');
-    return {selection: (fixture.selection || []).map(id => nodes.get(id))};
-  },
-  async getNodeByIdAsync(id) {accesses.push(id); return nodes.get(id) || null;},
-  async loadAllPagesAsync() {throw Error('unbounded page loading');}
-};
-(async () => {
-  try {
-    const run = new (Object.getPrototypeOf(async function(){}).constructor)('figma', 'input', code);
-    const result = await run(figma, input);
-    process.stdout.write(JSON.stringify({result, accesses}));
-  } catch (e) {process.stdout.write(JSON.stringify({error: e.message, accesses}));}
-})();
-"""
-        payload = {"code": match.group(1), "fixture": fixture,
-                   "input": {"expectedFileKey": "DemoFile", **inputs}}
-        completed = subprocess.run([NODE, "-e", harness], input=json.dumps(payload),
-                                   text=True, capture_output=True, check=True, timeout=10)
-        return json.loads(completed.stdout)
+        return run_js_recipe(REFERENCE, marker, fixture,
+                             {"expectedFileKey": "DemoFile", **inputs})
 
     def test_wrong_file_rejects_before_any_node_or_selection_access(self):
         for marker in ("identity-ancestry", "bounded-subtree"):
@@ -118,6 +80,23 @@ const figma = {
                             ("opacity", 0), ("characters", "")]:
             self.assertEqual({"state": "read", "value": value}, fields[name])
         self.assertEqual({"state": "missing"}, fields["boundVariables"])
+
+    def test_throwing_annotations_preserves_other_fields_and_bounded_child(self):
+        fixture = {"nodes": [
+            {"id": "r", "childrenIds": ["a"], "throwFields": ["annotations"],
+             "visible": False, "opacity": 0},
+            {"id": "a", "childrenIds": []},
+        ]}
+        result = self.run_recipe("bounded-subtree", fixture, rootId="r", maxNodes=2,
+                                 maxDepth=1, maxBytes=32768)["result"]
+        fields = result["observations"][0]["fields"]
+        self.assertEqual({"state": "unavailable"}, fields["annotations"])
+        self.assertEqual({"state": "read", "value": False}, fields["visible"])
+        self.assertEqual({"state": "read", "value": 0}, fields["opacity"])
+        self.assertEqual(["r", "a"], result["scope"]["nodeIds"])
+        self.assertTrue(result["partial"])
+        self.assertTrue(any("field_unavailable" in item["reasons"]
+                            for item in result["frontier"]))
 
     def test_raw_actions_preserve_nested_unknown_and_legacy(self):
         reactions = [{"trigger": {"type": "ON_CLICK"}, "actions": [
