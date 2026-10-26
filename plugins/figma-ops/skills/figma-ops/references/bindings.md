@@ -1,6 +1,12 @@
 # Использованные компоненты, styles и variables
 
-## Точный inventory
+## Интерактивный MCP read
+
+Для использованных components/styles/bindings сначала targeted raw read точного подключённого файла по [mcp-routing](mcp-routing.md), с source/root, node/depth/byte bounds. Читай полные instance property keys, raw boundVariables и mode observations, сохраняй exact IDs. Для local definitions предпочти поддерживаемые Plugin API `getLocalVariablesAsync`/`getLocalVariableCollectionsAsync`; ограничь возвращаемые refs/alias closure и явно перечисли unresolved remote refs. Уже наблюдённые remote refs можно проверить точным read-only `getVariableByIdAsync`, если поддерживается; не импортировать library entities. Успешный local catalog не обещает определения всех imported refs, наличие API не обещает values/closure. API-derived resolved values/modes не выдавай за effective значения ноды без отдельного подтверждения.
+
+Официальный `get_variable_defs` — отдельное evidence; Code Connect — профильные официальные read-only mapping tools. Отсутствие ID/mode mapping остаётся явным; похожие names/colors не подтверждают token/component mapping. Не создавать mappings. Если нужен строгий inventory/coverage/closure contract или headless artifact, используй автономный CLI ниже: его schema, budgets и defaults не меняются.
+
+## Точный CLI inventory
 
 ```sh
 python3 "$FIGMA_OPS_CLI" bindings SyntheticKey --node '1:2'
@@ -38,7 +44,7 @@ Variables collections: `variables`, `variable_collections`, `alias_links`, `unre
 
 ## Следующий источник: MCP и репозиторий
 
-Маршрут: точный context → bindings использованных entities → отдельный `get_variable_defs` по тому же root → repository tokens/components по подтверждённым именам или read-only Code Connect. Сначала discover доступные инструменты хоста и текущие схемы: наличие `get_variable_defs` и mapping tool не обещается. Успешный MCP при REST403 — отдельное evidence с другими возможностями, не восстановленный REST graph.
+Интерактивный маршрут: точный targeted context → raw bindings использованных entities → scoped Plugin API local definitions; официальный `get_variable_defs` и repository/Code Connect evidence отдельно. CLI dossier/inventory остаётся независимым полным контрактом. Сначала discover доступные инструменты хоста и текущие схемы: наличие `get_variable_defs` и mapping tool не обещается. Тарифный REST Variables 403 сам по себе не запрещает независимый предусмотренный Plugin API. Policy/organization denial не обходят другим транспортом; 429 не обходят переключением. Успешный MCP при REST403 — отдельное evidence с другими возможностями, не восстановленный REST graph.
 
 Храни MCP evidence отдельно с file/node, временем и фактическим содержимым. CLI не вызывает MCP и не импортирует provider JSON. Не соединяй MCP name→string с REST variable ID по похожему имени/значению: отсутствие ID/mode mapping остаётся явным. Подтверждённый другим read-only источником mapping используй отдельно с provenance. Code Connect проверяй по реально наблюдённым component IDs/keys и контексту проекта; чтение не разрешает создавать mappings или менять дизайн.
 

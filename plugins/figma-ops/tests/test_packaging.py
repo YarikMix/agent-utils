@@ -20,7 +20,7 @@ class PackagingTests(unittest.TestCase):
         for host, catalog in (('.claude-plugin', '.claude-plugin/marketplace.json'),
                               ('.codex-plugin', '.agents/plugins/marketplace.json')):
             entries = json.loads((ROOT / catalog).read_text())['plugins']
-            for name, version in (('figma-ops', '1.2.0'), ('figma-lookup', '1.3.0')):
+            for name, version in (('figma-ops', '1.3.0'), ('figma-lookup', '1.4.0')):
                 with self.subTest(host=host, name=name):
                     entry, = [item for item in entries if item['name'] == name]
                     source = entry['source']
@@ -43,7 +43,7 @@ class PackagingTests(unittest.TestCase):
                 skill = plugin / 'skills' / plugin.name / 'SKILL.md'
                 self.assertTrue(skill.is_file())
                 references = list((skill.parent / 'references').glob('*.md'))
-                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md', 'context.md', 'bindings.md'})
+                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md', 'context.md', 'bindings.md', 'mcp-routing.md'})
                 for path in [skill, *references]:
                     for target in re.findall(r'\]\(([^)]+)\)', path.read_text()):
                         if '://' in target or target.startswith('#'):

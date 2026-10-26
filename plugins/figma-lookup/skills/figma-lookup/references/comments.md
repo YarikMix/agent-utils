@@ -1,6 +1,8 @@
 # Полные обсуждения и точный pin
 
-Если пользователь уже дал полную ветку и читаемый pin-контекст, разбери их без повторного получения. Иначе проверь текущий MCP: он подходит, только если возвращает root и все replies. Если такого инструмента нет, настроенный REST CLI даёт полный read-only путь; [credentials и ошибки](auth.md). Дерево нод и screenshot не содержат историю обсуждений.
+Если пользователь уже дал полную ветку и читаемый pin-контекст, разбери их без повторного получения. Иначе основной полный read-only маршрут сейчас — CLI `comments`/`thread` с существующим auth. Southleft comments тоже используют REST и требуют уже работающий `FIGMA_ACCESS_TOKEN`: CLI Keychain автоматически не подхватывается. Нет Southleft PAT — используй CLI, не запускай настройку credentials. Southleft допустим только с `include_resolved=true` и проверенным полным результатом root/replies/pins; raw список не заменяет сбор веток. Другой MCP подходит только при таком же полном охвате; [credentials и ошибки](auth.md).
+
+Дерево нод, Dev annotations и screenshot не содержат историю обсуждений. Discovery/точный target — [mcp-routing](mcp-routing.md). Policy/organization denial не обходи другим транспортом; при 429 сохрани retry_after и полученное, без переключения для обхода throttling.
 
 ```sh
 python3 "$FIGMA_OPS_CLI" comments SyntheticKey --query 'повторить' --status all --output '/tmp/figma threads.json'
