@@ -1,7 +1,7 @@
 {
   "name": "figma-lookup",
-  "version": "1.3.0",
-  "description": "Совместимое имя Figma Ops: чтение, обсуждения и проверенный экспорт",
+  "version": "1.4.0",
+  "description": "Совместимое имя Figma Ops: точный Southleft/official MCP routing и автономный read-only REST CLI",
   "skills": "./skills/",
   "author": {
     "name": "Yaroslav Mihalev"
@@ -9,6 +9,6 @@
   "license": "MIT",
   "interface": {
     "displayName": "Figma Lookup (compatibility)",
-    "shortDescription": "Поиск, полные обсуждения и проверенный экспорт Figma"
+    "shortDescription": "Read-only Figma: Southleft, official MCP и REST CLI"
   }
 }

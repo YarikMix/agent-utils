@@ -2,6 +2,8 @@
 
 Используй поддерживаемый MCP-экспорт, если он даёт требуемый файл. Если текущая схема/выдача не обеспечивает результат, настроенный REST даёт `export`/`fills`; [auth](auth.md). Ограничения отдельного MCP не распространяй на все инструменты. UI fallback нужен, когда доступные MCP/REST результата не дают.
 
+Southleft `figma_capture_screenshot` по проверенной схеме ограничивает длинную сторону 1568 px: preview не гарантирует asset 2×. Проверенный targeted `exportAsync` либо другой MCP export подходит при достаточном контракте и проверке скачанного файла; не утверждай 2× только по запрошенному scale. Discovery/точный fileKey — [mcp-routing](mcp-routing.md). Tool без fileKey не привязывай к файлу по старому activeFile; предпочти targeted read/export либо иной точный маршрут.
+
 ```sh
 python3 "$FIGMA_OPS_CLI" export SyntheticKey --node '1:2' --node '1:3' --format png --scale 2 --dest '/tmp/figma assets'
 python3 "$FIGMA_OPS_CLI" fills SyntheticKey --node '1:2'

@@ -1,7 +1,7 @@
 {
   "name": "figma-ops",
-  "version": "1.2.0",
-  "description": "Чтение Figma: поиск, полные обсуждения и проверенный экспорт через MCP и REST",
+  "version": "1.3.0",
+  "description": "Read-only Figma: точный live scope через Southleft Bridge, official design/motion tools и автономный REST CLI",
   "skills": "./skills/",
   "author": {
     "name": "Yaroslav Mihalev"

@@ -1,18 +1,20 @@
 # Context dossier, annotations и границы доказательств
 
-## Единый workflow
+## Интерактивный MCP workflow
 
-Сначала сверь доступные MCP tools и текущие схемы. Для простого чтения используй подходящий MCP; REST dossier удобен, когда уже настроен token. Без REST-доступа продолжай доступные MCP-чтения, отмечая непроверенные секции. CLI не собирает motion/визуал: `not_collected` означает границу CLI, а не отсутствие MCP API или данных в макете.
+Сначала выполни [discovery/точный target](mcp-routing.md): Southleft active probe и connected files; каждый execute с fileKey и in-code guard. Для ancestry/структуры/annotations — bounded targeted raw read, для реализации — официальный `get_design_context` после его prerequisite. Для строгого сохранённого dossier и headless режима остаётся CLI workflow ниже. Без REST продолжай доступные MCP-чтения, отмечая непроверенные секции. CLI не собирает motion/визуал: `not_collected` означает границу CLI, а не отсутствие MCP API или данных в макете.
 
-1. Сохрани точную source ноду внешней ссылки. Начни с `context` выбранного subtree либо MCP metadata для ancestry.
-2. Для утверждения о целом экране выбери явный ancestor root, назови его и при необходимости проверь screenshot. Расширяй `--scope-root`, сохраняя source; `--node` переопределяет сам source.
+1. Сохрани точные file/branch и source ноду внешней ссылки. Прочитай identity/ancestry targeted recipe; пустое selection не повод сканировать файл.
+2. Для утверждения о целом экране выбери явный ancestor root, сохрани source/root и проверь screenshot. В CLI расширяй `--scope-root`, сохраняя source; `--node` переопределяет сам source.
 3. Прочитай нужные annotations, полные comment threads и prototype actions. Это отдельные источники; нарисованные стрелки также проверяются отдельно.
 4. Если задача касается keyframes/animation, запроси доступный официальный `get_motion_context` для выбранного frame/subtree. Если motion находится на destination, запроси именно destination. Prototype Smart Animate не является keyframe track.
 5. Сохрани выдачу MCP/сниппеты отдельными evidence artifacts доступным хосту способом рядом со ссылкой на REST dossier. CLI не импортирует произвольный provider JSON и не обещает собрать всё одним вызовом.
 
 Перед КАЖДЫМ `use_figma` загрузи актуальный `figma-use`; для motion через него также `figma-use-motion`. Перед `get_design_context` — `figma-design-to-code`; design context нужен для реализации. Если skill отсутствует, руководство получают через доступный официальный `get_figma_skill` и тот же провайдер для его references. При missing tools/unsupported motion отметь конкретную секцию непроверенной и продолжай доступное. Пустые metadata/reactions и screenshot покоя не доказывают отсутствие timeline и не дают duration/easing.
 
-## Source и scope root
+MCP evidence сохраняет фактические server/tool/transport, file/branch, source/root, время и limits каждой части. Для каждого раздела различай прочитано, не запрошено, недоступно, усечено, явно пусто. Live Plugin API snapshot и сохранённый REST response не получают общей document version: неизвестная version — null. Не имитируй CLI schema_version=1 для MCP artifacts и не считай dossier полным по одному успешному вызову.
+
+## Сохранённый CLI dossier: source и scope root
 
 ```sh
 python3 "$FIGMA_OPS_CLI" context DemoFile --node '31:8' --output '/tmp/figma evidence/source.json'

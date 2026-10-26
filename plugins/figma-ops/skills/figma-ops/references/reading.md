@@ -1,6 +1,12 @@
 # Структура, поиск, прототип и motion
 
-## Inspect и поиск
+## Интерактивное чтение через MCP
+
+Для selection/ancestry/структуры/текста/geometry сначала Southleft targeted read-only execute на точном подключённом файле: [discovery и исполняемые recipes](mcp-routing.md). Явно задай root и bounds (по умолчанию 200 nodes, depth 4, 32768 UTF-8 bytes); при cap сохраняй partial/frontier. Source внешней ссылки остаётся source при расширении к ancestor frame. Пустое selection не инициирует file-wide поиск. Tool без fileKey не получает target из старого activeFile; не менять selection/page ради чтения.
+
+При отсутствии Bridge используй подходящий официальный read или автономные CLI команды ниже. Геометрия и screenshot проверяются по точной ноде; успешный raw read не означает полного dossier. Все последующие флаги, budgets и envelope описывают **CLI**, не новые MCP reads.
+
+## CLI inspect и поиск
 
 ```sh
 python3 "$FIGMA_OPS_CLI" inspect SyntheticKey
@@ -19,7 +25,7 @@ python3 "$FIGMA_OPS_CLI" search SyntheticKey --query 'Повторить' --node
 
 ## Привязки дизайн-системы
 
-Для used components/styles, полных instance property keys и variable aliases используй [bindings](bindings.md): `bindings` точного subtree или `context --with-bindings` переиспользуют существующий source/root. `componentId`, metadata `key` и TARGET file key — разные идентификаторы; remote key не разрешает читать другой файл. Полный response catalog не означает, что все его entries использованы в scope. Style metadata не даёт computed CSS, explicit mode map не даёт effective mode. Отдельное MCP `get_variable_defs` требует discovery текущей схемы; evidence сохраняется отдельно от REST IDs.
+Для used components/styles, полных instance property keys и variable aliases начни с targeted raw read по [bindings](bindings.md). Для CLI inventory/coverage `bindings` точного subtree или `context --with-bindings` сохраняют существующий source/root. `componentId`, metadata `key` и TARGET file key — разные идентификаторы; remote key не разрешает читать другой файл. Полный response catalog не означает, что все его entries использованы в scope. Style metadata не даёт computed CSS, explicit mode map не даёт effective mode. Отдельное MCP `get_variable_defs` требует discovery текущей схемы; evidence сохраняется отдельно от REST IDs.
 
 ## Инстансы и геометрия
 
@@ -27,7 +33,11 @@ python3 "$FIGMA_OPS_CLI" search SyntheticKey --query 'Повторить' --node
 
 Координаты могут быть относительно родителя. Сумма x/y без матриц трансформации неверна для поворота/масштаба; x/y повёрнутой ноды не равны верхнему левому углу видимой картинки. Если дерево расходится с рендером, проверь трансформации и измерь видимые края по проверенному экспорту. Размер `svgAssets` относится к экспортированному вектору: сравни его с viewBox/ассетом репозитория и CSS-размером, не выводи визуальный масштаб по одному положению. Подробности замеров — [assets](assets.md).
 
-## Prototype: actions, BFS и raw timing
+## Prototype: raw MCP read
+
+Предпочти targeted Bridge `node.reactions` в bounded subtree recipe из [mcp-routing](mcp-routing.md). Сохраняй ordered modern `actions[]`, nested conditionals, legacy `action`, unknown fields, false/zero; поле missing не заменяй `[]`. Southleft summary/deep serializer даже с `verbosity=full` может потерять modern actions. Raw transition — отдельное evidence, не keyframes; единицы Plugin API не выводи из REST значений. Для готового BFS/envelope используй CLI ниже; альтернативный официальный `use_figma` требует `figma-use` перед каждым вызовом.
+
+## CLI prototype: actions, BFS и raw timing
 
 ```sh
 python3 "$FIGMA_OPS_CLI" prototype DemoFile --node '31:4' --follow 1 --max-frames 6 --output '/tmp/figma evidence/prototype.json'
@@ -45,7 +55,7 @@ Frontier сохраняет `depth_limit`, `frame_limit`, `forbidden`, `not_foun
 
 ## MCP и animation timelines
 
-Metadata может не содержать interactions. Доступный официальный `use_figma` позволяет read-only чтение Plugin API `node.reactions`; перед КАЖДЫМ вызовом загрузи актуальный `figma-use` и сверь текущую схему. Не записывай reactions и не переключай прототип ради чтения. Сохраняй точные source/destination IDs и неизвестные поля без домыслов.
+Metadata может не содержать interactions. Наличие `figma.motion` в Bridge не доказывает чтение definitions/keyframes: targeted read допустим после проверки доступности и фактического результата. Доступный официальный `use_figma` позволяет read-only чтение Plugin API `node.reactions`; перед КАЖДЫМ вызовом загрузи актуальный `figma-use` и сверь текущую схему. Не записывай reactions и не переключай прототип ради чтения. Сохраняй точные source/destination IDs и неизвестные поля без домыслов.
 
 Keyframes — отдельный источник: доступный официальный `get_motion_context` запрашивается для выбранного frame/subtree, при необходимости отдельно для destination. Фактически возвращённый animated-node inventory, snippets, tracks и coordination hints сохраняй отдельным evidence artifact: наличие tracks не обещается любой схемой/ответом. REST transitions/Smart Animate не являются keyframe tracks. Для реализации motion — `figma-implement-motion`; перед `get_design_context` — `figma-design-to-code`, он нужен для реализации, не разведки. Через `use_figma` чтение motion требует также `figma-use-motion`. При unsupported API зафиксируй предел и продолжи остальное, без повторов. Полный workflow — [context](context.md).
 
