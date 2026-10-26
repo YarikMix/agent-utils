@@ -109,7 +109,7 @@
     },
     {
       "name": "figma-ops",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "description": "Read-only Figma: точный live scope через Southleft Bridge, official design/motion tools и автономный REST CLI",
       "author": {
         "name": "Yaroslav Mihalev"
@@ -119,7 +119,7 @@
     },
     {
       "name": "figma-lookup",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "description": "Совместимое имя Figma Ops: точный Southleft/official MCP routing и автономный read-only REST CLI",
       "author": {
         "name": "Yaroslav Mihalev"

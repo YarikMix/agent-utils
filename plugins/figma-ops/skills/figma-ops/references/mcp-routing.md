@@ -140,7 +140,7 @@ return result;
 
 Для bindings нужны exact IDs, полные property keys и raw aliases/mode observations: см. [bindings](bindings.md). `componentId` у Plugin API instance может требовать отдельного read-only API lookup; отсутствие этого поля не доказывает отсутствие component. Для local definitions доступны `figma.variables.getLocalVariablesAsync` и коллекции через `getLocalVariableCollectionsAsync`, если поддерживаются. Ограничь возвращаемые definitions нужными raw IDs/closure и budget; library imports не делать, unresolved remote refs перечислить. API-derived resolved values/modes не становятся effective node values без отдельного подтверждения. Official `get_variable_defs` — самостоятельный источник, без name-based слияния IDs.
 
-Motion: сначала профильный `get_motion_context`. Bridge `figma.motion` допустим только после проверки API и фактически возвращённых definitions/keyframes; наличие namespace не доказывает полноту парсера или данные конкретной ноды. Preview точной ноды отличается от asset export: см. [assets](assets.md). Comments Southleft требуют отдельного работающего PAT: см. [comments](comments.md).
+Motion: сначала профильный `get_motion_context`. Bridge `figma.motion` допустим только после проверки API и фактически возвращённых definitions/keyframes; наличие namespace не доказывает полноту парсера или данные конкретной ноды. Preview точной ноды отличается от asset export: PNG capture → host save → offline pixel checks — [native-assets](native-assets.md), остальные форматы/fills — [assets](assets.md). Comments Southleft требуют отдельного работающего PAT: см. [comments](comments.md).
 
 ## Ошибки и evidence
 

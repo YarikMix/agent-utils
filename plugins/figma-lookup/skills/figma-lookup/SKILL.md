@@ -11,7 +11,7 @@ description: Compatibility alias for figma-ops. Use when reading Figma designs, 
 
 Сверь текущие host catalog/schemas: prefixes серверов различаются. Для Southleft проверь status **active probe**, затем connected files. Перед каждым targeted `figma_execute` передай точный **fileKey** и проверь `figma.fileKey` в code **до чтения**. URL задаёт file/branch и source; node ID не уникален между файлами. Tools без fileKey не связывай с target по прежнему activeFile. Нет target среди подключённых — другой разрешённый read либо явный блокер. Не переключай вкладки скрытно. Пустое selection не разрешает whole-file scan.
 
-Runnable recipes, bounds и fallback — [mcp-routing](references/mcp-routing.md).
+Runnable recipes, bounds и fallback — [mcp-routing](references/mcp-routing.md). Native PNG capture/save и offline проверка файла — [native-assets](references/native-assets.md); standalone verifier разрешай относительно загруженного plugin root.
 
 ## Задача → маршрут
 

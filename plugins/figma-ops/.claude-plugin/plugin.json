@@ -1,6 +1,6 @@
 {
   "name": "figma-ops",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Read-only Figma: точный live scope через Southleft Bridge, official design/motion tools и автономный REST CLI",
   "skills": "./skills/",
   "author": {

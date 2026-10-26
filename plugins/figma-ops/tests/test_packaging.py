@@ -1,4 +1,5 @@
 """Installed roots are self-contained; generated compatibility cannot drift."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -8,6 +9,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+
+from test_image import png
 
 ROOT = Path(__file__).resolve().parents[3]
 CANONICAL = ROOT / 'plugins' / 'figma-ops'
@@ -20,7 +23,7 @@ class PackagingTests(unittest.TestCase):
         for host, catalog in (('.claude-plugin', '.claude-plugin/marketplace.json'),
                               ('.codex-plugin', '.agents/plugins/marketplace.json')):
             entries = json.loads((ROOT / catalog).read_text())['plugins']
-            for name, version in (('figma-ops', '1.3.0'), ('figma-lookup', '1.4.0')):
+            for name, version in (('figma-ops', '1.4.0'), ('figma-lookup', '1.5.0')):
                 with self.subTest(host=host, name=name):
                     entry, = [item for item in entries if item['name'] == name]
                     source = entry['source']
@@ -43,7 +46,7 @@ class PackagingTests(unittest.TestCase):
                 skill = plugin / 'skills' / plugin.name / 'SKILL.md'
                 self.assertTrue(skill.is_file())
                 references = list((skill.parent / 'references').glob('*.md'))
-                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md', 'context.md', 'bindings.md', 'mcp-routing.md'})
+                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md', 'context.md', 'bindings.md', 'mcp-routing.md', 'native-assets.md'})
                 for path in [skill, *references]:
                     for target in re.findall(r'\]\(([^)]+)\)', path.read_text()):
                         if '://' in target or target.startswith('#'):
@@ -58,7 +61,7 @@ class PackagingTests(unittest.TestCase):
     def test_generated_runtime_references_and_body_match(self):
         runtime = {p.name: p.read_bytes() for p in (CANONICAL / 'scripts').glob('*.py') if p.name != 'sync-compat.py'}
         copied = {p.name: p.read_bytes() for p in (LEGACY / 'scripts').glob('*.py')}
-        self.assertEqual(len(runtime), 15)
+        self.assertEqual(len(runtime), 16)
         self.assertEqual(copied, runtime)
         for source in (CANONICAL / 'skills/figma-ops/references').glob('*.md'):
             self.assertEqual((LEGACY / 'skills/figma-lookup/references' / source.name).read_bytes(), source.read_bytes())
@@ -87,6 +90,76 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(snapshots[0], snapshots[1])
             self.assertFalse(stale.exists())
             self.assertFalse((copied.parent / 'sync-compat.py').exists())
+
+    def test_standalone_asset_verifier_from_cwd_with_spaces(self):
+        for source in (CANONICAL, LEGACY):
+            with self.subTest(plugin=source.name), tempfile.TemporaryDirectory(prefix='figma asset install ') as temporary:
+                root = Path(temporary)
+                plugin = root / 'only installed plugin'
+                shutil.copytree(source, plugin)
+                self.assertEqual([path.name for path in root.iterdir()], ['only installed plugin'])
+                cwd = root / 'unrelated working directory'
+                cwd.mkdir()
+                script = plugin / 'scripts/figma_asset_verify.py'
+                transparent = cwd / 'transparent asset.dat'
+                opaque = cwd / 'opaque asset.png'
+                transparent.write_bytes(png(b'\x00\x10\x20\x30\x00'))
+                opaque.write_bytes(png(b'\x00\x10\x20\x30\xff'))
+                binary = root / 'fake bin'
+                binary.mkdir()
+                call_log = root / 'forbidden calls.log'
+                call_log.write_text('')
+                for name in ('curl', 'security'):
+                    command = binary / name
+                    command.write_text('#!' + sys.executable + '\nimport os\n'
+                                       "with open(os.environ['FIGMA_PACKAGING_CALL_LOG'], 'a') as log: log.write('called\\n')\n"
+                                       'raise SystemExit(99)\n')
+                    command.chmod(0o700)
+                environment = dict(os.environ, FIGMA_TOKEN='', FIGMA_ACCESS_TOKEN='',
+                                   FIGMA_PACKAGING_CALL_LOG=str(call_log), PYTHONDONTWRITEBYTECODE='1',
+                                   PATH=str(binary) + os.pathsep + os.defpath)
+                cache = Path.home() / '.cache' / 'figma-ops'
+
+                def cache_snapshot():
+                    return (cache.exists(), {str(path.relative_to(cache)): (path.stat().st_size, path.stat().st_mtime_ns)
+                                             for path in cache.rglob('*') if path.is_file()})
+
+                def snapshot():
+                    return {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+                            if path.is_file() else None for path in root.rglob('*')}
+
+                before, cache_before = snapshot(), cache_snapshot()
+                help_result = subprocess.run([sys.executable, str(script), '--help'], cwd=cwd,
+                                             env=environment, capture_output=True, text=True)
+                self.assertEqual(help_result.returncode, 0, help_result.stderr)
+                self.assertIn('--require-transparency', help_result.stdout)
+                cases = [([str(transparent), '--expect-width', '1', '--expect-height', '1',
+                           '--require-transparency'], 0, None),
+                         ([str(opaque), '--require-transparency'], 1, 'asset_mismatch'),
+                         ([str(transparent), '--expect-width', '1'], 2, 'invalid_argument')]
+                helper_count = 0
+                for arguments, code, error in cases:
+                    with self.subTest(arguments=arguments):
+                        result = subprocess.run([sys.executable, str(script), *arguments], cwd=cwd,
+                                                env=environment, capture_output=True, text=True)
+                        self.assertEqual(result.returncode, code, result.stderr + result.stdout)
+                        receipt = json.loads(result.stdout)
+                        self.assertEqual(result.stderr, '')
+                        self.assertEqual(receipt['source'], 'local-file')
+                        self.assertIs(receipt['data']['provenance_verified'], False)
+                        if error is None:
+                            self.assertEqual((result.returncode, json.loads(result.stdout)['source']), (0, 'local-file'))
+                            self.assertEqual(receipt['status'], 'ok')
+                            self.assertEqual(receipt['data']['checks'], {'valid_png': 'passed', 'width': 'passed',
+                                                                       'height': 'passed', 'transparency': 'passed'})
+                        else:
+                            self.assertEqual((receipt['status'], receipt['error']['code']), ('error', error))
+                        self.assertEqual(snapshot(), before)
+                        self.assertEqual(cache_snapshot(), cache_before)
+                        helper_count += 1
+                self.assertEqual(helper_count, 3)
+                self.assertEqual(call_log.read_text(), '')
+                print(f'{source.name}: {helper_count} standalone asset helper cases, 1 helper help call')
 
     def test_standalone_cli_from_cwd_with_spaces(self):
         for source in (CANONICAL, LEGACY):

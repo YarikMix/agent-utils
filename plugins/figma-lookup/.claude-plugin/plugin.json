@@ -1,6 +1,6 @@
 {
   "name": "figma-lookup",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Совместимое имя Figma Ops: точный Southleft/official MCP routing и автономный read-only REST CLI",
   "skills": "./skills/",
   "author": {

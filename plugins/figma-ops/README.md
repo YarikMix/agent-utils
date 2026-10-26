@@ -2,7 +2,7 @@
 
 Read-only работа с Figma для Claude Code и Codex: поиск экранов и текста,
 предки нод, annotations, prototype actions, context dossier, полные обсуждения
-и проверенный экспорт. Версия 1.3.0 выбирает маршрут между Southleft Bridge, официальным Figma MCP
+и проверенный экспорт. Версия 1.4.0 выбирает маршрут между Southleft Bridge, официальным Figma MCP
 и автономным REST CLI по задаче. Плагин добавляет skill и сохраняет 11 CLI
 операций; MCP-серверы подключаются отдельно, manifests их не устанавливают.
 
@@ -18,7 +18,7 @@ codex plugin add figma-ops@yarikmix-plugins
 
 Skill [figma-ops](skills/figma-ops/SKILL.md) доступен по имени плагина/скилла
 и автоматически для подходящих задач. Manifests обоих хостов указывают
-`./skills/`. `figma-lookup` 1.4.0 сохраняет прежнее имя и тот же workflow;
+`./skills/`. `figma-lookup` 1.5.0 сохраняет прежнее имя и тот же workflow;
 для новой установки достаточно одного из имён. Каждый plugin root автономен.
 
 ## Маршруты
@@ -38,7 +38,8 @@ Skill [figma-ops](skills/figma-ops/SKILL.md) доступен по имени п
 | Definitions/modes | Доступный Plugin API read; отдельный официальный `get_variable_defs` как evidence. Не импортировать remote entities и не угадывать effective values |
 | Keyframes/timeline | Официальный `get_motion_context`; Smart Animate transition не заменяет timeline |
 | Preview | Точный Southleft preview или официальный screenshot |
-| PNG 2×, SVG/PDF, image fills, QR | Проверенный MCP export либо CLI `export`/`fills`; скачать файл и проверить размер/прозрачность, preview cap не доказывает 2× |
+| Native PNG | Southleft exact-node capture → exclusive host save → offline `figma_asset_verify.py`; ожидаемые pixels подтверждаются отдельно |
+| SVG/PDF, image fills, QR | Действующие MCP/CLI `export`/`fills` по доступным capabilities; скачать и проверить artifact |
 | Полные comments/threads | Существующий CLI auth; Southleft только с работающим PAT, `include_resolved=true` и полным root/replies/pins |
 | Headless, сохранённый dossier, CLI inventory/coverage | Автономный REST `context`/`bindings` и остальные действующие команды |
 
@@ -66,6 +67,36 @@ service `figma-rest`, account `figma`. Southleft `FIGMA_ACCESS_TOKEN` — отд
 фактическими server/tool/transport, временем, coverage и ограничениями.
 Не присваивай MCP результатам CLI envelope или общую document version с REST.
 Подробный discovery и bounded recipes: [MCP routing](skills/figma-ops/references/mcp-routing.md).
+
+## Native PNG: capture → save → verify
+
+[Native assets](skills/figma-ops/references/native-assets.md) содержит исполняемые
+recipes: read-only `exportAsync` точной ноды с fileKey guard, затем host сохраняет
+bytes через exclusive create (`xb`), сохраняя существующий destination.
+Capture receipt и локальная проверка сохраняются отдельно; Plugin API не пишет
+файл на компьютер. Native workflow и новый helper поддерживают только PNG.
+
+```sh
+FIGMA_ASSET_VERIFY='/absolute/path/to/installed/plugin/scripts/figma_asset_verify.py'
+python3 "$FIGMA_ASSET_VERIFY" '/tmp/native asset.png' --expect-width 640 --expect-height 360 --require-transparency
+```
+
+Пара размеров означает независимо подтверждённые ожидаемые **пиксели**.
+`scale_requested=2`, geometry или preview не доказывают фактический 2×.
+Helper требует только Python 3.10+ stdlib, работает без PAT/MCP/curl/Node
+и не записывает файлы. Он читает обычный файл с пределом 64 MiB + sentinel,
+проверяет PNG существующим decoder и печатает JSON `source=local-file`.
+Exit0 — требования прошли, exit1 — ошибка файла/проверки, exit2 — аргументы;
+ширина и высота задаются вместе. `--require-transparency` принимает только
+подтверждённые прозрачные pixels: opaque не проходит, unknown остаётся
+непроверенным. Без этого требования unknown допустим с warnings.
+
+Capture выдаёт raw PNG до 1 MiB по умолчанию (настраиваемо до 4 MiB до base64);
+превышение — `partial/export_size_limit` без binary и без уменьшения scale.
+Это не лимит уже выделенной Figma памяти. Native version остаётся null;
+`provenance_verified=false` в локальной проверке всегда: pixels/alpha не
+доказывают source identity, snapshot version или полноту capture.
+Preview не заменяет asset, потеря transport не доказывает завершение export.
 
 ## CLI
 
@@ -152,7 +183,9 @@ frontmatter имени/совместимости. Tests и сам sync tool н�
 Packaging tests проверяют оба marketplace/manifests, локальные references,
 точность копий и все 11 операций/12 help calls в каждом из двух отдельных
 установленных roots из cwd с пробелами: 22 базовые операции, 24 help calls и 12 дополнительных enrichment/partial/context cases.
-Это файловые и synthetic transport проверки; они не заменяют проверку
+Отдельно проверяются 6 standalone asset helper cases и 2 helper help calls.
+Runtime в каждом root: 16 модулей и 8 references; test harness и sync tool
+не входят в installed runtime. Это файловые и synthetic transport проверки; они не заменяют проверку
 реального discovery в Claude Code/Codex или живого Figma API.
-Sanitized результаты и ограничения MCP routing —
-[verification report](../../docs/superpowers/research/2026-10-26-figma-ops-mcp-routing-verification.md).
+Sanitized результаты native assets и границы проверки —
+[verification report](../../docs/superpowers/research/2026-10-26-figma-ops-native-assets-verification.md).
