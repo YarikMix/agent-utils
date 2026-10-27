@@ -1,0 +1,10 @@
+{
+  "name": "setup-sdd-ponytail",
+  "version": "1.0.0",
+  "description": "Настройка глобальных инструкций для совместного использования Superpowers SDD и Ponytail",
+  "skills": "./skills/",
+  "author": {
+    "name": "Yaroslav Mihalev"
+  },
+  "license": "MIT"
+}
