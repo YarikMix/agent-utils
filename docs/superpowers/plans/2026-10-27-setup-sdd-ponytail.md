@@ -56,7 +56,7 @@
 
 ---
 
-### Задача 1: Скилл и поведенческая проверка настройки
+### Task 1: Скилл и поведенческая проверка настройки
 
 **Files:**
 - Create: `plugins/setup-sdd-ponytail/skills/setup-sdd-ponytail/SKILL.md`
@@ -92,7 +92,7 @@
 
 - [ ] **Шаг 6: Коммит после штатного ревью задачи.** Добавить только два файла задачи; сообщение `feat: add SDD Ponytail memory setup skill`. Перед коммитом проверить staged diff.
 
-### Задача 2: Упаковка для Claude Code и Codex
+### Task 2: Упаковка для Claude Code и Codex
 
 **Files:**
 - Create: `plugins/setup-sdd-ponytail/.claude-plugin/plugin.json`
