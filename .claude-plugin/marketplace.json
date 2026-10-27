@@ -98,6 +98,16 @@
       "category": "development"
     },
     {
+      "name": "setup-sdd-ponytail",
+      "version": "1.0.0",
+      "description": "Настройка глобальных инструкций для совместного использования Superpowers SDD и Ponytail",
+      "author": {
+        "name": "Yaroslav Mihalev"
+      },
+      "source": "./plugins/setup-sdd-ponytail",
+      "category": "development"
+    },
+    {
       "name": "peekaboo-control",
       "version": "1.0.0",
       "description": "Управление macOS через Peekaboo MCP и Desktop Bridge",

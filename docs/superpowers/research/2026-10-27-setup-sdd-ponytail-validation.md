@@ -82,3 +82,30 @@ The Claude command is the unavailable native-client probe, not an additional suc
 The system skill-creator `quick_validate.py` reports `Skill is valid!`. Additional assertions confirm one exact copy of the design's base paragraph, propagation into every correction including continued subagents, acceptance using evidence in the existing SDD cycle, and absence of private paths and held-out example markers in the skill. The skill adds no executable scripts, hooks, dependencies or invocation restriction.
 
 The saved rule requires the full base paragraph in initial executor/reviewer assignments and every correction, including continued subagents, together with the approved specification and plan paths. Acceptance uses the approved specification and evidence of required checks; omissions return to the existing SDD correction cycle without an additional review or new cycle.
+
+## Task 2: packaging for Claude Code and Codex
+
+The package adds Claude Code and Codex manifests with `name: setup-sdd-ponytail`,
+`version: 1.0.0` and `skills: ./skills/`, an MIT license and Russian installation
+and usage documentation. Each marketplace registers the plugin once with the
+local source `./plugins/setup-sdd-ponytail`; all pre-existing marketplace entries
+remain semantically unchanged. The root README links the plugin and lists both
+installation commands. The self-contained skill from Task 1 is unchanged.
+
+One-off Python assertions parse all four JSON files, check unique registrations,
+matching names and versions, registered skill paths, local links in both READMEs,
+and compare all existing marketplace entries with saved pre-change JSON snapshots.
+The system skill-creator `quick_validate.py` and `git diff --check` also pass.
+No static-test framework, installer, hook or dependency is added; other packages
+and their tests are untouched.
+
+| Evidence level | Result |
+|---|---|
+| Package structure, registration and documentation | Static checks PASS |
+| Synthetic RED/GREEN profile writes | Task 1 results above; not rerun for packaging |
+| Actual native plugin/global-instruction loading | Unverified; no plugin installation or new live loading test performed |
+| Observed execution of a real SDD task | Unverified |
+
+Packaging checks do not establish live client compatibility or enforcement.
+The native Claude Code login limitation and documentation access limitations
+recorded above still apply. No real user memory or client configuration was changed.

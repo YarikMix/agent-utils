@@ -14,6 +14,7 @@ claude plugin install figma-ops@yarikmix-plugins
 claude plugin install iphone-control@yarikmix-plugins
 claude plugin install setup-iphone-control@yarikmix-plugins
 claude plugin install setup-bash-blesh@yarikmix-plugins
+claude plugin install setup-sdd-ponytail@yarikmix-plugins
 
 codex plugin marketplace add YarikMix/agent-utils
 codex plugin add apple-notes-folder@yarikmix-plugins
@@ -24,6 +25,7 @@ codex plugin add figma-ops@yarikmix-plugins
 codex plugin add iphone-control@yarikmix-plugins
 codex plugin add setup-iphone-control@yarikmix-plugins
 codex plugin add setup-bash-blesh@yarikmix-plugins
+codex plugin add setup-sdd-ponytail@yarikmix-plugins
 ```
 
 Добавление каталога ещё не устанавливает плагин: выполните и команду установки.
@@ -41,6 +43,7 @@ Codex — `$apple-notes-folder:setup`.
 | [iphone-control](plugins/iphone-control/README.md) | Управление физическим iPhone через Appium MCP | Claude Code, Codex |
 | [setup-iphone-control](plugins/setup-iphone-control/README.md) | Настройка Appium MCP и подписи WDA на Mac | Claude Code, Codex |
 | [setup-bash-blesh](plugins/setup-bash-blesh/README.md) | Настройка интерактивного Bash с ble.sh в Ubuntu под WSL | Claude Code, Codex |
+| [setup-sdd-ponytail](plugins/setup-sdd-ponytail/README.md) | Настройка глобальных инструкций для Superpowers SDD и Ponytail | Claude Code, Codex |
 | [karabiner-layout-switch](plugins/karabiner-layout-switch/README.md) | Настройка Cmd+Shift для английской и русской раскладок macOS, включая Keychron K8 Pro | Claude Code, Codex |
 | [apple-notes-folder](plugins/apple-notes-folder/README.md) | Apple Notes в одной папке: чтение, поиск, правка, картинки | Claude Code, Codex |
 | [codex-disable-skill](plugins/codex-disable-skill/README.md) | Отключение отдельных скиллов и их подсказок | Codex |
@@ -63,6 +66,15 @@ Codex — `$setup-bash-blesh:setup-bash-blesh`.
 Смена профиля новых терминалов удалённого VS Code на Bash — отдельный
 необязательный шаг; VS Code не требуется для основной настройки.
 Живая интеграция с Claude Code не проверена.
+
+Setup SDD + Ponytail настраивает текущий клиент по умолчанию; PAIW необязателен.
+Вызов: Claude Code — `/setup-sdd-ponytail:setup-sdd-ponytail`,
+Codex — `$setup-sdd-ponytail:setup-sdd-ponytail`.
+«Настрой» разрешает необходимые правки глобальных инструкций, «только проверь» — чтение.
+Установка сама по себе ничего не меняет в памяти; повторная настройка не создаёт дублей.
+После записи загрузку инструкций проверяют в новой сессии.
+Упаковка и синтетические сценарии проверены; фактическая загрузка глобальных инструкций
+и соблюдение SDD в живом клиенте не подтверждены. Подробности — в [README плагина](plugins/setup-sdd-ponytail/README.md).
 
 Peekaboo Control добавляет инструкции и не подключает MCP автоматически.
 [Подключение MCP/Bridge](plugins/peekaboo-control/skills/peekaboo-control/references/setup.md)
