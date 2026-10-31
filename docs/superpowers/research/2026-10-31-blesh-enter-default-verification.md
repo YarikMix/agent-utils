@@ -103,3 +103,16 @@ Ruling: Use the documented PTY failure and fresh isolated baseline as the refere
 Ruling: Keep the execution record in docs/superpowers/research/2026-10-31-blesh-enter-default-verification.md; scratch briefs/reports remain in this plan's ignored workspace — preserves reviewable evidence after required workspace cleanup — cost if wrong is one small documentation artifact.
 Ruling: Do not install project dependencies or run unrelated plugin suites — this task changes only a Bash configuration recipe and has targeted PTY/metadata checks — cost if wrong is an undiscovered unrelated regression, with no runtime files changed.
 Ruling: Correct the executable acceptance examples now under the explicit negative spec verdict — the spec requires the documented tests to yield real output lines, even though the reviewer rated this a minor documentation defect — cost if wrong is one tiny fix commit and one scoped re-review.
+
+## Final branch gate
+
+Independent whole-branch review of `bf33142..76e3364`: ready to merge, no
+Critical/Important/Minor findings. Its scope exclusions match the approved spec;
+no additional functionality was requested. Final controller checks passed:
+skill metadata validation, Bash syntax for 4 shell examples, 8 local Markdown
+links, and whitespace validation for the complete branch diff.
+
+The SDD implementation and review gates are complete. No push, PR, merge,
+package release, or real dotfile changes were performed; integration awaits
+the user's choice. Live-client and natural-idle-suggestion limitations above
+remain unverified.
