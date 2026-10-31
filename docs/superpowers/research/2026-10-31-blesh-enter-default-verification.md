@@ -71,3 +71,18 @@ for these harness errors.
 No clean-machine install, real dotfile edit/rollback, live VS Code UI, marketplace
 installation/discovery, or live Claude Code integration was exercised. Independent
 spec/quality review is pending with the controller.
+
+## Copyable printf example review check
+
+A review questioned the escaping in the three inline `printf` examples in
+`references/validation.md`. Direct byte checks at implementation commit
+`9241ae4` found **one** backslash in each command, already the required spelling.
+No correction to those examples was necessary. Python `repr` and JSON tool output
+escape that byte for display; their doubled display is not the Markdown source.
+
+Extracted all three commands from the actual Markdown and executed them with
+`bash --noprofile --norc -c` (wrapping the `; fi` example in `if true; then`).
+Each exited 0, emitted no stderr, and produced exactly its label followed by one
+newline: `enter-one`, `enter-two`, and `if-complete`. Byte assertions checked
+exactly one backslash in each source command and byte `10` at the output end.
+`git diff --check` passed. The PTY suite was not repeated for this review check.
