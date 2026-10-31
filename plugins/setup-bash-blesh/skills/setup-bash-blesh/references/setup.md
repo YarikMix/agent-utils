@@ -16,7 +16,12 @@ Normally `~/.blerc` takes precedence; only when it is absent is
 `${XDG_CONFIG_HOME:-$HOME/.config}/blesh/init.sh` used. Preserve an existing XDG
 init instead of creating a `.blerc` that silently shadows it. Follow explicit
 custom init paths. Identify later bindings, themes, and repeated source/attach
-calls that could override the proposed settings.
+calls that could override the proposed settings. Inspect the effective editing
+mode/keymap (`set -o` and `ble-bind -m emacs --print`) and both Enter
+spellings (`C-m` and `RET`), including later overrides.
+The default recipe targets Emacs mode: preserve vi mode and custom keymaps,
+surface incompatible bindings, and explain that Emacs bindings alone do not
+configure vi mode. Do not silently switch editing modes.
 
 Classify the host as working, partial, or unconfigured. Reuse a working install
 and settings; do not reinstall solely because this skill was invoked. Inspect
@@ -85,15 +90,31 @@ In the effective `.blerc`, XDG init, or explicit init file, apply exactly:
 ```bash
 ble-bind -m auto_complete -f C-i auto_complete/insert
 ble-bind -m auto_complete -f TAB auto_complete/insert
+ble-bind -m emacs -f C-m 'accept-line syntax'
+ble-bind -m emacs -f RET 'accept-line syntax'
 ble-face -s syntax_error none
 ```
 
-These bindings act in `auto_complete` mode when a suggestion is visible. Keep
+The Tab bindings act in `auto_complete` mode when a suggestion is visible. Keep
 ordinary completion outside that mode; replacing the global Emacs Tab binding
 with `auto_complete/insert-on-end` does not satisfy this contract. Both spellings
-are required. Resolve later overrides and update agreed existing entries rather
-than accumulating duplicates. Check options that disable autosuggestions before
-claiming this behavior is available.
+of Tab are required. Resolve later overrides and update agreed existing entries
+rather than accumulating duplicates. Check options that disable autosuggestions
+before claiming this behavior is available.
+
+The two Emacs Enter bindings are part of the default setup. `accept-line syntax`
+runs syntactically complete input, including a bracketed multiline paste, on
+Enter without Ctrl+J. Its `syntax` modifier inserts a continuation newline for
+unfinished constructs such as `if true; then` or an unmatched quote. The
+MULTILINE label may remain; keep multiline editing and bracketed paste enabled.
+Preserve custom keymaps and resolve conflicting Enter bindings under the same
+authorization and backup rules as Tab; a matching binding needs no new entry.
+
+Apply the updated effective init in a new terminal, or source that exact init
+file in an existing Bash where ble.sh is already loaded. Reload the discovered
+`.blerc`, XDG init, or explicit `--rcfile` path, not a guessed default; avoid
+sourcing `.bashrc` again and repeating source/attach calls. Existing terminals
+keep their current bindings until the effective init is reloaded.
 
 ## 4. Optional remote VS Code profile
 

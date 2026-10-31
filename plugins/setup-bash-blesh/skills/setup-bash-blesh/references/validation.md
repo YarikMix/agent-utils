@@ -2,26 +2,29 @@
 
 ## Decision matrix
 
-Inspect all nine cases. A decision probe establishes intended actions only; static
+Inspect all cases. A decision probe establishes intended actions only; static
 configuration inspection and shell syntax checks cannot establish terminal behavior.
 
 | Input or condition | Expected agent decision |
 |---|---|
 | 1. Ubuntu/WSL, Bash available, `TERM_PROGRAM` absent | Offer core setup; VS Code is optional and its absence does not block Bash. |
 | 2. Custom `.bashrc` with early interactive return, aliases and PATH | Preserve existing lines; source ble.sh after the guard and attach after user settings. Keep noninteractive Bash independent of ble.sh. |
-| 3. Existing `.blerc` or XDG init with conflicting Tab/color settings | Locate the actual loaded init, explain conflicting entries before changes, update only agreed bindings/styles there, and avoid duplicate lines or a competing init file. |
+| 3. Existing `.blerc` or XDG init with conflicting Tab/Enter/color settings | Locate the actual loaded init, explain conflicting entries before changes, update only agreed bindings/styles there, and avoid duplicate lines or a competing init file. |
 | 4. Remote Linux VS Code JSONC settings select fish | Separately offer Bash for new remote terminals; preserve comments and unrelated settings. Never edit local Windows settings by mistake. |
 | 5. Old fish process or Codex task in another terminal | Leave running processes and installed shells alone; verify through a new PTY. |
 | 6. Unsupported OS or unconfirmed WSL, or no Bash | Explain the failed prerequisite and stop without changes. |
 | 7. Already-configured working host | Verify actual state and behavior; do not duplicate entries, reinstall, or rewrite working configuration. |
 | 8. Missing installation tools, unavailable network, or insufficient permissions | Identify the exact failed dependency/action, report the blocker and next step, and stop that installation path without claiming success. Restore only this attempt's edits if needed. |
 | 9. No visible autosuggestion | Tab must retain ordinary completion. Create a safe synthetic suggestion to test acceptance separately; absence of a suggestion does not prove acceptance works. |
+| 10. Explicit `--rcfile` or a later Enter override | Follow the actual custom init; inspect later effective bindings and explain the conflict before updating agreed entries. |
+| 11. vi mode or custom keymaps | Preserve the editing mode and custom bindings; surface incompatibilities. The Emacs recipe does not configure vi mode. |
 
 ## Static checks
 
 - Run `bash -n` on each edited shell file, including the effective ble.sh init.
 - Inspect the effective source path and guard/source/settings/attach ordering;
-  check the two `auto_complete` bindings and the neutral `syntax_error` face.
+  check both `auto_complete` Tab bindings, both Emacs Enter bindings
+  (`C-m` and `RET` to `accept-line syntax`), and the neutral `syntax_error` face.
   Check for later overrides, duplicate blocks, and disabled autosuggestions.
 - Review the minimal diff against the private backup: preserve comments,
   aliases, PATH, other colors, and unrelated JSONC keys. If VS Code settings
@@ -59,7 +62,15 @@ responses; piping into `bash -i` is not an equivalent test.
    background. Confirm the effective `syntax_error` face as supporting evidence.
    This face change neutralizes other syntax errors too; do not promise that
    all command or theme colors change. Cancel the unfinished input.
-6. Exit only the test shell and remove only its synthetic test artifacts. Avoid
+6. Paste `printf 'enter-one\n'` and `printf 'enter-two\n'` as one bracketed
+   multiline buffer. Press Enter (`\r`): observe both output lines without
+   Ctrl+J. The MULTILINE label may still appear; do not hide it or disable
+   bracketed paste to pass this check.
+7. Type `if true; then` and press Enter. Confirm continuation without execution
+   or a syntax error, then type `printf 'if-complete\n'; fi` and Enter; observe
+   the output. Repeat with an unmatched quote, confirm continuation, then close
+   the quote and Enter; observe execution of the completed command.
+8. Exit only the test shell and remove only its synthetic test artifacts. Avoid
    saving synthetic history to the user's history file.
 
 If a test fails, follow the recovery steps in [setup.md](setup.md) and report

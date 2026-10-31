@@ -7,7 +7,8 @@ description: Use only when a developer explicitly invokes setup-bash-blesh to in
 
 Keep Bash as the shell. The target is syntax highlighting, autosuggestions,
 Tab acceptance of a visible suggestion, ordinary completion when none is
-visible, and neutral highlighting for incomplete syntax.
+visible, Enter execution of complete multiline input, continuation for unfinished
+syntax, and neutral highlighting for incomplete syntax.
 
 1. Read [the setup workflow](references/setup.md) before inspecting and
    proposing changes. Core prerequisites are Ubuntu, WSL, and available Bash;
