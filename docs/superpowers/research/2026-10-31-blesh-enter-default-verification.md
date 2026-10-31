@@ -86,3 +86,20 @@ Each exited 0, emitted no stderr, and produced exactly its label followed by one
 newline: `enter-one`, `enter-two`, and `if-complete`. Byte assertions checked
 exactly one backslash in each source command and byte `10` at the output end.
 `git diff --check` passed. The PTY suite was not repeated for this review check.
+
+## SDD task review and execution decisions
+
+Task review and scoped follow-up approved spec compliance and task quality.
+The only finding was withdrawn after source-byte inspection: the reviewer had
+misread escaped tool output. The acceptance examples were already correct;
+the follow-up commit records direct command evidence without changing them.
+The controller also checked that six original authorization, backup, rollback,
+preservation, and idempotency safeguards remain unchanged.
+
+Controller decisions, in order:
+
+Ruling: Use a sibling worktree based on origin/main — user selected the isolated SDD workflow, and the existing checkout belongs to another branch — cost if wrong is one removable local branch/worktree; no existing branch is switched.
+Ruling: Use the documented PTY failure and fresh isolated baseline as the reference-skill RED evidence, with the fresh implementer exercising the recipe — this is a small reference update, not a new discipline policy — cost if wrong is additional behavioral verification before review approval.
+Ruling: Keep the execution record in docs/superpowers/research/2026-10-31-blesh-enter-default-verification.md; scratch briefs/reports remain in this plan's ignored workspace — preserves reviewable evidence after required workspace cleanup — cost if wrong is one small documentation artifact.
+Ruling: Do not install project dependencies or run unrelated plugin suites — this task changes only a Bash configuration recipe and has targeted PTY/metadata checks — cost if wrong is an undiscovered unrelated regression, with no runtime files changed.
+Ruling: Correct the executable acceptance examples now under the explicit negative spec verdict — the spec requires the documented tests to yield real output lines, even though the reviewer rated this a minor documentation defect — cost if wrong is one tiny fix commit and one scoped re-review.
