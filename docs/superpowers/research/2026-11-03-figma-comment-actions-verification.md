@@ -26,9 +26,23 @@ No blocking guidance gap was reported. These checks did not call live Figma.
 
 ## Live verification
 
-**Pending web-session setup by the user.** No live edit/Resolve/Unresolve result
-is claimed. The current CLI PAT is configured; no cookie is copied from browser
-storage automatically. The user was given the local `session-login` command.
+Passed on 2026-11-03 (Europe/Moscow), using a web session saved by the user
+through local hidden `session-login` input. Public REST identity matched the
+configured session account; no credential or personal identity is recorded here.
+
+- Created a clearly labelled synthetic root comment and a reply.
+- `comment-edit` changed the root to multiline UTF-8 text, retaining its ID/pin.
+- `comment-resolve` and `comment-unresolve` each returned changed=true and
+  verified=true after fresh public REST readback, with no warnings.
+- A final independent REST read confirmed the root was open and its reply
+  remained attached. The test threads were then resolved, preserving history.
+- The comment-posting MCP ignored the attempted reply parameter and created a
+  second root. The actual reply was created through public REST; the extra test
+  root was also resolved. This was a test setup issue, not a CLI mutation issue.
+- No internal request/header/payload changes were needed after the live test.
+- An existing thread authored by another account returned HTTP 403. Fresh REST
+  confirmed it stayed open; no alternative credentials or transport were tried.
+  This validates the error receipt, not a universal rule about Figma permissions.
 
 The internal PUT path, headers and payload were researched from figmanage:
 
@@ -38,7 +52,8 @@ The internal PUT path, headers and payload were researched from figmanage:
 The Python implementation is independently written against that observed
 protocol; no figmanage package or TypeScript implementation is bundled.
 The internal API can change independently of the public REST API. Synthetic
-transport tests prove the client behavior, not that Figma accepts this protocol.
+transport tests cover client failures; the live run confirmed acceptance of all
+three operations for the configured account on the test date.
 
 ## Review
 
@@ -49,7 +64,7 @@ RED regressions; fixed ID validation at the shared comment parser boundary.
 Both regressions and the full 350-test suite pass. No Critical or Minor findings.
 
 Review also confirmed that readback-cache ENOSPC becomes write_unconfirmed.
-Live internal-API acceptance remains pending. Native Windows ACL behavior was
+Live internal-API acceptance subsequently passed. Native Windows ACL behavior was
 not exercised on Linux; the platform limit is documented. Code review was run
 while waiting for session setup; any later live-protocol correction must receive
 its own RED→GREEN regression and full-suite verification.
