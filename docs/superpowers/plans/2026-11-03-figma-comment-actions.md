@@ -125,4 +125,4 @@ self.assertEqual([method(call) for call in calls], ['GET', 'PUT', 'GET'])
 
 Spec mapped: commands and preservation → Task 2; credentials → Task 1; routing/version/docs → Task 3; verification/errors/cache → Tasks 1–2; installed/live checks and PR → Task 3/Finish. Five Review Focus cases have explicit tests in their owner tasks. Interfaces use the existing Client/envelope/OpsError contracts. No new dependency, browser extraction, general mutation framework or unrelated administration is introduced.
 
-Execution method is not chosen yet. No implementation starts before the user's choice required by AGENTS.md.
+Execution method: executing-plans, explicitly selected by the user. Tasks 1–2 complete; Task 3 in progress.
