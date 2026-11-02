@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only Figma operations CLI, runnable from any working directory."""
+"""Figma reads and explicitly requested comment changes, runnable from any cwd."""
 import argparse
 from pathlib import Path
 import sys
@@ -7,6 +7,8 @@ import sys
 from figma_ops_core import Client, OpsError, atomic_write, envelope, serialize_json
 from figma_ops_nodes import inspect, search
 from figma_ops_comments import comments, thread
+from figma_ops_comment_actions import comment_resolve, comment_unresolve, comment_edit
+from figma_ops_session import session_login, session_logout, session_path
 from figma_ops_assets import export, fills
 from figma_ops_annotations import annotations
 from figma_ops_prototype import prototype
@@ -75,6 +77,20 @@ def build_parser():
     conversation.set_defaults(handler=thread)
     conversation.add_argument('target')
     conversation.add_argument('--comment', required=True, type=nonempty)
+    mutations = []
+    for name, handler in (('comment-resolve', comment_resolve), ('comment-unresolve', comment_unresolve),
+                          ('comment-edit', comment_edit)):
+        command = commands.add_parser(name, help='Change one comment and verify fresh REST state.')
+        command.set_defaults(handler=handler)
+        command.add_argument('target')
+        command.add_argument('--comment', required=True, type=nonempty)
+        if name == 'comment-edit':
+            command.add_argument('--body-file', type=Path, required=True)
+        mutations.append(command)
+    for name, handler in (('session-login', session_login), ('session-logout', session_logout)):
+        command = commands.add_parser(name, help='Manage only the explicit local Figma web session.')
+        command.set_defaults(handler=handler)
+        mutations.append(command)
     rendering = commands.add_parser('export', help='Download and verify node renders.')
     rendering.set_defaults(handler=export)
     rendering.add_argument('target')
@@ -118,7 +134,7 @@ def build_parser():
     inventory.add_argument('--scope-root')
     inventory.add_argument('--with-variables', action='store_true')
     inventory.add_argument('--limit', type=positive_integer, default=20)
-    for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources, notes, behavior, dossier, inventory):
+    for command in (diagnostic, inspection, searching, discussions, conversation, rendering, sources, notes, behavior, dossier, inventory, *mutations):
         command.add_argument('--refresh', action='store_true', help='Fetch again and replace cached result.')
         command.add_argument('--no-cache', action='store_true', help='Do not read or write persistent cache.')
         command.add_argument('--cache-dir', type=Path)
@@ -132,6 +148,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         args = build_parser().parse_args(argv)
         operation = args.command
+        if args.output is not None and args.output.resolve() == session_path().resolve():
+            args.output = None
+            raise OpsError('invalid_argument', 'Output must not overwrite the local Figma session.')
         client = Client(cache_dir=args.cache_dir, refresh=args.refresh, no_cache=args.no_cache)
         result = args.handler(args, client)
         serialize_json(result)
@@ -148,7 +167,8 @@ def main(argv: list[str] | None = None) -> int:
             atomic_write(output, content)
             result = {**result, 'data': {'artifact': str(output), 'bytes': len(content)}}
         except OSError:
-            result = envelope(operation or 'unknown', None, None, status='error',
+            receipt = result.get('data') if isinstance(result.get('data'), dict) and result['data'].get('write_attempted') else None
+            result = envelope(operation or 'unknown', result.get('file_key'), receipt, status='error',
                               error={'code': 'output_error', 'message': 'Could not write JSON output artifact.',
                                      'http_status': None, 'retry_after': None})
             code = 1
