@@ -8,7 +8,7 @@
 - Comment commands RED: 17 failures for missing actions; GREEN: 17 passed.
 - Cache invalidation RED: missing invalidation assertion; GREEN: 35 core tests passed.
 - Packaging RED: version 1.5.0 missing in both host manifests; GREEN: 5 packaging tests passed.
-- Complete suite: `python3 -m unittest discover -s plugins/figma-ops/tests`: **348 tests passed**.
+- Complete suite: `python3 -m unittest discover -s plugins/figma-ops/tests`: **350 tests passed**.
 - Installed-copy verification: all 16 command help pages plus top-level help; isolated cwd with spaces, synthetic session and stateful fake Figma server. Edit preserves Unicode/CRLF, Resolve and Unresolve persist the expected state, replies remain intact.
 - `git diff --check`: passed.
 
@@ -42,4 +42,14 @@ transport tests prove the client behavior, not that Figma accepts this protocol.
 
 ## Review
 
-Whole-branch review is pending. Final results will be recorded before handoff.
+Fresh whole-branch review used gpt-6-astra (high), range `46957a8..8d363a6`.
+One Important finding: malformed id/parent_id in post-write readback raised an
+uncaught TypeError, losing the uncertain-write receipt. Reproduced with two
+RED regressions; fixed ID validation at the shared comment parser boundary.
+Both regressions and the full 350-test suite pass. No Critical or Minor findings.
+
+Review also confirmed that readback-cache ENOSPC becomes write_unconfirmed.
+Live internal-API acceptance remains pending. Native Windows ACL behavior was
+not exercised on Linux; the platform limit is documented. Code review was run
+while waiting for session setup; any later live-protocol correction must receive
+its own RED→GREEN regression and full-suite verification.
