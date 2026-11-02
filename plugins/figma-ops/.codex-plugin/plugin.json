@@ -1,7 +1,7 @@
 {
   "name": "figma-ops",
-  "version": "1.4.1",
-  "description": "Read-only Figma: точный live scope через Southleft Bridge, official design/motion tools и автономный REST CLI",
+  "version": "1.5.0",
+  "description": "Figma: точное чтение макетов, полный контекст и проверенные изменения комментариев",
   "skills": "./skills/",
   "author": {
     "name": "Yaroslav Mihalev"
@@ -9,6 +9,6 @@
   "license": "MIT",
   "interface": {
     "displayName": "Figma Ops",
-    "shortDescription": "Read-only Figma: Southleft, official MCP и REST CLI"
+    "shortDescription": "Figma: чтение, Resolve/Unresolve и редактирование комментариев"
   }
 }

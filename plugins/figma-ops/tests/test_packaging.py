@@ -14,7 +14,8 @@ from test_image import png
 
 ROOT = Path(__file__).resolve().parents[3]
 CANONICAL = ROOT / 'plugins' / 'figma-ops'
-COMMANDS = ('doctor', 'inspect', 'search', 'comments', 'thread', 'export', 'fills', 'annotations', 'prototype', 'context', 'bindings')
+COMMANDS = ('doctor', 'inspect', 'search', 'comments', 'thread', 'export', 'fills', 'annotations', 'prototype', 'context', 'bindings',
+            'comment-resolve', 'comment-unresolve', 'comment-edit', 'session-login', 'session-logout')
 
 
 class PackagingTests(unittest.TestCase):
@@ -23,7 +24,7 @@ class PackagingTests(unittest.TestCase):
                               ('.codex-plugin', '.agents/plugins/marketplace.json')):
             entries = json.loads((ROOT / catalog).read_text())['plugins']
             self.assertNotIn('figma-lookup', [item['name'] for item in entries])
-            for name, version in (('figma-ops', '1.4.1'),):
+            for name, version in (('figma-ops', '1.5.0'),):
                 with self.subTest(host=host, name=name):
                     entry, = [item for item in entries if item['name'] == name]
                     source = entry['source']
@@ -143,7 +144,7 @@ class PackagingTests(unittest.TestCase):
                     result = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
                     help_count += 1
-                self.assertEqual(help_count, 12)
+                self.assertEqual(help_count, 17)
                 # A fake transport executes the installed runtime, without network or Keychain.
                 binary = root / 'fake bin'
                 binary.mkdir()
@@ -258,6 +259,74 @@ class PackagingTests(unittest.TestCase):
                       f'{additional_count} additional enrichment/partial/context cases')
                 self.assertEqual(len(list((cwd / 'export').glob('*.png'))), 1)
                 self.assertEqual(len(list((cwd / 'fills').glob('*'))), 1)
+
+    def test_installed_mutations_use_only_packaged_code_and_local_session(self):
+        with tempfile.TemporaryDirectory(prefix='figma mutations ') as temporary:
+            root = Path(temporary)
+            plugin, home, cwd, binary = (root / name for name in ('installed plugin', 'home', 'other cwd', 'bin'))
+            shutil.copytree(CANONICAL, plugin)
+            for directory in (home, cwd, binary):
+                directory.mkdir()
+            curl = binary / 'curl'
+            curl.write_text('#!' + sys.executable + '\n' + MUTATION_CURL)
+            curl.chmod(0o700)
+            session_file = home / '.config/figma-ops/session.json'
+            session_file.parent.mkdir(parents=True, mode=0o700)
+            session_file.write_text(json.dumps({'cookie': 'synthetic-cookie', 'user_id': '123'}))
+            session_file.chmod(0o600)
+            state = root / 'server.json'
+            state.write_text(json.dumps({'comments': [
+                {'id': '10', 'parent_id': '', 'message': 'Before', 'resolved_at': None,
+                 'client_meta': {'node_id': '1:2'}, 'created_at': '2026-01-01T00:00:00Z', 'user': {'id': '123'}},
+                {'id': '11', 'parent_id': '10', 'message': 'Keep reply', 'resolved_at': None,
+                 'client_meta': None, 'created_at': '2026-01-01T00:01:00Z', 'user': {'id': '123'}}]}))
+            environment = dict(os.environ, HOME=str(home), USERPROFILE=str(home), FIGMA_TOKEN='synthetic-pat',
+                               FIGMA_TEST_STATE=str(state), PATH=str(binary) + os.pathsep + os.defpath)
+            body = root / 'new text.txt'
+            body.write_bytes('Новый текст\r\nстрока 2\n'.encode())
+            script = plugin / 'scripts/figma_ops.py'
+            for command, flags in [('comment-edit', ['--body-file', str(body)]), ('comment-resolve', []), ('comment-unresolve', [])]:
+                result = subprocess.run([sys.executable, str(script), command, 'Key', '--comment', '10', *flags],
+                                        cwd=cwd, env=environment, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                receipt = json.loads(result.stdout)
+                self.assertEqual((receipt['data']['changed'], receipt['data']['verified']), (True, True))
+                self.assertNotIn('synthetic-cookie', result.stdout + result.stderr)
+                self.assertNotIn('synthetic-pat', result.stdout + result.stderr)
+            saved = json.loads(state.read_text())['comments']
+            self.assertEqual(saved[0]['message'], 'Новый текст\r\nстрока 2\n')
+            self.assertIsNone(saved[0]['resolved_at'])
+            self.assertEqual(saved[1]['message'], 'Keep reply')
+
+
+MUTATION_CURL = r'''
+import json, os, sys
+from pathlib import Path
+args = sys.argv[1:]
+url = args[args.index('--url') + 1]
+config = sys.stdin.read()
+state = Path(os.environ['FIGMA_TEST_STATE'])
+data = json.loads(state.read_text())
+assert 'synthetic-cookie' not in ' '.join(args)
+assert 'synthetic-pat' not in ' '.join(args)
+if url == 'https://api.figma.com/v1/files/Key/comments':
+    assert 'synthetic-pat' in config and 'synthetic-cookie' not in config
+    payload = data
+else:
+    assert url == 'https://www.figma.com/api/file/Key/comments/10'
+    assert args[args.index('--request') + 1] == 'PUT'
+    assert 'synthetic-cookie' in config and 'synthetic-pat' not in config
+    body = json.loads(Path(args[args.index('--data-binary') + 1][1:]).read_text())
+    if 'resolved_at' in body:
+        data['comments'][0]['resolved_at'] = '2026-11-03T00:00:00Z' if body['resolved_at'] == 'true' else None
+    else:
+        data['comments'][0]['message'] = body['message_meta'][0]['t']
+    state.write_text(json.dumps(data))
+    payload = {'error': False}
+Path(args[args.index('--output') + 1]).write_text(json.dumps(payload))
+Path(args[args.index('--dump-header') + 1]).write_text('HTTP/1.1 200 OK\r\n\r\n')
+print('200', end='')
+'''
 
 
 FAKE_CURL = r'''

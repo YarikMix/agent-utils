@@ -208,7 +208,7 @@ class Client:
             except (OSError, subprocess.SubprocessError):
                 raise OpsError('network_error', 'HTTPS request could not be completed.') from None
 
-    def get_json(self, path: str, params: dict | None = None) -> ApiResponse:
+    def _location(self, path: str, params: dict | None = None) -> tuple[str, str, Path]:
         try:
             parsed = urlsplit(path)
         except ValueError:
@@ -224,6 +224,17 @@ class Client:
         identity = hashlib.sha256(token.encode()).hexdigest()
         cache_key = hashlib.sha256((identity + '\n' + url).encode()).hexdigest()
         cache_path = self.cache_dir / (cache_key + '.json')
+        return url, token, cache_path
+
+    def invalidate(self, path: str, params: dict | None = None) -> None:
+        _, _, cache_path = self._location(path, params)
+        try:
+            cache_path.unlink(missing_ok=True)
+        except OSError:
+            raise OpsError('cache_error', 'Could not invalidate cached comments; no write attempted.') from None
+
+    def get_json(self, path: str, params: dict | None = None) -> ApiResponse:
+        url, token, cache_path = self._location(path, params)
         if not self.no_cache and not self.refresh:
             try:
                 os.chmod(self.cache_dir, 0o700)

@@ -43,6 +43,23 @@ class CurlBoundary:
 
 
 class CoreTests(unittest.TestCase):
+    def test_invalidate_only_selected_endpoint_query_and_identity(self):
+        self.assertTrue(hasattr(core.Client, 'invalidate'), 'Cache invalidation is not implemented')
+        self.boundary.responses = [(200, {'n': n}, {}) for n in range(5)]
+        first = self.client()
+        other = self.client(token='other-secret')
+        first.get_json('files/Key/comments')
+        first.get_json('files/Key/comments', {'as_md': True})
+        other.get_json('files/Key/comments')
+        first.invalidate('files/Key/comments')
+        self.assertEqual(first.get_json('files/Key/comments').payload, {'n': 3})
+        self.assertEqual(first.get_json('files/Key/comments', {'as_md': True}).payload, {'n': 1})
+        self.assertEqual(other.get_json('files/Key/comments').payload, {'n': 2})
+        with patch.object(Path, 'unlink', side_effect=OSError('synthetic-secret')):
+            with self.assertRaises(core.OpsError) as caught:
+                first.invalidate('files/Key/comments')
+        self.assertNotIn('synthetic-secret', str(caught.exception))
+
     def setUp(self):
         self.assertIsNotNone(core, 'REST core is not implemented')
         self.temp = tempfile.TemporaryDirectory()
