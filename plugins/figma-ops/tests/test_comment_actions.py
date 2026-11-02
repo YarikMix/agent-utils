@@ -254,3 +254,15 @@ class ActionsTests(unittest.TestCase):
                 code = cli.main(args)
             self.assertEqual(code, 2)
             self.assertNotIn('synthetic-cookie', out.getvalue())
+
+    def test_malformed_readback_identifiers_keep_uncertain_write_receipt(self):
+        for field in ('id', 'parent_id'):
+            with self.subTest(field=field):
+                after = deepcopy(self.after)
+                after['comments'][-1][field] = ['invalid']
+                self.responses(after=after, write=subprocess.TimeoutExpired(['curl'], 35))
+                code, result = self.invoke()
+                self.assertEqual((code, result['error']['code']), (1, 'write_unconfirmed'))
+                self.assertEqual((result['file_key'], result['data']['comment_id']), ('Key', '10'))
+                self.assertTrue(result['data']['write_attempted'])
+                self.assertIsNone(result['data']['changed'])

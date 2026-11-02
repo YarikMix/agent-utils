@@ -26,7 +26,10 @@ def _order(item):
 def load_threads(client: Client, target: Target) -> tuple[ApiResponse, list[dict], int]:
     response = client.get_json(f'files/{target.file_key}/comments')
     raw = response.payload.get('comments')
-    if not isinstance(raw, list) or any(not isinstance(item, dict) or not item.get('id') for item in raw):
+    if not isinstance(raw, list) or any(
+            not isinstance(item, dict) or not isinstance(item.get('id'), str) or not item['id']
+            or (item.get('parent_id') is not None and not isinstance(item['parent_id'], str))
+            for item in raw):
         raise OpsError('invalid_response', 'Figma response has no valid comments list.')
     by_id = {item['id']: item for item in raw}
     grouped = {}

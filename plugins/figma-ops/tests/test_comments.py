@@ -40,6 +40,15 @@ def discussion():
 
 
 class CommentTests(unittest.TestCase):
+    def test_malformed_id_types_return_safe_error_before_thread_grouping(self):
+        for field, value in [('id', ['invalid']), ('id', 123), ('parent_id', ['invalid']), ('parent_id', {})]:
+            with self.subTest(field=field, value=value):
+                payload = discussion()
+                payload['comments'][0][field] = value
+                self.boundary.responses = [(200, payload, {})]
+                code, result = self.invoke(['comments', 'Key'])
+                self.assertEqual((code, result['error']['code']), (1, 'invalid_response'))
+
     def setUp(self):
         self.payload = discussion()
         self.boundary = CurlBoundary([(200, self.payload, {})])
