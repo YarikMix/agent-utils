@@ -12,7 +12,6 @@ claude plugin install apple-notes-folder@yarikmix-plugins
 claude plugin install peekaboo-control@yarikmix-plugins
 claude plugin install figma-ops@yarikmix-plugins
 claude plugin install phone-control@yarikmix-plugins
-claude plugin install setup-iphone-control@yarikmix-plugins
 claude plugin install setup-bash-blesh@yarikmix-plugins
 claude plugin install setup-sdd-ponytail@yarikmix-plugins
 
@@ -23,7 +22,6 @@ codex plugin add codex-vscode-sessions@yarikmix-plugins
 codex plugin add peekaboo-control@yarikmix-plugins
 codex plugin add figma-ops@yarikmix-plugins
 codex plugin add phone-control@yarikmix-plugins
-codex plugin add setup-iphone-control@yarikmix-plugins
 codex plugin add setup-bash-blesh@yarikmix-plugins
 codex plugin add setup-sdd-ponytail@yarikmix-plugins
 ```
@@ -39,8 +37,7 @@ Codex — `$apple-notes-folder:setup`.
 |---|---|---|
 | [figma-ops](plugins/figma-ops/README.md) | Figma context dossier, design-system bindings, annotations/prototype, поиск текста, полные обсуждения, Resolve/Unresolve, редактирование комментариев и проверенный экспорт через MCP/REST | Claude Code, Codex |
 | [peekaboo-control](plugins/peekaboo-control/README.md) | Управление macOS через Peekaboo MCP и Desktop Bridge | Claude Code, Codex |
-| [phone-control](plugins/phone-control/README.md) | Управление физическими iPhone и Android через Appium MCP; настройка Android и клавиатуры/буфера iOS Simulator | Claude Code, Codex |
-| [setup-iphone-control](plugins/setup-iphone-control/README.md) | Настройка Appium MCP и подписи WDA на Mac | Claude Code, Codex |
+| [phone-control](plugins/phone-control/README.md) | Настройка и управление физическими iPhone и Android через Appium MCP; клавиатура и буфер iOS Simulator | Claude Code, Codex |
 | [setup-bash-blesh](plugins/setup-bash-blesh/README.md) | Настройка интерактивного Bash с ble.sh в Ubuntu под WSL | Claude Code, Codex |
 | [setup-sdd-ponytail](plugins/setup-sdd-ponytail/README.md) | Настройка глобальных инструкций для Superpowers SDD и Ponytail | Claude Code, Codex |
 | [karabiner-layout-switch](plugins/karabiner-layout-switch/README.md) | Настройка Cmd+Shift для английской и русской раскладок macOS, включая Keychron K8 Pro | Claude Code, Codex |
@@ -54,8 +51,10 @@ Apple Notes 2.0.0 принимает картинки только из подт
 вложений текущего диалога; произвольные пути и scratchpad больше не разрешены.
 `dist/` включён в плагин: установка не требует npm или сборки.
 
-Appium-плагины добавляют инструкции; подключение MCP выполняется отдельно через
-`setup-iphone-control` для iPhone или `setup-android-control` из `phone-control` для Android по запросу пользователя.
+Плагин `phone-control` добавляет инструкции; подключение MCP выполняется по запросу
+через входящие в него `setup-iphone-control` для iPhone и `setup-android-control` для Android.
+Прежний отдельный плагин `setup-iphone-control` заменён на `phone-control`;
+[переход и новые вызовы](plugins/phone-control/README.md#установка).
 
 Setup Bash + ble.sh добавляет инструкции и при установке не меняет dotfiles.
 Явный вызов: Claude Code — `/setup-bash-blesh:setup-bash-blesh`,

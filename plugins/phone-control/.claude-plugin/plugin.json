@@ -1,7 +1,7 @@
 {
   "name": "phone-control",
-  "version": "1.1.0",
-  "description": "Управление физическими iPhone и Android через Appium MCP, настройка Android и клавиатуры/буфера iOS Simulator",
+  "version": "1.2.0",
+  "description": "Настройка и управление физическими iPhone и Android через Appium MCP, клавиатура и буфер iOS Simulator",
   "skills": "./skills/",
   "author": {
     "name": "Yaroslav Mihalev"
