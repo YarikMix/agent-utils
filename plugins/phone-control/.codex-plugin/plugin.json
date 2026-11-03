@@ -1,6 +1,6 @@
 {
   "name": "phone-control",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Управление физическими iPhone и Android через Appium MCP, настройка Android и клавиатуры/буфера iOS Simulator",
   "skills": "./skills/",
   "interface": {

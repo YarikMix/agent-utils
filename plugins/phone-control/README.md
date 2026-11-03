@@ -41,6 +41,8 @@ codex plugin add phone-control@yarikmix-plugins
 [setup-iphone-control](https://github.com/YarikMix/agent-utils/tree/main/plugins/setup-iphone-control).
 Разблокировку телефона, доверие компьютеру и вход в аккаунты выполняет человек.
 Системные диалоги внутри порученной задачи агент обрабатывает по свежему экрану.
+Предупреждение Android о 16-КБ страницах закрывается кнопкой «ОК» без выбора
+«Больше не показывать»; это не подтверждает совместимость APK с 16-КБ страницами.
 WebView/Chromedriver и управление эмуляторами/симуляторами через Appium не входят в основной сценарий.
 
 `setup-ios-sim` использует preferences macOS и Peekaboo для GUI, отдельно от Appium.
