@@ -39,7 +39,7 @@ Codex — `$apple-notes-folder:setup`.
 |---|---|---|
 | [figma-ops](plugins/figma-ops/README.md) | Figma context dossier, design-system bindings, annotations/prototype, поиск текста, полные обсуждения, Resolve/Unresolve, редактирование комментариев и проверенный экспорт через MCP/REST | Claude Code, Codex |
 | [peekaboo-control](plugins/peekaboo-control/README.md) | Управление macOS через Peekaboo MCP и Desktop Bridge | Claude Code, Codex |
-| [phone-control](plugins/phone-control/README.md) | Управление физическими iPhone и Android через Appium MCP; настройка Android | Claude Code, Codex |
+| [phone-control](plugins/phone-control/README.md) | Управление физическими iPhone и Android через Appium MCP; настройка Android и клавиатуры/буфера iOS Simulator | Claude Code, Codex |
 | [setup-iphone-control](plugins/setup-iphone-control/README.md) | Настройка Appium MCP и подписи WDA на Mac | Claude Code, Codex |
 | [setup-bash-blesh](plugins/setup-bash-blesh/README.md) | Настройка интерактивного Bash с ble.sh в Ubuntu под WSL | Claude Code, Codex |
 | [setup-sdd-ponytail](plugins/setup-sdd-ponytail/README.md) | Настройка глобальных инструкций для Superpowers SDD и Ponytail | Claude Code, Codex |
@@ -95,3 +95,10 @@ file-wide metadata GET, при 403 сохраняет partial. `context --with-b
 переиспользует source response. Raw aliases/modes/SLOT не означают effective
 values; Code Connect mapping проверяется отдельным read-only источником.
 CLI не собирает keyframes/визуал и не делает вывод об их отсутствии.
+
+Скилл Setup iOS Simulator входит в Phone Control 1.1.0; установка сама настройки не меняет.
+Вызов: Claude Code — `/phone-control:setup-ios-sim`,
+Codex — `$phone-control:setup-ios-sim`.
+«Проверь» выполняется без записи, «настрой» разрешает описанные изменения.
+Peekaboo нужен для автоматизации GUI, а не для чтения глобальных значений.
+Подробности и границы проверки — в [README плагина](plugins/phone-control/README.md).
