@@ -18,6 +18,7 @@ Runnable recipes, bounds и fallback — [mcp-routing](references/mcp-routing.md
 | Задача | Предпочтение и детали |
 |---|---|
 | Selection, ancestry, структура, текст, geometry | Southleft targeted execute; иначе официальный read/CLI inspect/search. [reading](references/reading.md) |
+| Сравнить реализацию с макетом, визуальная приёмка | [reading: сравнение](references/reading.md#сравнение-реализации-с-макетом); качество runtime-ассетов — [assets](references/assets.md) |
 | Контекст реализации | Официальный get_design_context; live детали отдельно. [context](references/context.md) |
 | Dev annotations | Targeted raw read; отдельный annotation tool только с подтверждённым target. CLI annotations — fallback, это не comments |
 | Components/styles/bindings | Targeted raw read с exact IDs/modes; CLI bindings/context --with-bindings для строгого inventory/coverage. [bindings](references/bindings.md) |
