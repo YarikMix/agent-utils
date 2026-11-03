@@ -1,12 +1,14 @@
 # phone-control
 
-Управление физическими iPhone и Android через официальный Appium MCP.
+Управление физическими iPhone и Android через официальный Appium MCP, настройка Android
+и клавиатуры/буфера обмена iOS Simulator.
 
 | Скилл | Назначение |
 |---|---|
 | [iphone-control](skills/iphone-control/SKILL.md) | Управление готовым физическим iPhone: PNG/XML, ввод, жесты и навигация |
 | [android-control](skills/android-control/SKILL.md) | Управление готовым физическим Android через embedded UiAutomator2 |
 | [setup-android-control](skills/setup-android-control/SKILL.md) | Настройка Android SDK/JDK, USB-доверия и Appium MCP на Mac |
+| [setup-ios-sim](skills/setup-ios-sim/SKILL.md) | Клавиатура Mac и синхронизация буфера обмена iOS Simulator |
 
 ## Установка
 
@@ -39,7 +41,14 @@ codex plugin add phone-control@yarikmix-plugins
 [setup-iphone-control](https://github.com/YarikMix/agent-utils/tree/main/plugins/setup-iphone-control).
 Разблокировку телефона, доверие компьютеру и вход в аккаунты выполняет человек.
 Системные диалоги внутри порученной задачи агент обрабатывает по свежему экрану.
-Эмуляторы, симуляторы и WebView/Chromedriver не входят в основной сценарий.
+WebView/Chromedriver и управление эмуляторами/симуляторами через Appium не входят в основной сценарий.
+
+`setup-ios-sim` использует preferences macOS и Peekaboo для GUI, отдельно от Appium.
+Вызов: Claude Code — `/phone-control:setup-ios-sim`, Codex — `$phone-control:setup-ios-sim`.
+Установка инструкций сама настройки не меняет: «проверь» выполняется без записи,
+«настрой» разрешает описанные изменения. Peekaboo нужен для автоматизации GUI,
+а не для чтения глобальных значений; без него UI проверяют вручную.
+Нужны заранее установленные Xcode и iOS runtime; Peekaboo автоматически не устанавливается.
 
 Границы живых проверок: [iPhone](skills/iphone-control/references/validation.md),
 [Android](skills/android-control/references/validation.md). Установка на втором чистом
