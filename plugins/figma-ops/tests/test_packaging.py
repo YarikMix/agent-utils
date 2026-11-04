@@ -47,7 +47,7 @@ class PackagingTests(unittest.TestCase):
                 skill = plugin / 'skills' / plugin.name / 'SKILL.md'
                 self.assertTrue(skill.is_file())
                 references = list((skill.parent / 'references').glob('*.md'))
-                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md', 'context.md', 'bindings.md', 'mcp-routing.md', 'native-assets.md'})
+                self.assertEqual({p.name for p in references}, {'auth.md', 'reading.md', 'comments.md', 'assets.md', 'context.md', 'bindings.md', 'mcp-routing.md', 'native-assets.md', 'design-workflows.md'})
                 for path in [skill, *references]:
                     for target in re.findall(r'\]\(([^)]+)\)', path.read_text()):
                         if '://' in target or target.startswith('#'):
