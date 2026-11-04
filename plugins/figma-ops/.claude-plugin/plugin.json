@@ -1,7 +1,7 @@
 {
   "name": "figma-ops",
-  "version": "1.5.0",
-  "description": "Figma: точное чтение макетов, полный контекст и проверенные изменения комментариев",
+  "version": "1.6.0",
+  "description": "Figma: чтение и проверка, создание и правки экранов, полные обсуждения и комментарии",
   "skills": "./skills/",
   "author": {
     "name": "Yaroslav Mihalev"

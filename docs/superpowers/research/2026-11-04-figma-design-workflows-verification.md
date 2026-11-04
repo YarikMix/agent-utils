@@ -83,3 +83,16 @@ Full A–F after edit:
 Skill frontmatter validator: PASS. No runtime code/CLI commands changed.
 
 All 15 micro responses read manually. Core visual/permission decisions passed in 5/5 control, 5/5 baseline and 5/5 revised samples; explicit comment confirmation appeared in 1/5, 5/5 and 5/5 respectively. This supports preservation, not a causal visual-quality improvement claim. Creation prerequisite omission observed once in full baseline and corrected in full revised response; no statistical reliability claim.
+
+## Packaging 1.6.0 and discovery
+
+Version RED: existing PackagingTests.test_host_catalogs_resolve_figma_ops_and_discover_skill expected1.6.0, both host subtests failed on1.5.0. GREEN after manifests/catalog entries updated: 5/5 packaging tests pass. Other catalog entries compared unchanged. CLI remains16 operations; reference inventory9.
+
+Full plugin regression suite after packaging: 350/350 PASS (6.886s); git diff --check clean. Repository has independent plugin test suites and no root-wide test command; this run covers figma-ops and both catalog entries, not unrelated plugins. Runtime scripts are unchanged.
+
+Discovery prompt (one fresh agent per host, actual catalog then selected entrypoint; no expected plugin named):
+> Choose plugin/route and reference set for “Исправь макеты по комментариям в указанном файле”; “Создай новый экран восстановления доступа в нашем Figma-файле”; “Прочитай макет в Dev Mode; у меня корпоративный Mac, дизайн read-only, комментировать можно”. No real writes/network; do not read plan/spec/evidence.
+
+Claude catalog: chose figma-ops1.6 for all three; edit route uses complete threads/components/all variants; create route names Refero + figma-generate-design + figma-use; corporate route reads reading/routing only, no design-write setup, no unrequested comment publication.
+
+Codex catalog: same three routes selected; read-only reference set excludes creation/Refero, allowed commenting does not itself authorize a post. Official prerequisites named for subsequent calls, not falsely reported loaded in this discovery-only exercise. Both host results are synthetic: no live installation or corporate permission test.

@@ -24,7 +24,7 @@ class PackagingTests(unittest.TestCase):
                               ('.codex-plugin', '.agents/plugins/marketplace.json')):
             entries = json.loads((ROOT / catalog).read_text())['plugins']
             self.assertNotIn('figma-lookup', [item['name'] for item in entries])
-            for name, version in (('figma-ops', '1.5.0'),):
+            for name, version in (('figma-ops', '1.6.0'),):
                 with self.subTest(host=host, name=name):
                     entry, = [item for item in entries if item['name'] == name]
                     source = entry['source']

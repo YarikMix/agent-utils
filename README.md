@@ -35,7 +35,7 @@ Codex — `$apple-notes-folder:setup`.
 
 | Плагин | Возможности | Клиенты |
 |---|---|---|
-| [figma-ops](plugins/figma-ops/README.md) | Figma context dossier, design-system bindings, annotations/prototype, поиск текста, полные обсуждения, Resolve/Unresolve, редактирование комментариев и проверенный экспорт через MCP/REST | Claude Code, Codex |
+| [figma-ops](plugins/figma-ops/README.md) | Создание/правки экранов, Figma context dossier, design-system bindings, annotations/prototype, поиск текста, полные обсуждения, Resolve/Unresolve, редактирование комментариев и проверенный экспорт через MCP/REST | Claude Code, Codex |
 | [peekaboo-control](plugins/peekaboo-control/README.md) | Управление macOS через Peekaboo MCP и Desktop Bridge | Claude Code, Codex |
 | [phone-control](plugins/phone-control/README.md) | Настройка и управление физическими iPhone и Android через Appium MCP; клавиатура и буфер iOS Simulator | Claude Code, Codex |
 | [setup-bash-blesh](plugins/setup-bash-blesh/README.md) | Настройка интерактивного Bash с ble.sh в Ubuntu под WSL | Claude Code, Codex |
@@ -83,7 +83,7 @@ Figma Ops использует уже подключённый Figma MCP; REST C
 системный curl и существующий `FIGMA_TOKEN` либо macOS Keychain `figma-rest/figma`.
 REST необязателен для MCP. Для недоступных другим путём UI-задач можно использовать
 `peekaboo-control`; подключение MCP и системные разрешения настраиваются отдельно.
-Figma Ops 1.5.0 заменяет снятый с поддержки `figma-lookup`: установите
+Figma Ops 1.6.0 заменяет снятый с поддержки `figma-lookup`: установите
 `figma-ops@yarikmix-plugins` и удалите прежний плагин в своём клиенте.
 Прежний вызов замените на `$figma-ops:figma-ops` в Codex или
 `/figma-ops:figma-ops` в Claude Code. Возможности сохраняются: точный source/context,
@@ -94,6 +94,11 @@ file-wide metadata GET, при 403 сохраняет partial. `context --with-b
 переиспользует source response. Raw aliases/modes/SLOT не означают effective
 values; Code Connect mapping проверяется отдельным read-only источником.
 CLI не собирает keyframes/визуал и не делает вывод об их отсутствии.
+Новые маршруты создания и правок используют официальный `use_figma`, Refero
+для новых решений и проверку всех затронутых вариантов. Корпоративное чтение
+в Dev Mode и комментарии остаются отдельным маршрутом без edit-доступа;
+write-инструкции загружаются только по соответствующей задаче.
+В памяти агента достаточно: «При работе с Figma используй figma-ops».
 
 Скилл Setup iOS Simulator входит в Phone Control 1.1.0; установка сама настройки не меняет.
 Вызов: Claude Code — `/phone-control:setup-ios-sim`,
