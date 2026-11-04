@@ -8,6 +8,8 @@
 
 Официальный MCP: следуй текущей схеме `create_session`/`sessionId`, если capability использует сессию. Перед **каждым** `use_figma` загрузи `figma-use`, для motion также `figma-use-motion`; перед `get_design_context` — `figma-design-to-code`. Если prerequisite skill не установлен, используй доступный `get_figma_skill` с URI `skill://figma/figma-use/SKILL.md` или `skill://figma/figma-design-to-code/SKILL.md` и читай references тем же провайдером. Этот reference их не заменяет. Code Connect — только read-only mapping tools; не создавать mappings по похожим именам.
 
+Для поручения создать новые экраны загрузи применимый `figma-generate-design` (ресурс `skill://figma/figma-generate-design/SKILL.md`) тем же способом. Создание и правки — [design-workflows](design-workflows.md); при read-only задаче этот маршрут не загружается. Обязательный `figma-use` нужен и для read-only вызова `use_figma`. Доступность инструмента не разрешает запись; корпоративные read/comment права проверяются независимо от design-write.
+
 ## Выполнение recipes
 
 Вставь перед выбранным JS block строку `const input = {...};` с JSON literals своих **явных** параметров. Например, для первого `{"expectedFileKey":"DemoFile","nodeId":"I11:2;33:4"}`, для второго `{"expectedFileKey":"DemoFile","rootId":"11:2","maxNodes":200,"maxDepth":4,"maxBytes":32768}`. В `figma_execute` передай тот же `fileKey`; code — строка prefix + block. `return` выполняется в async body execute. IDs синтетические. Tests исполняют именно fenced blocks, передавая тот же input как аргумент.

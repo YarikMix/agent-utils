@@ -2,7 +2,7 @@
 
 Работа с Figma для Claude Code и Codex: поиск экранов и текста,
 предки нод, annotations, prototype actions, context dossier, полные обсуждения
-и проверенный экспорт. Версия 1.5.0 выбирает маршрут между Southleft Bridge, официальным Figma MCP
+и проверенный экспорт, создание и исправление экранов. Версия 1.6.0 выбирает маршрут между Southleft Bridge, официальным Figma MCP
 и автономным REST CLI по задаче. Плагин добавляет skill и 16 CLI
 операций (11 чтений, 3 изменения комментариев, вход/выход локальной веб-сессии); MCP-серверы подключаются отдельно, manifests их не устанавливают.
 
@@ -31,7 +31,8 @@ Skill [figma-ops](skills/figma-ops/SKILL.md) доступен по имени п
 
 ## Маршруты
 
-Сначала проверь реальные tool schemas/capabilities обоих серверов. Для Southleft
+Сначала определи поручение: чтение, комментарии, исправление или создание.
+Загружай только нужные references и проверяй capabilities выбранного маршрута. Для Southleft
 нужны active status probe и список подключённых файлов: наличие tools не доказывает
 соединение. Передай точный file/branch key в targeted execute и проверь
 `figma.fileKey` внутри code до чтения. Не читай другой active file; для selection
@@ -40,6 +41,9 @@ Skill [figma-ops](skills/figma-ops/SKILL.md) доступен по имени п
 
 | Задача | Маршрут |
 |---|---|
+| Исправление существующих макетов | Полные треды → существующие компоненты и минимальная правка через официальный `use_figma` → все затронутые варианты |
+| Новые экраны | Refero и дизайн-система → применимый `figma-generate-design` и `use_figma` → проверка согласованных экранов/состояний |
+| Ответы в тредах | Доступный comment API/MCP или публичный REST, точный root и свежий readback; по поручению, без новой CLI-команды |
 | Selection, ancestors, subtree, текст/geometry, annotations, raw prototype, использованные bindings | Southleft targeted read-only Plugin API при подключённом точном файле; явные root/depth/node/byte budgets и partial frontier |
 | Реализация по макету | Официальный `get_design_context` после `figma-design-to-code` |
 | Code Connect | Официальные read-only mapping tools с применимым skill; mapping по подтверждённым IDs/keys |
@@ -50,6 +54,23 @@ Skill [figma-ops](skills/figma-ops/SKILL.md) доступен по имени п
 | SVG/PDF, image fills, QR | Действующие MCP/CLI `export`/`fills` по доступным capabilities; скачать и проверить artifact |
 | Полные comments/threads | Существующий CLI auth; Southleft только с работающим PAT, `include_resolved=true` и полным root/replies/pins |
 | Headless, сохранённый dossier, CLI inventory/coverage | Автономный REST `context`/`bindings` и остальные действующие команды |
+
+Подробный цикл создания/правок — [design workflows](skills/figma-ops/references/design-workflows.md).
+После правки проверяются свежий весь экран и читаемая область, фактические размеры
+PNG и структура каждого затронутого варианта. Официальный `get_screenshot`
+подходит при достаточном результате; иначе используется точный экспорт.
+
+### Корпоративный Mac: Dev Mode и комментарии
+
+Read-only доступ к дизайну не мешает чтению и порученным комментариям.
+Для этого маршрута не загружаются инструкции создания/Refero и не требуются
+edit seat, пробная запись, копирование в Drafts или подключение новых MCP.
+Наличие write-tool не означает право менять файл; комментарии имеют отдельные
+права. Реализация UI в коде по макету также оставляет Figma read-only.
+Перед read-only `use_figma` всё равно обязателен его технический `figma-use`.
+
+В памяти агента достаточно: **«При работе с Figma используй figma-ops».**
+Плагин сам не меняет глобальную память или подключённые инструменты.
 
 Для official MCP соблюдай текущие `create_session`/`sessionId` schemas.
 Перед каждым `use_figma` прочитай `figma-use`, для motion через него также
@@ -192,10 +213,13 @@ python3 -m unittest discover -s plugins/figma-ops/tests -v
 
 Установленный CLI не зависит от соседнего plugin root.
 Packaging tests проверяют оба marketplace/manifests, локальные references
-и автономную установку из cwd с пробелами: 11 базовых операций, 12 help calls
+и автономную установку из cwd с пробелами: 11 базовых операций, 17 help calls
 и 6 дополнительных enrichment/partial/context cases.
 Отдельно проверяются 3 standalone asset helper cases и 1 helper help call.
-Runtime: 16 модулей и 8 references. Это файловые и synthetic transport проверки; они не заменяют проверку
+Runtime: 16 модулей и 9 references. Это файловые и synthetic transport проверки; они не заменяют проверку
 реального discovery в Claude Code/Codex или живого Figma API.
 Sanitized результаты native assets и границы проверки —
 [verification report](../../docs/superpowers/research/2026-10-26-figma-ops-native-assets-verification.md).
+
+Сценарии создания/правок, корпоративного чтения и границы синтетической проверки —
+[design workflows verification](../../docs/superpowers/research/2026-11-04-figma-design-workflows-verification.md).
