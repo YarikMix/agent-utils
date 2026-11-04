@@ -96,3 +96,14 @@ Discovery prompt (one fresh agent per host, actual catalog then selected entrypo
 Claude catalog: chose figma-ops1.6 for all three; edit route uses complete threads/components/all variants; create route names Refero + figma-generate-design + figma-use; corporate route reads reading/routing only, no design-write setup, no unrequested comment publication.
 
 Codex catalog: same three routes selected; read-only reference set excludes creation/Refero, allowed commenting does not itself authorize a post. Official prerequisites named for subsequent calls, not falsely reported loaded in this discovery-only exercise. Both host results are synthetic: no live installation or corporate permission test.
+
+## Final independent review
+
+Fresh-context gpt-6-astra high reviewed c94b1f3..2a83136 against spec, plan and five Review Focus cases. No Critical, Important or Minor findings; ready to merge. Reviewer independently ran packaging tests5/5 and diff whitespace check. Full350 suite was run by implementer, not repeated by reviewer.
+
+Rulings retained from execution:
+1. Reuse existing reading/assets rules because controls already passed core visual checks; new recipe connects routes and explicit publication readback. Limit: synthetic decision traces may overestimate compliance during real tool execution.
+2. Live corporate Figma and installed-host discovery remain unverified within the approved synthetic-only validation scope. Risk: actual permission/tool integration may still fail.
+3. No statistical reliability claim from these samples. Risk: rare failures remain undetected.
+
+Deferred minors: none. No live installation, publishing or Figma mutations performed. Source version bump is not evidence of installed plugin update.
